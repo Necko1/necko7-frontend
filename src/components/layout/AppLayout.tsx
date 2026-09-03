@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Navigate, Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -78,7 +79,6 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const {
-    currentUser,
     setCurrentUser,
     broadcasters,
     setBroadcasters,
@@ -88,32 +88,27 @@ export default function AppLayout() {
   } = useAppStore();
 
   // ── Auth guard: GET /api/v1/users/me ─────────────────────────────────────
-  // This query BLOCKS the entire layout from rendering.
-  // - Pending → full-screen spinner
-  // - 401     → <Navigate to="/login" />
-  // - 404     → <Navigate to="/init-bot" /> (bot not initialized)
-  // - Success → render app
+  // This query blocks the layout from rendering until authentication is confirmed.
   const {
     data: meData,
     isLoading: meLoading,
     error: meError,
   } = useQuery({
     queryKey: ["me"],
-    queryFn: async () => {
-      const res = await usersApi.me();
-      return res.data;
-    },
-    retry: false,           // never retry — a 401 is definitive
+    queryFn: () => usersApi.me().then((r) => r.data),
+    retry: false,
     staleTime: 5 * 60_000,
   });
 
-  // Sync user into store when data arrives
-  if (meData && !currentUser) {
-    setCurrentUser(meData);
-  }
+  // Sync user into store safely inside useEffect (never in render body!)
+  useEffect(() => {
+    if (meData) {
+      setCurrentUser(meData);
+    }
+  }, [meData, setCurrentUser]);
 
   // ── While checking auth — show full-screen loader ─────────────────────────
-  if (meLoading) {
+  if (meLoading || (!meData && !meError)) {
     return (
       <div className="flex items-center justify-center min-h-screen w-full bg-background">
         <div className="flex flex-col items-center gap-4 text-muted-foreground">
@@ -135,26 +130,26 @@ export default function AppLayout() {
   if (meError) {
     const status = (meError as AxiosError)?.response?.status;
     if (status === 404) return <Navigate to="/init-bot" replace />;
-    // 401, network error, or anything else → login
     return <Navigate to="/login" replace />;
   }
 
   // ── Fetch broadcasters after auth confirmed ───────────────────────────────
-
-  // Fetch broadcasters
-  const { isLoading: bcastLoading } = useQuery({
+  const { data: broadcastersData, isLoading: bcastLoading } = useQuery({
     queryKey: ["broadcasters"],
-    queryFn: async () => {
-      const res = await broadcastersApi.list();
-      setBroadcasters(res.data);
-      // Auto-select first broadcaster if nothing is selected
-      if (!selectedBroadcasterId && res.data.length > 0) {
-        setSelectedBroadcasterId(res.data[0].channel_id);
-      }
-      return res.data;
-    },
+    queryFn: () => broadcastersApi.list().then((r) => r.data),
+    enabled: !!meData,
     staleTime: 60_000,
   });
+
+  // Sync broadcasters safely in useEffect
+  useEffect(() => {
+    if (broadcastersData) {
+      setBroadcasters(broadcastersData);
+      if (!selectedBroadcasterId && broadcastersData.length > 0) {
+        setSelectedBroadcasterId(broadcastersData[0].channel_id);
+      }
+    }
+  }, [broadcastersData, selectedBroadcasterId, setBroadcasters, setSelectedBroadcasterId]);
 
   const logoutMutation = useMutation({
     mutationFn: () => authApi.logout(),
@@ -173,6 +168,22 @@ export default function AppLayout() {
     <div className="flex w-full min-h-screen">
       {/* ── Sidebar ── */}
       <aside className="w-64 shrink-0 flex flex-col border-r border-sidebar-border bg-sidebar h-screen sticky top-0 overflow-hidden">
+        {/* Brand header */}
+        <div className="p-5 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm glow-teal">
+            7
+          </div>
+          <div>
+            <span className="font-bold text-base tracking-tight text-sidebar-foreground">
+              necko7
+            </span>
+            <span className="text-xs text-muted-foreground block -mt-0.5">
+              Twitch Bot Panel
+            </span>
+          </div>
+        </div>
+
+        <Separator className="bg-sidebar-border" />
 
         {/* Broadcaster section */}
         <div className="p-4 space-y-2">
@@ -191,7 +202,7 @@ export default function AppLayout() {
                     alt={selectedBroadcaster.channel_login}
                   />
                   <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">
-                    {selectedBroadcaster.channel_login.slice(0, 2).toUpperCase()}
+                    {(selectedBroadcaster.channel_login || "??").slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
@@ -260,10 +271,10 @@ export default function AppLayout() {
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
                   isActive
-                    ? "bg-sidebar-accent text-primary"
-                    : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                    ? "bg-sidebar-accent text-primary font-semibold shadow-sm"
+                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
                 )
               }
             >
@@ -275,13 +286,13 @@ export default function AppLayout() {
 
         <Separator className="bg-sidebar-border" />
 
-        {/* User profile at bottom — auth is confirmed so meData is always defined */}
+        {/* User profile at bottom */}
         <div className="p-4">
           <div className="flex items-center gap-3 group">
             <Avatar className="h-8 w-8 shrink-0">
               <AvatarImage src={meData?.avatar_url ?? undefined} alt={meData?.login} />
               <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
-                {meData?.login.slice(0, 2).toUpperCase()}
+                {(meData?.login || "??").slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">

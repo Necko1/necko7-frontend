@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
 import { statsApi, broadcastersApi } from "@/lib/apiClient";
@@ -244,7 +245,13 @@ export default function DashboardPage() {
           }
           subtitle={
             balance
-              ? `Settlement: ${formatCurrency(balance.money_settlement * 100, balance.currency)} · Updated ${format(new Date(balance.updated_at), "HH:mm")}`
+              ? `Settlement: ${formatCurrency(balance.money_settlement * 100, balance.currency)}${(() => {
+                  try {
+                    return ` · Updated ${format(new Date(balance.updated_at), "HH:mm")}`;
+                  } catch {
+                    return "";
+                  }
+                })()}`
               : "Market API key not configured"
           }
           icon={<IconWallet />}
@@ -255,6 +262,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-// useState import fix
-import { useState } from "react";
