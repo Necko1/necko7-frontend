@@ -171,22 +171,6 @@ export default function AppLayout() {
     <div className="flex w-full min-h-screen">
       {/* ── Sidebar ── */}
       <aside className="w-64 shrink-0 flex flex-col border-r border-sidebar-border bg-sidebar h-screen sticky top-0 overflow-hidden">
-        {/* Brand header */}
-        <div className="p-5 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm glow-teal">
-            7
-          </div>
-          <div>
-            <span className="font-bold text-base tracking-tight text-sidebar-foreground">
-              necko7
-            </span>
-            <span className="text-xs text-muted-foreground block -mt-0.5">
-              Twitch Bot Panel
-            </span>
-          </div>
-        </div>
-
-        <Separator className="bg-sidebar-border" />
 
         {/* Broadcaster section */}
         <div className="p-4 space-y-2">
