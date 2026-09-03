@@ -4,12 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Tooltip,
   TooltipContent,
@@ -66,6 +61,12 @@ const IconSwap = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" />
     <polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
+  </svg>
+);
+
+const IconPlus = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
 
@@ -213,39 +214,34 @@ export default function AppLayout() {
                 </Tooltip>
               </div>
 
-              {/* Switch broadcaster button */}
-              {broadcasters.length > 1 ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    className="w-full flex items-center justify-start gap-2 text-xs h-7 px-2 rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-accent transition-colors"
-                  >
-                    <IconSwap />
-                    Switch channel
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    {broadcasters.map((b) => (
-                      <DropdownMenuItem
-                        key={b.channel_id}
-                        onClick={() => setSelectedBroadcasterId(b.channel_id)}
-                        className={cn(
-                          b.channel_id === selectedBroadcasterId && "bg-accent text-accent-foreground"
-                        )}
-                      >
-                        <span className="truncate">{b.channel_login}</span>
-                        <span className="ml-auto text-xs text-muted-foreground capitalize">
-                          {b.role}
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : null}
+              {/* Switch channel button — always shown */}
+              <button
+                type="button"
+                onClick={() => navigate("/channels")}
+                className="w-full flex items-center justify-between text-xs h-7.5 px-2.5 rounded-lg border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors group"
+              >
+                <span className="flex items-center gap-2">
+                  <IconSwap />
+                  Switch channel
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground font-mono font-medium">
+                  {broadcasters.length}
+                </span>
+              </button>
             </>
-          ) : broadcasters.length === 0 ? (
-            <div className="p-2.5 rounded-xl border border-dashed border-sidebar-border text-center">
-              <p className="text-xs text-muted-foreground">No channel selected</p>
-            </div>
-          ) : null}
+          ) : (
+            /* No broadcaster selected */
+            <button
+              type="button"
+              onClick={() => navigate("/channels")}
+              className="w-full p-2.5 rounded-xl border border-dashed border-sidebar-border text-center hover:border-primary/50 hover:bg-sidebar-accent/50 transition-colors group"
+            >
+              <p className="text-xs font-medium text-primary flex items-center justify-center gap-1.5">
+                <IconPlus />
+                Select channel
+              </p>
+            </button>
+          )}
         </div>
 
         <Separator className="bg-sidebar-border" />

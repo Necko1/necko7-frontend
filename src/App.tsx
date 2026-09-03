@@ -9,6 +9,7 @@ import InitBotPage from "@/pages/auth/InitBotPage";
 import DashboardPage from "@/pages/DashboardPage";
 import RewardsPage from "@/pages/RewardsPage";
 import RedemptionsPage from "@/pages/RedemptionsPage";
+import ChannelsPage from "@/pages/ChannelsPage";
 import SettingsPage from "@/pages/SettingsPage";
 
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ export default function App() {
               {/* Protected app routes */}
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/channels" element={<ChannelsPage />} />
                 <Route path="/rewards" element={<RewardsPage />} />
                 <Route path="/redemptions" element={<RedemptionsPage />} />
                 <Route

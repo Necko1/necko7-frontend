@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
 import { statsApi, broadcastersApi } from "@/lib/apiClient";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -88,6 +90,7 @@ function formatCurrency(cents: number, currency: string) {
 }
 
 function NoBroadcaster({ broadcasters }: { broadcasters: { channel_id: string }[] }) {
+  const navigate = useNavigate();
   if (broadcasters.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-96 space-y-4 text-center">
@@ -102,6 +105,9 @@ function NoBroadcaster({ broadcasters }: { broadcasters: { channel_id: string }[
             Ask a streamer to grant you access to their channel, or connect your own channel as a streamer.
           </p>
         </div>
+        <Button onClick={() => navigate("/channels")} className="rounded-xl">
+          Connect or view channels
+        </Button>
       </div>
     );
   }
@@ -116,9 +122,12 @@ function NoBroadcaster({ broadcasters }: { broadcasters: { channel_id: string }[
       <div>
         <h2 className="text-xl font-semibold text-foreground">Select a channel</h2>
         <p className="text-sm text-muted-foreground mt-2 max-w-xs">
-          Use the sidebar to choose a broadcaster channel to view the dashboard.
+          Choose a broadcaster channel to view the dashboard.
         </p>
       </div>
+      <Button onClick={() => navigate("/channels")} className="rounded-xl">
+        Select channel
+      </Button>
     </div>
   );
 }
