@@ -87,8 +87,7 @@ export default function AppLayout() {
     getSelectedBroadcaster,
   } = useAppStore();
 
-  // ── Auth guard: GET /api/v1/users/me ─────────────────────────────────────
-  // This query blocks the layout from rendering until authentication is confirmed.
+  // ── HOOK 1: Auth query ──────────────────────────────────────────────────
   const {
     data: meData,
     isLoading: meLoading,
@@ -100,14 +99,47 @@ export default function AppLayout() {
     staleTime: 5 * 60_000,
   });
 
-  // Sync user into store safely inside useEffect (never in render body!)
+  // ── HOOK 2: Broadcasters query (enabled only when authenticated) ──────────
+  const { data: broadcastersData, isLoading: bcastLoading } = useQuery({
+    queryKey: ["broadcasters"],
+    queryFn: () => broadcastersApi.list().then((r) => r.data),
+    enabled: !!meData,
+    staleTime: 60_000,
+  });
+
+  // ── HOOK 3: Logout mutation ──────────────────────────────────────────────
+  const logoutMutation = useMutation({
+    mutationFn: () => authApi.logout(),
+    onSuccess: () => {
+      setCurrentUser(null);
+      setBroadcasters([]);
+      setSelectedBroadcasterId(null);
+      qc.clear();
+      navigate("/login");
+    },
+  });
+
+  // ── HOOK 4: Sync user into store ─────────────────────────────────────────
   useEffect(() => {
     if (meData) {
       setCurrentUser(meData);
     }
   }, [meData, setCurrentUser]);
 
-  // ── While checking auth — show full-screen loader ─────────────────────────
+  // ── HOOK 5: Sync broadcasters into store ─────────────────────────────────
+  useEffect(() => {
+    if (broadcastersData) {
+      setBroadcasters(broadcastersData);
+      if (!selectedBroadcasterId && broadcastersData.length > 0) {
+        setSelectedBroadcasterId(broadcastersData[0].channel_id);
+      }
+    }
+  }, [broadcastersData, selectedBroadcasterId, setBroadcasters, setSelectedBroadcasterId]);
+
+  // ── ALL HOOKS CALLED UNCONDITIONALLY ABOVE ────────────────────────────────
+  // Early returns are STRICTLY below all hooks to satisfy React Rules of Hooks!
+
+  // While checking auth — show full-screen loader
   if (meLoading || (!meData && !meError)) {
     return (
       <div className="flex items-center justify-center min-h-screen w-full bg-background">
@@ -126,41 +158,12 @@ export default function AppLayout() {
     );
   }
 
-  // ── Auth error handling ───────────────────────────────────────────────────
+  // Auth error handling
   if (meError) {
     const status = (meError as AxiosError)?.response?.status;
     if (status === 404) return <Navigate to="/init-bot" replace />;
     return <Navigate to="/login" replace />;
   }
-
-  // ── Fetch broadcasters after auth confirmed ───────────────────────────────
-  const { data: broadcastersData, isLoading: bcastLoading } = useQuery({
-    queryKey: ["broadcasters"],
-    queryFn: () => broadcastersApi.list().then((r) => r.data),
-    enabled: !!meData,
-    staleTime: 60_000,
-  });
-
-  // Sync broadcasters safely in useEffect
-  useEffect(() => {
-    if (broadcastersData) {
-      setBroadcasters(broadcastersData);
-      if (!selectedBroadcasterId && broadcastersData.length > 0) {
-        setSelectedBroadcasterId(broadcastersData[0].channel_id);
-      }
-    }
-  }, [broadcastersData, selectedBroadcasterId, setBroadcasters, setSelectedBroadcasterId]);
-
-  const logoutMutation = useMutation({
-    mutationFn: () => authApi.logout(),
-    onSuccess: () => {
-      setCurrentUser(null);
-      setBroadcasters([]);
-      setSelectedBroadcasterId(null);
-      qc.clear();
-      navigate("/login");
-    },
-  });
 
   const selectedBroadcaster = getSelectedBroadcaster();
 
