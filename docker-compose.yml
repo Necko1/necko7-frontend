@@ -1,0 +1,9 @@
+services:
+  frontend:
+    image: ghcr.io/necko1/necko7-frontend:latest
+    container_name: necko7-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    env_file:
+      - .env

@@ -1,0 +1,12 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: necko7-frontend:local
+    container_name: necko7-frontend-local
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    env_file:
+      - .env
