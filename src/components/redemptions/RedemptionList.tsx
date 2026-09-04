@@ -11,19 +11,29 @@ import { formatMinorCurrency } from "@/lib/currency";
 
 // ── Status helpers ─────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<RedemptionStatus, string> = {
+  PENDING: "Pending",
+  ORDER_CREATED: "Order Created",
+  COMPLETED: "Completed",
+  FAILED_REFUND: "Refunded",
+  FAILED_PENALTY: "Penalized",
   Pending: "Pending",
   OrderCreated: "Order Created",
+  Completed: "Completed",
   FailedRefund: "Refunded",
   FailedPenalty: "Penalized",
-  Completed: "Completed",
 };
 
 const STATUS_CLASSES: Record<RedemptionStatus, string> = {
+  PENDING: "status-pending",
+  ORDER_CREATED: "status-order-created",
+  COMPLETED: "status-completed",
+  FAILED_REFUND: "status-failed-refund",
+  FAILED_PENALTY: "status-failed-penalty",
   Pending: "status-pending",
   OrderCreated: "status-order-created",
+  Completed: "status-completed",
   FailedRefund: "status-failed-refund",
   FailedPenalty: "status-failed-penalty",
-  Completed: "status-completed",
 };
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -81,6 +91,13 @@ function RedemptionRow({
 
   const isLoading = retryMutation.isPending || refundMutation.isPending || penaltyMutation.isPending;
 
+  const isFailedPenalty =
+    redemption.status === "FAILED_PENALTY" ||
+    redemption.status === "FailedPenalty";
+  const isPending =
+    redemption.status === "PENDING" ||
+    redemption.status === "Pending";
+
   return (
     <div className="rounded-xl border border-border overflow-hidden transition-all">
       {/* Main row */}
@@ -88,8 +105,8 @@ function RedemptionRow({
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
       >
-        <Badge className={cn("text-xs shrink-0 rounded-md px-2 py-0.5 font-medium border", STATUS_CLASSES[redemption.status])}>
-          {STATUS_LABELS[redemption.status]}
+        <Badge className={cn("text-xs shrink-0 rounded-md px-2 py-0.5 font-medium border", STATUS_CLASSES[redemption.status] || "status-pending")}>
+          {STATUS_LABELS[redemption.status] || redemption.status}
         </Badge>
         {redemption.retry_count > 0 && (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-500 bg-amber-500/10 font-normal shrink-0">
@@ -159,10 +176,10 @@ function RedemptionRow({
             )}
           </div>
 
-          {/* Action buttons for failed states */}
-          {(redemption.status === "FailedPenalty" || redemption.status === "FailedRefund" || redemption.status === "Pending") && (
+          {/* Action buttons for failed / pending states */}
+          {(isFailedPenalty || isPending) && (
             <div className="flex flex-wrap gap-2">
-              {redemption.status === "FailedPenalty" && (
+              {isFailedPenalty && (
                 <Button
                   size="sm"
                   className="gap-1.5 text-xs"
@@ -173,7 +190,7 @@ function RedemptionRow({
                   Retry Market Order
                 </Button>
               )}
-              {(redemption.status === "FailedPenalty" || redemption.status === "Pending") && (
+              {isPending && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -185,7 +202,7 @@ function RedemptionRow({
                   Refund
                 </Button>
               )}
-              {redemption.status === "Pending" && (
+              {isPending && (
                 <Button
                   size="sm"
                   variant="destructive"

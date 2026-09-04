@@ -137,11 +137,16 @@ export interface BatchRewardBody {
 // ===== Redemptions =====
 
 export type RedemptionStatus =
+  | "PENDING"
+  | "ORDER_CREATED"
+  | "COMPLETED"
+  | "FAILED_REFUND"
+  | "FAILED_PENALTY"
   | "Pending"
   | "OrderCreated"
+  | "Completed"
   | "FailedRefund"
-  | "FailedPenalty"
-  | "Completed";
+  | "FailedPenalty";
 
 export interface RedemptionResponse {
   twitch_redemption_id: string;

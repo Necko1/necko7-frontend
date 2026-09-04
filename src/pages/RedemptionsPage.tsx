@@ -6,11 +6,11 @@ import type { RedemptionStatus } from "@/types/api";
 
 const STATUS_OPTIONS: { value: RedemptionStatus | ""; label: string }[] = [
   { value: "", label: "All" },
-  { value: "Pending", label: "Pending" },
-  { value: "OrderCreated", label: "Order Created" },
-  { value: "Completed", label: "Completed" },
-  { value: "FailedRefund", label: "Refunded" },
-  { value: "FailedPenalty", label: "Penalized" },
+  { value: "PENDING", label: "Pending" },
+  { value: "ORDER_CREATED", label: "Order Created" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "FAILED_REFUND", label: "Refunded" },
+  { value: "FAILED_PENALTY", label: "Penalized" },
 ];
 
 const PAGE_SIZES = [10, 25, 50];
