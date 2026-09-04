@@ -12,12 +12,11 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -179,7 +178,7 @@ function RewardForm({
     twitch_title: initial?.twitch_title ?? "",
     twitch_description: initial?.twitch_description ?? "",
     permissible_market_price_deviation: initial?.permissible_market_price_deviation ?? 10,
-    twitch_price_markup_percentage: initial?.twitch_price_markup_percentage ?? 150,
+    twitch_price_markup_percentage: initial?.twitch_price_markup_percentage ?? 50,
     global_cooldown_seconds: initial?.global_cooldown_seconds ?? 60,
     max_redemptions_per_stream: initial?.max_redemptions_per_stream ?? 0,
     max_redemptions_per_user_per_stream: initial?.max_redemptions_per_user_per_stream ?? 0,
@@ -228,7 +227,7 @@ function RewardForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="twitch_price_markup_percentage">Price Markup %</Label>
-          <Input id="twitch_price_markup_percentage" type="number" min={100} max={500} required {...field("twitch_price_markup_percentage")} />
+          <Input id="twitch_price_markup_percentage" type="number" min={0} max={500} required {...field("twitch_price_markup_percentage")} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="permissible_market_price_deviation">Max Deviation %</Label>
@@ -241,6 +240,10 @@ function RewardForm({
         <div className="space-y-2">
           <Label htmlFor="max_redemptions_per_stream">Max / Stream</Label>
           <Input id="max_redemptions_per_stream" type="number" min={0} {...field("max_redemptions_per_stream")} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="max_redemptions_per_user_per_stream">Max / User / Stream</Label>
+          <Input id="max_redemptions_per_user_per_stream" type="number" min={0} {...field("max_redemptions_per_user_per_stream")} />
         </div>
       </div>
       <div className="flex items-center gap-4">
@@ -270,8 +273,8 @@ function RewardForm({
   );
 }
 
-// ── Edit Sheet ─────────────────────────────────────────────────────────────
-function RewardEditSheet({
+// ── Edit Dialog (Full-page) ────────────────────────────────────────────────
+function RewardEditDialog({
   reward,
   channelId,
   open,
@@ -310,71 +313,75 @@ function RewardEditSheet({
   if (!reward) return null;
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-left">{reward.twitch_title}</SheetTitle>
-          <SheetDescription className="text-left">
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-lg">{reward.twitch_title}</DialogTitle>
+          <DialogDescription>
             {reward.market_item_name} · {formatMinorCurrency(reward.current_market_price, reward.currency)}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Edit form */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm text-foreground">Edit Reward</h3>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-xs"
-                  onClick={() => updatePriceMutation.mutate()}
-                  disabled={updatePriceMutation.isPending}
-                >
-                  <IconRefresh />
-                  Update Price
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-xs"
-                  onClick={() =>
-                    updateMutation.mutate({ is_paused: !reward.is_paused })
-                  }
-                  disabled={updateMutation.isPending}
-                >
-                  {reward.is_paused ? <IconPlay /> : <IconPause />}
-                  {reward.is_paused ? "Unpause" : "Pause"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="gap-1.5 text-xs"
-                  onClick={() => {
-                    if (confirm(`Delete "${reward.twitch_title}"?`)) deleteMutation.mutate();
-                  }}
-                  disabled={deleteMutation.isPending}
-                >
-                  <IconTrash />
-                </Button>
-              </div>
-            </div>
+        {/* Action bar */}
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 text-xs"
+            onClick={() => updatePriceMutation.mutate()}
+            disabled={updatePriceMutation.isPending}
+          >
+            <IconRefresh />
+            Update Price
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 text-xs"
+            onClick={() =>
+              updateMutation.mutate({ is_paused: !reward.is_paused })
+            }
+            disabled={updateMutation.isPending}
+          >
+            {reward.is_paused ? <IconPlay /> : <IconPause />}
+            {reward.is_paused ? "Unpause" : "Pause"}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="gap-1.5 text-xs"
+            onClick={() => {
+              if (confirm(`Delete "${reward.twitch_title}"?`)) deleteMutation.mutate();
+            }}
+            disabled={deleteMutation.isPending}
+          >
+            <IconTrash />
+            Delete
+          </Button>
+        </div>
+
+        <Separator className="my-2" />
+
+        <Tabs defaultValue="edit" className="w-full">
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="edit">Edit Reward</TabsTrigger>
+            <TabsTrigger value="redemptions">Recent Redemptions</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="edit" className="mt-4">
             <RewardForm
               initial={reward}
               onSubmit={(data) => updateMutation.mutate(data)}
               loading={updateMutation.isPending}
             />
-          </div>
+          </TabsContent>
 
-          {/* Redemptions for this reward */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-sm text-foreground">Recent Redemptions</h3>
+          <TabsContent value="redemptions" className="mt-4">
             <RedemptionList channelId={channelId} rewardId={reward.twitch_id} compact />
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -625,7 +632,7 @@ export default function RewardsPage() {
       )}
 
       {/* Modals */}
-      <RewardEditSheet
+      <RewardEditDialog
         reward={editingReward}
         channelId={channelId}
         open={!!editingReward}
