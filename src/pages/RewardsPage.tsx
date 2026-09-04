@@ -64,6 +64,13 @@ const IconClose = () => (
     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
+const IconExternalLink = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" y1="14" x2="21" y2="3" />
+  </svg>
+);
 
 // ── Reward Card ────────────────────────────────────────────────────────────
 function RewardCard({
@@ -117,8 +124,22 @@ function RewardCard({
       {/* Status badges */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {reward.is_paused && (
-          <Badge variant="outline" className="status-failed-refund text-xs gap-1">
-            <IconPause /> Paused
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-xs gap-1",
+              reward.pause_reason === "NO_MONEY"
+                ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
+                : "status-failed-refund"
+            )}
+            title={
+              reward.pause_reason === "NO_MONEY"
+                ? "Paused automatically: insufficient balance on Market"
+                : "Paused manually"
+            }
+          >
+            <IconPause />
+            {reward.pause_reason === "NO_MONEY" ? "Paused (No balance)" : "Paused"}
           </Badge>
         )}
         {reward.market_autobuy && (
@@ -137,9 +158,19 @@ function RewardCard({
       <h3 className="font-semibold text-foreground text-sm leading-tight mb-1 pr-6 line-clamp-2">
         {reward.twitch_title}
       </h3>
-      <p className="text-xs text-muted-foreground line-clamp-1 mb-4">
-        {reward.market_item_name}
-      </p>
+      <div className="mb-4">
+        <a
+          href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-1 transition-colors max-w-full"
+          title={`View "${reward.market_item_name}" on Market`}
+        >
+          <span className="truncate">{reward.market_item_name}</span>
+          <IconExternalLink />
+        </a>
+      </div>
 
       {/* Price info */}
       <div className="grid grid-cols-2 gap-3">
@@ -154,10 +185,12 @@ function RewardCard({
       </div>
 
       {/* Footer meta */}
-      <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-muted-foreground">
         <span>CD: {reward.global_cooldown_seconds}s</span>
         <span>·</span>
         <span>Max/stream: {reward.max_redemptions_per_stream}</span>
+        <span>·</span>
+        <span>Max/user/stream: {reward.max_redemptions_per_user_per_stream}</span>
       </div>
     </div>
   );
@@ -168,10 +201,12 @@ function RewardForm({
   initial,
   onSubmit,
   loading,
+  isEdit = false,
 }: {
   initial?: Partial<CreateRewardBody & UpdateRewardBody>;
   onSubmit: (data: CreateRewardBody) => void;
   loading: boolean;
+  isEdit?: boolean;
 }) {
   const [form, setForm] = useState<CreateRewardBody>({
     market_item_name: initial?.market_item_name ?? "",
@@ -213,8 +248,20 @@ function RewardForm({
       className="space-y-5"
     >
       <div className="space-y-2">
-        <Label htmlFor="market_item_name">Market Item Name</Label>
-        <Input id="market_item_name" placeholder="AWP | Asiimov (Field-Tested)" required {...field("market_item_name")} />
+        <div className="flex items-center justify-between">
+          <Label htmlFor="market_item_name">Market Item Name</Label>
+          {isEdit && (
+            <span className="text-xs text-muted-foreground">Cannot be changed after creation</span>
+          )}
+        </div>
+        <Input
+          id="market_item_name"
+          placeholder="AWP | Asiimov (Field-Tested)"
+          required
+          disabled={isEdit}
+          className={cn(isEdit && "opacity-70 bg-muted/40 cursor-not-allowed")}
+          {...field("market_item_name")}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="twitch_title">Twitch Reward Title</Label>
@@ -227,7 +274,7 @@ function RewardForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="twitch_price_markup_percentage">Price Markup %</Label>
-          <Input id="twitch_price_markup_percentage" type="number" min={0} max={500} required {...field("twitch_price_markup_percentage")} />
+          <Input id="twitch_price_markup_percentage" type="number" min={0} max={4900} required {...field("twitch_price_markup_percentage")} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="permissible_market_price_deviation">Max Deviation %</Label>
@@ -316,9 +363,36 @@ function RewardEditDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg">{reward.twitch_title}</DialogTitle>
-          <DialogDescription>
-            {reward.market_item_name} · {formatMinorCurrency(reward.current_market_price, reward.currency)}
+          <div className="flex items-center justify-between gap-2 flex-wrap pr-6">
+            <DialogTitle className="text-lg">{reward.twitch_title}</DialogTitle>
+            {reward.is_paused && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-xs gap-1",
+                  reward.pause_reason === "NO_MONEY"
+                    ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
+                    : "status-failed-refund"
+                )}
+              >
+                <IconPause />
+                {reward.pause_reason === "NO_MONEY" ? "Paused (No balance)" : "Paused"}
+              </Badge>
+            )}
+          </div>
+          <DialogDescription className="flex items-center gap-1.5 flex-wrap">
+            <a
+              href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-1 font-medium"
+              title={`View "${reward.market_item_name}" on Market`}
+            >
+              <span>{reward.market_item_name}</span>
+              <IconExternalLink />
+            </a>
+            <span>·</span>
+            <span>{formatMinorCurrency(reward.current_market_price, reward.currency)}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -371,7 +445,11 @@ function RewardEditDialog({
           <TabsContent value="edit" className="mt-4">
             <RewardForm
               initial={reward}
-              onSubmit={(data) => updateMutation.mutate(data)}
+              isEdit={true}
+              onSubmit={(data) => {
+                const { market_item_name: _, ...updateData } = data;
+                updateMutation.mutate(updateData);
+              }}
               loading={updateMutation.isPending}
             />
           </TabsContent>

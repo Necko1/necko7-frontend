@@ -81,9 +81,12 @@ export interface GrantPermissionBody {
 
 // ===== Rewards =====
 
+export type PauseReason = "MANUAL" | "NO_MONEY";
+
 export interface RewardResponse {
   twitch_id: string;
   is_paused: boolean;
+  pause_reason: PauseReason | null;
   is_deleted: boolean;
   streamer_id: string;
   market_item_name: string;
@@ -125,6 +128,13 @@ export interface UpdateRewardBody {
   max_redemptions_per_user_per_stream?: number | null;
   market_autobuy?: boolean | null;
   is_paused?: boolean | null;
+  pause_reason?: PauseReason | null;
+}
+
+export interface ListRewardsQuery {
+  is_paused?: boolean | null;
+  is_deleted?: boolean | null;
+  pause_reason?: PauseReason | null;
 }
 
 export type BatchAction = "pause" | "unpause" | "delete";

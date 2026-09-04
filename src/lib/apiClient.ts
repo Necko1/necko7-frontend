@@ -14,6 +14,7 @@ import type {
   CreateRewardBody,
   UpdateRewardBody,
   BatchRewardBody,
+  ListRewardsQuery,
   PaginatedRedemptionsResponse,
   ListRedemptionsQuery,
   StatsResponse,
@@ -88,7 +89,7 @@ export const permissionsApi = {
 // ===== Rewards =====
 
 export const rewardsApi = {
-  list: (channelId: string, params?: { is_paused?: boolean | null; is_deleted?: boolean | null }) =>
+  list: (channelId: string, params?: ListRewardsQuery) =>
     api.get<RewardResponse[]>(`/api/v1/broadcasters/${channelId}/rewards`, {
       params,
     }),
