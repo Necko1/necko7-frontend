@@ -151,6 +151,7 @@ export interface RedemptionResponse {
   twitch_points_cost: number;
   currency: string;
   market_paid_price: number | null;
+  retry_count: number;
   fail_cause: string | null;
   fail_description: string | null;
   status: RedemptionStatus;

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -133,16 +133,16 @@ function GeneralTab({ channelId }: { channelId: string }) {
       <Section title="Pricing" description="Control how market prices translate into Twitch channel point costs.">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="base_price_multiplier">Base Price Multiplier (%)</Label>
+            <Label htmlFor="base_price_multiplier">Base Price Multiplier</Label>
             <Input
               id="base_price_multiplier"
               type="number"
-              min={100}
+              min={1}
               value={form.base_price_multiplier ?? ""}
               onChange={(e) => set("base_price_multiplier", Number(e.target.value))}
             />
             <p className="text-xs text-muted-foreground">
-              e.g. 150 = 1.5× the market price
+              Points per 1 major currency unit (e.g. 200 = 200 pts per 1 RUB/USD)
             </p>
           </div>
           <div className="space-y-2">

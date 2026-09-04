@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
-import { rewardsApi, redemptionsApi } from "@/lib/apiClient";
+import { rewardsApi } from "@/lib/apiClient";
 import type { RewardResponse, CreateRewardBody, UpdateRewardBody } from "@/types/api";
+import { formatMinorCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +78,7 @@ function RewardCard({
   onSelect: (id: string, checked: boolean) => void;
   onClick: () => void;
 }) {
-  const priceRub = (reward.current_market_price / 100).toFixed(2);
+  const formattedPrice = formatMinorCurrency(reward.current_market_price, reward.currency);
 
   return (
     <div
@@ -145,7 +146,7 @@ function RewardCard({
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
           <p className="text-xs text-muted-foreground">Market price</p>
-          <p className="text-sm font-bold tabular-nums text-foreground">₽{priceRub}</p>
+          <p className="text-sm font-bold tabular-nums text-foreground">{formattedPrice}</p>
         </div>
         <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
           <p className="text-xs text-muted-foreground">Markup</p>
@@ -313,7 +314,9 @@ function RewardEditSheet({
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-left">{reward.twitch_title}</SheetTitle>
-          <SheetDescription className="text-left">{reward.market_item_name}</SheetDescription>
+          <SheetDescription className="text-left">
+            {reward.market_item_name} · {formatMinorCurrency(reward.current_market_price, reward.currency)}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">

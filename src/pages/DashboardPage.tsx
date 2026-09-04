@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { formatMajorCurrency, formatMinorCurrency } from "@/lib/currency";
 
 // ── Stat Card ──────────────────────────────────────────────────────────────
 interface StatCardProps {
@@ -83,11 +84,6 @@ const IconWallet = () => (
 );
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function formatCurrency(cents: number, currency: string) {
-  const amount = cents / 100;
-  if (currency === "RUB") return `₽${amount.toLocaleString("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
-  return `${amount.toLocaleString("en-US", { style: "currency", currency })}`;
-}
 
 function NoBroadcaster({ broadcasters }: { broadcasters: { channel_id: string }[] }) {
   const navigate = useNavigate();
@@ -238,7 +234,7 @@ export default function DashboardPage() {
           title="Total Spent on Market"
           value={
             stats
-              ? formatCurrency(stats.total_spent, balance?.currency ?? "RUB")
+              ? formatMinorCurrency(stats.total_spent, balance?.currency ?? "RUB")
               : "–"
           }
           subtitle="From completed redemptions"
@@ -249,12 +245,12 @@ export default function DashboardPage() {
           title="Market Balance"
           value={
             balance
-              ? formatCurrency(balance.money * 100, balance.currency)
+              ? formatMajorCurrency(balance.money, balance.currency)
               : balanceLoading ? "–" : "N/A"
           }
           subtitle={
             balance
-              ? `Settlement: ${formatCurrency(balance.money_settlement * 100, balance.currency)}${(() => {
+              ? `Settlement: ${formatMajorCurrency(balance.money_settlement, balance.currency)}${(() => {
                   try {
                     return ` · Updated ${format(new Date(balance.updated_at), "HH:mm")}`;
                   } catch {

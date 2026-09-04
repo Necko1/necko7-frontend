@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { formatMinorCurrency } from "@/lib/currency";
 
 // ── Status helpers ─────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<RedemptionStatus, string> = {
@@ -90,6 +91,11 @@ function RedemptionRow({
         <Badge className={cn("text-xs shrink-0 rounded-md px-2 py-0.5 font-medium border", STATUS_CLASSES[redemption.status])}>
           {STATUS_LABELS[redemption.status]}
         </Badge>
+        {redemption.retry_count > 0 && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-500 bg-amber-500/10 font-normal shrink-0">
+            {redemption.retry_count} {redemption.retry_count === 1 ? "retry" : "retries"}
+          </Badge>
+        )}
         <span className="text-sm font-medium text-foreground shrink-0">@{redemption.user_login}</span>
         {!compact && (
           <span className="text-xs text-muted-foreground ml-auto shrink-0">
@@ -119,12 +125,20 @@ function RedemptionRow({
               <p className="text-foreground">{redemption.user_id}</p>
             </div>
             <div>
+              <p className="text-muted-foreground mb-0.5">Retry Count</p>
+              <p className="text-foreground tabular-nums">{redemption.retry_count}</p>
+            </div>
+            <div>
               <p className="text-muted-foreground mb-0.5">Market Paid</p>
               <p className="text-foreground tabular-nums">
                 {redemption.market_paid_price != null
-                  ? `₽${(redemption.market_paid_price / 100).toFixed(2)}`
+                  ? formatMinorCurrency(redemption.market_paid_price, redemption.currency)
                   : "–"}
               </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground mb-0.5">Points Cost</p>
+              <p className="text-foreground tabular-nums">{redemption.twitch_points_cost.toLocaleString()} pts</p>
             </div>
             <div>
               <p className="text-muted-foreground mb-0.5">Created</p>
