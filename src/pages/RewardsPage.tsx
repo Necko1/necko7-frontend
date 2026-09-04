@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
 import { rewardsApi } from "@/lib/apiClient";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import RedemptionList from "@/components/redemptions/RedemptionList";
+import { config } from "@/config";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 const IconPlus = () => (
@@ -71,6 +72,248 @@ const IconExternalLink = () => (
     <line x1="10" y1="14" x2="21" y2="3" />
   </svg>
 );
+const IconDownload = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+const IconImage = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+    <polyline points="21 15 16 10 5 21" />
+  </svg>
+);
+
+// Direct CDN URL — for <img> display only (no CORS header, browser shows fine)
+function getSkinImageUrl(marketItemName: string, size: 150 | 300 = 150): string {
+  return `https://cdn2.csgo.com/item/${encodeURIComponent(marketItemName)}/${size}.png`;
+}
+
+// Proxied URL — for canvas pixel access (proxy adds Access-Control-Allow-Origin: *)
+// Uses the same backend as the rest of the API (config.API_BASE_URL).
+function getSkinImageUrlProxied(marketItemName: string, size: 150 | 300 = 300): string {
+  const cdnUrl = getSkinImageUrl(marketItemName, size);
+  const base = config.API_BASE_URL.replace(/\/$/, "");
+  return `${base}/api/v1/proxy/image?url=${encodeURIComponent(cdnUrl)}`;
+}
+
+// ── SkinImage: renders skin with center-crop to square ─────────────────────
+function SkinImage({
+  marketItemName,
+  size = 150,
+  className,
+  style,
+}: {
+  marketItemName: string;
+  size?: 150 | 300;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
+  const url = getSkinImageUrl(marketItemName, size);
+
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden bg-gradient-to-br from-background/80 to-muted/40 flex items-center justify-center",
+        className
+      )}
+      style={style}
+    >
+      {status === "loading" && (
+        <div className="absolute inset-0 animate-pulse bg-muted/40 rounded-inherit" />
+      )}
+      {status === "error" && (
+        <div className="flex flex-col items-center gap-1.5 text-muted-foreground/40">
+          <IconImage />
+          <span className="text-[10px]">No preview</span>
+        </div>
+      )}
+      <img
+        src={url}
+        alt={marketItemName}
+        crossOrigin="anonymous"
+        onLoad={() => setStatus("ok")}
+        onError={() => setStatus("error")}
+        style={{
+          /* 150x113 → crop to square by clipping height-based center */
+          display: status === "error" ? "none" : "block",
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          objectPosition: "center",
+          opacity: status === "ok" ? 1 : 0,
+          transition: "opacity 0.3s ease",
+        }}
+      />
+    </div>
+  );
+}
+
+// ── SkinIconDownloader: browser-side crop + multi-size download ─────────────
+function SkinIconDownloader({
+  marketItemName,
+  open,
+  onClose,
+}: {
+  marketItemName: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const buildCroppedCanvas = useCallback(
+    (targetSize: number): HTMLCanvasElement | null => {
+      const src = canvasRef.current;
+      if (!src) return null;
+      const dst = document.createElement("canvas");
+      dst.width = targetSize;
+      dst.height = targetSize;
+      const ctx = dst.getContext("2d");
+      if (!ctx) return null;
+      // Render from the 300x225 original (stored in canvasRef as 300x225)
+      // Centre-crop to 225x225, then scale to targetSize
+      const srcW = src.width;   // 300
+      const srcH = src.height;  // 225
+      const cropSide = Math.min(srcW, srcH); // 225
+      const offsetX = (srcW - cropSide) / 2;
+      const offsetY = (srcH - cropSide) / 2;
+      ctx.drawImage(src, offsetX, offsetY, cropSide, cropSide, 0, 0, targetSize, targetSize);
+      return dst;
+    },
+    []
+  );
+
+  // Load the 300-size image into an offscreen canvas when dialog opens
+  useEffect(() => {
+    if (!open) {
+      setPreviewUrl(null);
+      setIsReady(false);
+      setError(null);
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setIsReady(false);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    // Must load via proxy: cdn2.csgo.com has no CORS headers,
+    // which would taint the canvas and block toDataURL().
+    img.src = getSkinImageUrlProxied(marketItemName, 300);
+    img.onload = () => {
+      const cv = canvasRef.current;
+      if (!cv) return;
+      cv.width = img.naturalWidth;
+      cv.height = img.naturalHeight;
+      const ctx = cv.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0);
+      // Generate 112px preview
+      const preview = buildCroppedCanvas(112);
+      if (preview) setPreviewUrl(preview.toDataURL("image/png"));
+      setIsReady(true);
+      setIsLoading(false);
+    };
+    img.onerror = () => {
+      setError("Failed to load skin image. The item name may not match the market exactly.");
+      setIsLoading(false);
+    };
+  }, [open, marketItemName, buildCroppedCanvas]);
+
+  const download = (targetSize: number) => {
+    const dst = buildCroppedCanvas(targetSize);
+    if (!dst) return;
+    const link = document.createElement("a");
+    const safeName = marketItemName.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+    link.download = `${safeName}_${targetSize}x${targetSize}.png`;
+    link.href = dst.toDataURL("image/png");
+    link.click();
+  };
+
+  const SIZES = [28, 56, 112] as const;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-base">Download Twitch Panel Icon</DialogTitle>
+          <DialogDescription className="text-xs leading-relaxed">
+            Center-cropped to a perfect square. Download in the sizes accepted by Twitch reward panels.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Hidden canvas for pixel processing */}
+        <canvas ref={canvasRef} style={{ display: "none" }} />
+
+        <div className="flex flex-col items-center gap-5 mt-2">
+          {/* Preview */}
+          <div
+            className="relative rounded-xl overflow-hidden border border-border shadow-inner"
+            style={{ width: 112, height: 112, background: "var(--muted)" }}
+          >
+            {isLoading && (
+              <div className="absolute inset-0 animate-pulse bg-muted/60 flex items-center justify-center">
+                <span className="text-[10px] text-muted-foreground">Loading…</span>
+              </div>
+            )}
+            {previewUrl && (
+              <img
+                src={previewUrl}
+                alt="Preview"
+                width={112}
+                height={112}
+                style={{ imageRendering: "pixelated", display: "block" }}
+              />
+            )}
+            {!isLoading && !previewUrl && !error && (
+              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/40">
+                <IconImage />
+              </div>
+            )}
+            <div className="absolute bottom-1 right-1 rounded bg-black/50 px-1 py-0.5 text-[9px] text-white/80 font-mono">112×112</div>
+          </div>
+
+          {error && (
+            <p className="text-xs text-destructive text-center max-w-xs leading-relaxed">{error}</p>
+          )}
+
+          {/* Item name */}
+          <p className="text-xs text-muted-foreground text-center truncate max-w-full px-2">{marketItemName}</p>
+
+          {/* Download buttons */}
+          <div className="flex items-center gap-2 w-full">
+            {SIZES.map((sz) => (
+              <button
+                key={sz}
+                onClick={() => download(sz)}
+                disabled={!isReady}
+                className={cn(
+                  "flex-1 flex flex-col items-center gap-1 rounded-xl border border-border py-3 px-2 transition-all",
+                  "hover:border-primary/50 hover:bg-primary/5 disabled:opacity-40 disabled:cursor-not-allowed",
+                  "text-foreground font-medium"
+                )}
+              >
+                <IconDownload />
+                <span className="text-xs tabular-nums">{sz}×{sz}</span>
+              </button>
+            ))}
+          </div>
+
+          <p className="text-[10px] text-muted-foreground/60 text-center">
+            Images are cropped client-side in your browser. Nothing is uploaded.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // ── Reward Card ────────────────────────────────────────────────────────────
 function RewardCard({
@@ -90,107 +333,117 @@ function RewardCard({
     <div
       onClick={onClick}
       className={cn(
-        "relative rounded-2xl border bg-card p-5 cursor-pointer transition-all duration-200 group",
+        "relative rounded-2xl border bg-card cursor-pointer transition-all duration-200 group overflow-hidden",
         "hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
         selected && "border-primary/60 bg-primary/5 shadow-md shadow-primary/10",
         reward.is_paused && !selected && "opacity-60",
         reward.is_deleted && "opacity-40 pointer-events-none"
       )}
     >
-      {/* Checkbox */}
-      <div
-        className="absolute top-4 right-4 z-10"
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(reward.twitch_id, !selected);
-        }}
-      >
+      {/* Skin image banner */}
+      <SkinImage
+        marketItemName={reward.market_item_name}
+        size={150}
+        className="w-full rounded-t-2xl"
+        style={{ height: 90 }}
+      />
+
+      <div className="p-4">
+        {/* Checkbox */}
         <div
-          className={cn(
-            "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
-            selected
-              ? "bg-primary border-primary"
-              : "border-border opacity-0 group-hover:opacity-100"
-          )}
+          className="absolute top-3 right-3 z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(reward.twitch_id, !selected);
+          }}
         >
-          {selected && (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          )}
-        </div>
-      </div>
-
-      {/* Status badges */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {reward.is_paused && (
-          <Badge
-            variant="outline"
+          <div
             className={cn(
-              "text-xs gap-1",
-              reward.pause_reason === "NO_MONEY"
-                ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
-                : "status-failed-refund"
+              "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all backdrop-blur-sm",
+              selected
+                ? "bg-primary border-primary"
+                : "border-white/60 bg-black/30 opacity-0 group-hover:opacity-100"
             )}
-            title={
-              reward.pause_reason === "NO_MONEY"
-                ? "Paused automatically: insufficient balance on Market"
-                : "Paused manually"
-            }
           >
-            <IconPause />
-            {reward.pause_reason === "NO_MONEY" ? "Paused (No balance)" : "Paused"}
-          </Badge>
-        )}
-        {reward.market_autobuy && (
-          <Badge variant="outline" className="status-completed text-xs">
-            Auto-buy
-          </Badge>
-        )}
-        {reward.is_deleted && (
-          <Badge variant="outline" className="text-xs text-muted-foreground">
-            Deleted
-          </Badge>
-        )}
-      </div>
-
-      {/* Title */}
-      <h3 className="font-semibold text-foreground text-sm leading-tight mb-1 pr-6 line-clamp-2">
-        {reward.twitch_title}
-      </h3>
-      <div className="mb-4">
-        <a
-          href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-1 transition-colors max-w-full"
-          title={`View "${reward.market_item_name}" on Market`}
-        >
-          <span className="truncate">{reward.market_item_name}</span>
-          <IconExternalLink />
-        </a>
-      </div>
-
-      {/* Price info */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
-          <p className="text-xs text-muted-foreground">Market price</p>
-          <p className="text-sm font-bold tabular-nums text-foreground">{formattedPrice}</p>
+            {selected && (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </div>
         </div>
-        <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
-          <p className="text-xs text-muted-foreground">Markup</p>
-          <p className="text-sm font-bold tabular-nums text-primary">+{reward.twitch_price_markup_percentage}%</p>
-        </div>
-      </div>
 
-      {/* Footer meta */}
-      <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-muted-foreground">
-        <span>CD: {reward.global_cooldown_seconds}s</span>
-        <span>·</span>
-        <span>Max/stream: {reward.max_redemptions_per_stream}</span>
-        <span>·</span>
-        <span>Max/user/stream: {reward.max_redemptions_per_user_per_stream}</span>
+        {/* Status badges */}
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {reward.is_paused && (
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-xs gap-1",
+                reward.pause_reason === "NO_MONEY"
+                  ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
+                  : "status-failed-refund"
+              )}
+              title={
+                reward.pause_reason === "NO_MONEY"
+                  ? "Paused automatically: insufficient balance on Market"
+                  : "Paused manually"
+              }
+            >
+              <IconPause />
+              {reward.pause_reason === "NO_MONEY" ? "Paused (No balance)" : "Paused"}
+            </Badge>
+          )}
+          {reward.market_autobuy && (
+            <Badge variant="outline" className="status-completed text-xs">
+              Auto-buy
+            </Badge>
+          )}
+          {reward.is_deleted && (
+            <Badge variant="outline" className="text-xs text-muted-foreground">
+              Deleted
+            </Badge>
+          )}
+        </div>
+
+        {/* Title */}
+        <h3 className="font-semibold text-foreground text-sm leading-tight mb-1 pr-6 line-clamp-2">
+          {reward.twitch_title}
+        </h3>
+        <div className="mb-3">
+          <a
+            href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-1 transition-colors max-w-full"
+            title={`View "${reward.market_item_name}" on Market`}
+          >
+            <span className="truncate">{reward.market_item_name}</span>
+            <IconExternalLink />
+          </a>
+        </div>
+
+        {/* Price info */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+            <p className="text-xs text-muted-foreground">Market price</p>
+            <p className="text-sm font-bold tabular-nums text-foreground">{formattedPrice}</p>
+          </div>
+          <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+            <p className="text-xs text-muted-foreground">Markup</p>
+            <p className="text-sm font-bold tabular-nums text-primary">+{reward.twitch_price_markup_percentage}%</p>
+          </div>
+        </div>
+
+        {/* Footer meta */}
+        <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-muted-foreground">
+          <span>CD: {reward.global_cooldown_seconds}s</span>
+          <span>·</span>
+          <span>Max/stream: {reward.max_redemptions_per_stream}</span>
+          <span>·</span>
+          <span>Max/user/stream: {reward.max_redemptions_per_user_per_stream}</span>
+        </div>
       </div>
     </div>
   );
@@ -357,109 +610,139 @@ function RewardEditDialog({
     },
   });
 
+  const [showIconDownloader, setShowIconDownloader] = useState(false);
+
   if (!reward) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between gap-2 flex-wrap pr-6">
-            <DialogTitle className="text-lg">{reward.twitch_title}</DialogTitle>
-            {reward.is_paused && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-xs gap-1",
-                  reward.pause_reason === "NO_MONEY"
-                    ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
-                    : "status-failed-refund"
-                )}
-              >
-                <IconPause />
-                {reward.pause_reason === "NO_MONEY" ? "Paused (No balance)" : "Paused"}
-              </Badge>
-            )}
-          </div>
-          <DialogDescription className="flex items-center gap-1.5 flex-wrap">
-            <a
-              href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline inline-flex items-center gap-1 font-medium"
-              title={`View "${reward.market_item_name}" on Market`}
+    <>
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-start gap-4 pr-6">
+              {/* Skin thumbnail */}
+              <SkinImage
+                marketItemName={reward.market_item_name}
+                size={150}
+                className="rounded-xl flex-shrink-0 border border-border"
+                style={{ width: 96, height: 72 }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <DialogTitle className="text-lg">{reward.twitch_title}</DialogTitle>
+                  {reward.is_paused && (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs gap-1",
+                        reward.pause_reason === "NO_MONEY"
+                          ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
+                          : "status-failed-refund"
+                      )}
+                    >
+                      <IconPause />
+                      {reward.pause_reason === "NO_MONEY" ? "Paused (No balance)" : "Paused"}
+                    </Badge>
+                  )}
+                </div>
+                <DialogDescription className="flex items-center gap-1.5 flex-wrap mt-1">
+                  <a
+                    href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1 font-medium"
+                    title={`View "${reward.market_item_name}" on Market`}
+                  >
+                    <span>{reward.market_item_name}</span>
+                    <IconExternalLink />
+                  </a>
+                  <span>·</span>
+                  <span>{formatMinorCurrency(reward.current_market_price, reward.currency)}</span>
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Action bar */}
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 text-xs"
+              onClick={() => updatePriceMutation.mutate()}
+              disabled={updatePriceMutation.isPending}
             >
-              <span>{reward.market_item_name}</span>
-              <IconExternalLink />
-            </a>
-            <span>·</span>
-            <span>{formatMinorCurrency(reward.current_market_price, reward.currency)}</span>
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Action bar */}
-        <div className="flex flex-wrap items-center gap-2 mt-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 text-xs"
-            onClick={() => updatePriceMutation.mutate()}
-            disabled={updatePriceMutation.isPending}
-          >
-            <IconRefresh />
-            Update Price
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 text-xs"
-            onClick={() =>
-              updateMutation.mutate({ is_paused: !reward.is_paused })
-            }
-            disabled={updateMutation.isPending}
-          >
-            {reward.is_paused ? <IconPlay /> : <IconPause />}
-            {reward.is_paused ? "Unpause" : "Pause"}
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            className="gap-1.5 text-xs"
-            onClick={() => {
-              if (confirm(`Delete "${reward.twitch_title}"?`)) deleteMutation.mutate();
-            }}
-            disabled={deleteMutation.isPending}
-          >
-            <IconTrash />
-            Delete
-          </Button>
-        </div>
-
-        <Separator className="my-2" />
-
-        <Tabs defaultValue="edit" className="w-full">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="edit">Edit Reward</TabsTrigger>
-            <TabsTrigger value="redemptions">Recent Redemptions</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="edit" className="mt-4">
-            <RewardForm
-              initial={reward}
-              isEdit={true}
-              onSubmit={(data) => {
-                const { market_item_name: _, ...updateData } = data;
-                updateMutation.mutate(updateData);
+              <IconRefresh />
+              Update Price
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 text-xs"
+              onClick={() =>
+                updateMutation.mutate({ is_paused: !reward.is_paused })
+              }
+              disabled={updateMutation.isPending}
+            >
+              {reward.is_paused ? <IconPlay /> : <IconPause />}
+              {reward.is_paused ? "Unpause" : "Pause"}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="gap-1.5 text-xs"
+              onClick={() => {
+                if (confirm(`Delete "${reward.twitch_title}"?`)) deleteMutation.mutate();
               }}
-              loading={updateMutation.isPending}
-            />
-          </TabsContent>
+              disabled={deleteMutation.isPending}
+            >
+              <IconTrash />
+              Delete
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 text-xs ml-auto"
+              onClick={() => setShowIconDownloader(true)}
+            >
+              <IconDownload />
+              Download Icon
+            </Button>
+          </div>
 
-          <TabsContent value="redemptions" className="mt-4">
-            <RedemptionList channelId={channelId} rewardId={reward.twitch_id} compact />
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+          <Separator className="my-2" />
+
+          <Tabs defaultValue="edit" className="w-full">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="edit">Edit Reward</TabsTrigger>
+              <TabsTrigger value="redemptions">Recent Redemptions</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="edit" className="mt-4">
+              <RewardForm
+                initial={reward}
+                isEdit={true}
+                onSubmit={(data) => {
+                  const { market_item_name: _, ...updateData } = data;
+                  updateMutation.mutate(updateData);
+                }}
+                loading={updateMutation.isPending}
+              />
+            </TabsContent>
+
+            <TabsContent value="redemptions" className="mt-4">
+              <RedemptionList channelId={channelId} rewardId={reward.twitch_id} compact />
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      <SkinIconDownloader
+        marketItemName={reward.market_item_name}
+        open={showIconDownloader}
+        onClose={() => setShowIconDownloader(false)}
+      />
+    </>
   );
 }
 
