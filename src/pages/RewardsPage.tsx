@@ -135,7 +135,6 @@ function SkinImage({
       <img
         src={url}
         alt={marketItemName}
-        crossOrigin="anonymous"
         onLoad={() => setStatus("ok")}
         onError={() => setStatus("error")}
         style={{
@@ -702,7 +701,7 @@ function RewardEditDialog({
             <Button
               size="sm"
               variant="outline"
-              className="gap-1.5 text-xs ml-auto"
+              className="gap-1.5 text-xs"
               onClick={() => setShowIconDownloader(true)}
             >
               <IconDownload />
