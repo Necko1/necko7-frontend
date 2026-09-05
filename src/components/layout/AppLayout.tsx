@@ -186,7 +186,6 @@ export default function AppLayout() {
               <div className="flex items-center gap-3 p-2.5 rounded-xl bg-sidebar-accent group">
                 <Avatar className="h-9 w-9 ring-2 ring-primary/30 shrink-0">
                   <AvatarImage
-                    src={`https://static-cdn.jtvnw.net/jtv_user_pictures/${selectedBroadcaster.channel_login}-profile_image-70x70.png`}
                     alt={selectedBroadcaster.channel_login}
                   />
                   <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">

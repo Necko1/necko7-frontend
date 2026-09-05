@@ -181,7 +181,6 @@ export default function ChannelsPage() {
                 <div className="flex items-start justify-between">
                   <Avatar className="h-14 w-14 rounded-xl ring-2 ring-primary/20 shrink-0">
                     <AvatarImage
-                      src={`https://static-cdn.jtvnw.net/jtv_user_pictures/${b.channel_login}-profile_image-300x300.png`}
                       alt={b.channel_login}
                     />
                     <AvatarFallback className="text-base font-bold bg-primary text-primary-foreground rounded-xl">
