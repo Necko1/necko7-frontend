@@ -82,6 +82,54 @@ export interface GrantPermissionBody {
 // ===== Rewards =====
 
 export type PauseReason = "MANUAL" | "NO_MONEY";
+export type RewardType = "FIXED" | "POOL" | "FILTER";
+export type PricingMode = "AUTO" | "MANUAL";
+export type PriceStrategy = "AVERAGE" | "MEDIAN" | "MAX";
+
+export interface FilterConfig {
+  min_price: number;
+  max_price: number;
+  min_volume?: number | null;
+  name_contains?: string | null;
+  name_prefix?: string | null;
+  name_suffix?: string | null;
+}
+
+export interface PoolItemConfig {
+  market_hash_name: string;
+  weight: number;
+  permissible_market_price_deviation: number;
+  current_market_price?: number;
+}
+
+export interface MarketPriceItem {
+  market_hash_name: string;
+  price: number;
+  volume?: number;
+}
+
+export interface PreviewFilterBody {
+  filter_config: FilterConfig;
+  currency?: string | null;
+  price_strategy?: PriceStrategy | null;
+  twitch_price_markup_percentage?: number | null;
+}
+
+export interface PreviewFilterResponse {
+  total_matching_items: number;
+  min_price: number;
+  max_price: number;
+  average_price: number;
+  median_price: number;
+  calculated_market_price: number;
+  estimated_twitch_points: number;
+  currency: string;
+  sample_items: MarketPriceItem[];
+}
+
+export interface ImageProxyParams {
+  url: string;
+}
 
 export interface RewardResponse {
   twitch_id: string;
@@ -89,7 +137,12 @@ export interface RewardResponse {
   pause_reason: PauseReason | null;
   is_deleted: boolean;
   streamer_id: string;
-  market_item_name: string;
+  reward_type: RewardType;
+  pricing_mode: PricingMode;
+  price_strategy?: PriceStrategy | null;
+  market_item_name?: string | null;
+  pool_items?: PoolItemConfig[] | null;
+  filter_config?: FilterConfig | null;
   twitch_title: string;
   twitch_description: string;
   current_market_price: number;
@@ -105,7 +158,13 @@ export interface RewardResponse {
 }
 
 export interface CreateRewardBody {
-  market_item_name: string;
+  reward_type?: RewardType;
+  pricing_mode?: PricingMode;
+  price_strategy?: PriceStrategy | null;
+  manual_twitch_points?: number | null;
+  market_item_name?: string | null;
+  pool_items?: PoolItemConfig[] | null;
+  filter_config?: FilterConfig | null;
   twitch_title: string;
   twitch_description: string;
   permissible_market_price_deviation: number;
@@ -118,6 +177,13 @@ export interface CreateRewardBody {
 }
 
 export interface UpdateRewardBody {
+  reward_type?: RewardType | null;
+  pricing_mode?: PricingMode | null;
+  price_strategy?: PriceStrategy | null;
+  manual_twitch_points?: number | null;
+  market_item_name?: string | null;
+  pool_items?: PoolItemConfig[] | null;
+  filter_config?: FilterConfig | null;
   twitch_title?: string | null;
   twitch_description?: string | null;
   current_market_price?: number | null;
@@ -166,6 +232,7 @@ export interface RedemptionResponse {
   twitch_points_cost: number;
   currency: string;
   market_paid_price: number | null;
+  market_item_name?: string | null;
   retry_count: number;
   fail_cause: string | null;
   fail_description: string | null;

@@ -15,6 +15,8 @@ import type {
   UpdateRewardBody,
   BatchRewardBody,
   ListRewardsQuery,
+  PreviewFilterBody,
+  PreviewFilterResponse,
   PaginatedRedemptionsResponse,
   ListRedemptionsQuery,
   StatsResponse,
@@ -119,6 +121,21 @@ export const rewardsApi = {
     api.post(
       `/api/v1/broadcasters/${channelId}/rewards/${rewardId}/update-price`
     ),
+
+  previewFilter: (channelId: string, body: PreviewFilterBody) =>
+    api.post<PreviewFilterResponse>(
+      `/api/v1/broadcasters/${channelId}/rewards/preview-filter`,
+      body
+    ),
+};
+
+// ===== Proxy =====
+
+export const proxyApi = {
+  imageUrl: (externalUrl: string): string => {
+    const base = config.API_BASE_URL.replace(/\/$/, "");
+    return `${base}/api/v1/proxy/image?url=${encodeURIComponent(externalUrl)}`;
+  },
 };
 
 // ===== Redemptions =====
