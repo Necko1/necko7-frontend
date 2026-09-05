@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
@@ -178,7 +178,12 @@ function LeaderboardColumn({
 }) {
   const [offset, setOffset] = useState(0);
   const [allItems, setAllItems] = useState<LeaderboardUserItem[]>([]);
-  const initialLoadDone = useRef(false);
+
+  // Reset when filters change
+  useEffect(() => {
+    setOffset(0);
+    setAllItems([]);
+  }, [channelId, sortBy, timeWindowHours, search]);
 
   const { data, isLoading, isFetching: colFetching } = useQuery({
     queryKey: ["leaderboard", channelId, sortBy, timeWindowHours, search, offset],
@@ -198,26 +203,17 @@ function LeaderboardColumn({
   });
 
   // Accumulate items across pages
-  const prevQueryKeyRef = useRef<string>("");
-  const queryKey = `${channelId}:${sortBy}:${timeWindowHours}:${search}`;
-
-  if (queryKey !== prevQueryKeyRef.current) {
-    prevQueryKeyRef.current = queryKey;
-    setOffset(0);
-    setAllItems([]);
-    initialLoadDone.current = false;
-  }
-
-  if (data && !colFetching) {
-    if (!initialLoadDone.current || offset > 0) {
-      const newIds = new Set(allItems.map((i) => i.chatter_user_id));
-      const toAdd = data.items.filter((i) => !newIds.has(i.chatter_user_id));
-      if (toAdd.length > 0 || !initialLoadDone.current) {
-        setAllItems((prev) => (offset === 0 ? data.items : [...prev, ...toAdd]));
-        initialLoadDone.current = true;
+  useEffect(() => {
+    if (!data) return;
+    setAllItems((prev) => {
+      if (offset === 0) {
+        return data.items;
       }
-    }
-  }
+      const existingIds = new Set(prev.map((i) => i.chatter_user_id));
+      const fresh = data.items.filter((i) => !existingIds.has(i.chatter_user_id));
+      return [...prev, ...fresh];
+    });
+  }, [data, offset]);
 
   const hasMore = data ? allItems.length < data.total : false;
 

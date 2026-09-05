@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
@@ -204,12 +204,22 @@ export default function ChatUserPage() {
   // Messages state
   const [msgOffset, setMsgOffset] = useState(0);
   const [allMessages, setAllMessages] = useState<ChatMessage[]>([]);
-  const msgPrevKeyRef = useRef("");
 
   // Redemptions state
   const [redOffset, setRedOffset] = useState(0);
   const [allRedemptions, setAllRedemptions] = useState<RedemptionResponse[]>([]);
-  const redPrevKeyRef = useRef("");
+
+  // Reset messages when filter changes
+  useEffect(() => {
+    setMsgOffset(0);
+    setAllMessages([]);
+  }, [channelId, userId, timeWindow]);
+
+  // Reset redemptions when channel or user changes
+  useEffect(() => {
+    setRedOffset(0);
+    setAllRedemptions([]);
+  }, [channelId, userId]);
 
   if (!channelId || !userId) {
     return (
@@ -238,13 +248,6 @@ export default function ChatUserPage() {
     staleTime: 30_000,
   });
 
-  const msgQueryKey = `${channelId}:${userId}:${timeWindow}`;
-  if (msgQueryKey !== msgPrevKeyRef.current) {
-    msgPrevKeyRef.current = msgQueryKey;
-    setMsgOffset(0);
-    setAllMessages([]);
-  }
-
   const { data: messagesData, isFetching: msgsFetching } = useQuery({
     queryKey: ["userMessages", channelId, userId, timeWindow, msgOffset],
     queryFn: () =>
@@ -261,20 +264,17 @@ export default function ChatUserPage() {
   });
 
   // Accumulate messages
-  if (messagesData && !msgsFetching) {
-    const newIds = new Set(allMessages.map((m) => m.id));
-    const toAdd = messagesData.items.filter((m) => !newIds.has(m.id));
-    if (toAdd.length > 0 || (msgOffset === 0 && allMessages.length === 0)) {
-      setAllMessages((prev) => (msgOffset === 0 ? messagesData.items : [...prev, ...toAdd]));
-    }
-  }
-
-  const redQueryKey = `${channelId}:${userId}:reds`;
-  if (redQueryKey !== redPrevKeyRef.current) {
-    redPrevKeyRef.current = redQueryKey;
-    setRedOffset(0);
-    setAllRedemptions([]);
-  }
+  useEffect(() => {
+    if (!messagesData) return;
+    setAllMessages((prev) => {
+      if (msgOffset === 0) {
+        return messagesData.items;
+      }
+      const existingIds = new Set(prev.map((m) => m.id));
+      const fresh = messagesData.items.filter((m) => !existingIds.has(m.id));
+      return [...prev, ...fresh];
+    });
+  }, [messagesData, msgOffset]);
 
   const { data: redemptionsData, isFetching: redsFetching } = useQuery({
     queryKey: ["userRedemptions", channelId, userId, redOffset],
@@ -291,15 +291,17 @@ export default function ChatUserPage() {
   });
 
   // Accumulate redemptions
-  if (redemptionsData && !redsFetching) {
-    const newIds = new Set(allRedemptions.map((r) => r.twitch_redemption_id));
-    const toAdd = redemptionsData.items.filter((r) => !newIds.has(r.twitch_redemption_id));
-    if (toAdd.length > 0 || (redOffset === 0 && allRedemptions.length === 0)) {
-      setAllRedemptions((prev) =>
-        redOffset === 0 ? redemptionsData.items : [...prev, ...toAdd]
-      );
-    }
-  }
+  useEffect(() => {
+    if (!redemptionsData) return;
+    setAllRedemptions((prev) => {
+      if (redOffset === 0) {
+        return redemptionsData.items;
+      }
+      const existingIds = new Set(prev.map((r) => r.twitch_redemption_id));
+      const fresh = redemptionsData.items.filter((r) => !existingIds.has(r.twitch_redemption_id));
+      return [...prev, ...fresh];
+    });
+  }, [redemptionsData, redOffset]);
 
   const msgHasMore = messagesData ? allMessages.length < messagesData.total : false;
   const redHasMore = redemptionsData ? allRedemptions.length < redemptionsData.total : false;
