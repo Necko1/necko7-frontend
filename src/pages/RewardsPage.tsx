@@ -104,11 +104,13 @@ function getSkinImageUrlProxied(marketItemName: string, size: 150 | 300 = 300): 
 function SkinImage({
   marketItemName,
   size = 150,
+  objectFit = "cover",
   className,
   style,
 }: {
   marketItemName: string;
   size?: 150 | 300;
+  objectFit?: "cover" | "contain";
   className?: string;
   style?: React.CSSProperties;
 }) {
@@ -138,11 +140,10 @@ function SkinImage({
         onLoad={() => setStatus("ok")}
         onError={() => setStatus("error")}
         style={{
-          /* 150x113 → crop to square by clipping height-based center */
           display: status === "error" ? "none" : "block",
           width: "100%",
           height: "100%",
-          objectFit: "cover",
+          objectFit,
           objectPosition: "center",
           opacity: status === "ok" ? 1 : 0,
           transition: "opacity 0.3s ease",
@@ -343,8 +344,8 @@ function RewardCard({
       <SkinImage
         marketItemName={reward.market_item_name}
         size={150}
-        className="w-full rounded-t-2xl"
-        style={{ height: 90 }}
+        objectFit="contain"
+        className="w-full rounded-t-2xl aspect-[150/113]"
       />
 
       <div className="p-4">
@@ -555,15 +556,17 @@ function RewardForm({
           />
           <span className="text-sm">Auto-buy from market</span>
         </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.is_paused}
-            onChange={(e) => setForm((f) => ({ ...f, is_paused: e.target.checked }))}
-            className="rounded accent-primary"
-          />
-          <span className="text-sm">Create as paused</span>
-        </label>
+        {!isEdit && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.is_paused}
+              onChange={(e) => setForm((f) => ({ ...f, is_paused: e.target.checked }))}
+              className="rounded accent-primary"
+            />
+            <span className="text-sm">Create as paused</span>
+          </label>
+        )}
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Saving…" : "Save Reward"}
