@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { config } from "@/config";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { GiftIcon } from "@hugeicons/core-free-icons";
 
 // Direct CDN URL for <img> display
 function getSkinImageUrl(marketItemName: string, size: 150 | 300 = 150): string {
@@ -14,27 +16,14 @@ function getSkinImageUrlProxied(marketItemName: string, size: 150 | 300 = 150): 
 }
 
 // Fallback icon for when no skin image is available or on error
-export function SkinFallbackIcon({ className }: { className?: string }) {
+export function SkinFallbackIcon({ className, size = 48 }: { className?: string; size?: number }) {
   return (
-    <svg
+    <HugeiconsIcon
+      icon={GiftIcon}
+      size={size}
+      strokeWidth={1.5}
       className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {/* Box bottom */}
-      <path d="M4.5 9.5a1.5 1.5 0 0 1 1.5-1.5h12a1.5 1.5 0 0 1 1.5 1.5v8a3 3 0 0 1-3 3H7.5a3 3 0 0 1-3-3v-8z" />
-      {/* Ribbon vertical */}
-      <path d="M12 8v13" />
-      {/* Lid */}
-      <rect x="3" y="6" width="18" height="3" rx="1.5" />
-      {/* Ribbon bows */}
-      <path d="M12 6C10.5 3.5 7.5 3.5 7.5 6s4.5 0 4.5 0z" />
-      <path d="M12 6C13.5 3.5 16.5 3.5 16.5 6s-4.5 0-4.5 0z" />
-    </svg>
+    />
   );
 }
 
@@ -68,7 +57,7 @@ export default function SkinImage({
           "w-full h-full flex items-center justify-center bg-primary/5"
         }
       >
-        <SkinFallbackIcon className="w-14 h-14 text-primary" />
+        <SkinFallbackIcon className="text-primary" size={size >= 300 ? 64 : 48} />
       </div>
     );
   }

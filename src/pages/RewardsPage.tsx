@@ -1774,7 +1774,7 @@ function RewardWizard({
                   className={cn(
                     "relative w-12 h-12 rounded-xl flex items-center justify-center transition-all shrink-0",
                     isCurrent
-                      ? "border-2 border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105"
+                      ? "border-2 border-primary bg-primary text-primary-foreground"
                       : isEdit || isPast
                       ? "border-2 border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary cursor-pointer"
                       : "border border-border bg-card/60 text-muted-foreground/40 cursor-not-allowed"
