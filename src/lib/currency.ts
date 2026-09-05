@@ -19,6 +19,11 @@ export function minorToMajor(minor: number, currency?: string | null): number {
   return minor / divisor;
 }
 
+export function majorToMinor(major: number, currency?: string | null): number {
+  const divisor = getCurrencyDivisor(currency);
+  return Math.round(major * divisor);
+}
+
 export function formatMajorCurrency(amount: number, currency?: string | null): string {
   const cur = currency?.toUpperCase() || "RUB";
   const formatted = amount.toLocaleString("en-US", {

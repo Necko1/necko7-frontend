@@ -9,12 +9,13 @@ import type {
   RewardType,
   PricingMode,
   PriceStrategy,
+  PauseReason,
   FilterConfig,
   PoolItemConfig,
   PreviewFilterBody,
   PreviewFilterResponse,
 } from "@/types/api";
-import { formatMinorCurrency } from "@/lib/currency";
+import { formatMinorCurrency, minorToMajor, majorToMinor } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -484,16 +485,24 @@ function RewardCard({
                 "text-xs gap-1",
                 reward.pause_reason === "NO_MONEY"
                   ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
+                  : reward.pause_reason === "PRICE_LIMIT"
+                  ? "border-orange-500/30 text-orange-400 bg-orange-500/10"
                   : "status-failed-refund"
               )}
               title={
                 reward.pause_reason === "NO_MONEY"
                   ? "Paused automatically: insufficient balance on Market"
+                  : reward.pause_reason === "PRICE_LIMIT"
+                  ? "Paused automatically: market price exceeded configured limits"
                   : "Paused manually"
               }
             >
               <IconPause />
-              {reward.pause_reason === "NO_MONEY" ? "Paused (No balance)" : "Paused"}
+              {reward.pause_reason === "NO_MONEY"
+                ? "Paused (No balance)"
+                : reward.pause_reason === "PRICE_LIMIT"
+                ? "Paused (Price limit)"
+                : "Paused"}
             </Badge>
           )}
           {reward.market_autobuy && (
@@ -584,6 +593,14 @@ function RewardCard({
           <span>Max/stream: {reward.max_redemptions_per_stream}</span>
           <span>·</span>
           <span>Max/user/stream: {reward.max_redemptions_per_user_per_stream}</span>
+          {(reward.min_market_price != null || reward.max_market_price != null) && (
+            <>
+              <span>·</span>
+              <span className="text-amber-400/90" title="Market Price Safety Limits">
+                Limits: {reward.min_market_price != null ? formatMinorCurrency(reward.min_market_price, reward.currency) : "0"} – {reward.max_market_price != null ? formatMinorCurrency(reward.max_market_price, reward.currency) : "∞"}
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -1276,6 +1293,71 @@ function StepPricing({
           )}
         </div>
       )}
+
+      {/* Market Price Safety Limits (Auto-pause) */}
+      <div className="space-y-3 rounded-xl border border-border bg-card/60 p-4">
+        <div className="space-y-1">
+          <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
+            <span>🛡️</span> Market Price Safety Limits (Auto-pause)
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Automatically pause this reward if market price drops below or rises above these limits.
+            Protects your Market balance against sudden price surges.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="min_market_price" className="text-xs">Min Market Price</Label>
+            <Input
+              id="min_market_price"
+              type="number"
+              min={0}
+              step={0.01}
+              placeholder="No minimum"
+              value={
+                form.min_market_price != null
+                  ? minorToMajor(form.min_market_price)
+                  : ""
+              }
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                if (val === "") {
+                  onChange({ min_market_price: null });
+                } else {
+                  const num = parseFloat(val);
+                  onChange({ min_market_price: isNaN(num) ? null : majorToMinor(num) });
+                }
+              }}
+            />
+            <p className="text-[11px] text-muted-foreground">Auto-pauses if price drops below</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="max_market_price" className="text-xs">Max Market Price</Label>
+            <Input
+              id="max_market_price"
+              type="number"
+              min={0}
+              step={0.01}
+              placeholder="No maximum"
+              value={
+                form.max_market_price != null
+                  ? minorToMajor(form.max_market_price)
+                  : ""
+              }
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                if (val === "") {
+                  onChange({ max_market_price: null });
+                } else {
+                  const num = parseFloat(val);
+                  onChange({ max_market_price: isNaN(num) ? null : majorToMinor(num) });
+                }
+              }}
+            />
+            <p className="text-[11px] text-muted-foreground">Auto-pauses if price rises above</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1399,6 +1481,8 @@ function RewardWizard({
     max_redemptions_per_user_per_stream: 0,
     market_autobuy: true,
     is_paused: false,
+    min_market_price: null,
+    max_market_price: null,
     ...initial,
   });
 
@@ -1429,6 +1513,8 @@ function RewardWizard({
       filter_config: form.filter_config ?? null,
       twitch_title: form.twitch_title ?? "",
       twitch_description: form.twitch_description ?? "",
+      min_market_price: form.min_market_price ?? null,
+      max_market_price: form.max_market_price ?? null,
       permissible_market_price_deviation: form.permissible_market_price_deviation ?? 10,
       twitch_price_markup_percentage: form.twitch_price_markup_percentage ?? 50,
       global_cooldown_seconds: form.global_cooldown_seconds ?? 60,
@@ -1635,11 +1721,17 @@ function RewardEditDialog({
                     "text-xs gap-1",
                     reward.pause_reason === "NO_MONEY"
                       ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
+                      : reward.pause_reason === "PRICE_LIMIT"
+                      ? "border-orange-500/30 text-orange-400 bg-orange-500/10"
                       : "status-failed-refund"
                   )}
                 >
                   <IconPause />
-                  {reward.pause_reason === "NO_MONEY" ? "Paused (No balance)" : "Paused"}
+                  {reward.pause_reason === "NO_MONEY"
+                    ? "Paused (No balance)"
+                    : reward.pause_reason === "PRICE_LIMIT"
+                    ? "Paused (Price limit)"
+                    : "Paused"}
                 </Badge>
               )}
             </div>
@@ -1729,6 +1821,21 @@ function RewardEditDialog({
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-5">
+              {/* PRICE_LIMIT warning alert if reward is auto-paused by price limit */}
+              {reward.is_paused && reward.pause_reason === "PRICE_LIMIT" && (
+                <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3.5 text-xs text-orange-200 flex items-start gap-2.5">
+                  <span className="text-base leading-none">⚠️</span>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-orange-300">Auto-paused by Market Price Limit</p>
+                    <p className="text-orange-200/90 leading-relaxed">
+                      Current market price is <strong>{formatMinorCurrency(reward.current_market_price, reward.currency)}</strong>, which is outside your configured safety limits
+                      {reward.min_market_price != null && ` (Min: ${formatMinorCurrency(reward.min_market_price, reward.currency)})`}
+                      {reward.max_market_price != null && ` (Max: ${formatMinorCurrency(reward.max_market_price, reward.currency)})`}.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* POOL: pool items detail */}
               {type === "POOL" && reward.pool_items?.length ? (
                 <PoolItemsDetail items={reward.pool_items} currency={reward.currency} />
@@ -1800,6 +1907,8 @@ function RewardEditDialog({
                   { label: "Auto-buy", val: reward.market_autobuy ? "Yes" : "No" },
                   { label: "Pricing", val: reward.pricing_mode === "MANUAL" ? "Manual" : "Auto" },
                   { label: "Markup", val: `+${reward.twitch_price_markup_percentage}%` },
+                  { label: "Min Price Limit", val: reward.min_market_price != null ? formatMinorCurrency(reward.min_market_price, reward.currency) : "None" },
+                  { label: "Max Price Limit", val: reward.max_market_price != null ? formatMinorCurrency(reward.max_market_price, reward.currency) : "None" },
                 ].map(({ label, val }) => (
                   <div key={label} className="rounded-lg bg-background/60 border border-border px-3 py-2">
                     <p className="text-muted-foreground mb-0.5">{label}</p>
@@ -1820,6 +1929,8 @@ function RewardEditDialog({
                   filter_config: reward.filter_config ?? undefined,
                   twitch_title: reward.twitch_title,
                   twitch_description: reward.twitch_description,
+                  min_market_price: reward.min_market_price ?? undefined,
+                  max_market_price: reward.max_market_price ?? undefined,
                   permissible_market_price_deviation: reward.permissible_market_price_deviation,
                   twitch_price_markup_percentage: reward.twitch_price_markup_percentage,
                   global_cooldown_seconds: reward.global_cooldown_seconds,
@@ -2006,6 +2117,7 @@ export default function RewardsPage() {
 
   const [search, setSearch] = useState("");
   const [filterPaused, setFilterPaused] = useState<"all" | "paused" | "active">("all");
+  const [filterPauseReason, setFilterPauseReason] = useState<"all" | PauseReason>("all");
   const [filterType, setFilterType] = useState<"all" | RewardType>("all");
   const [showDeleted, setShowDeleted] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -2039,8 +2151,18 @@ export default function RewardsPage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return rewards.filter((r) => {
-      if (filterPaused === "paused" && !r.is_paused) return false;
-      if (filterPaused === "active" && r.is_paused) return false;
+      if (filterPaused === "paused") {
+        if (!r.is_paused) return false;
+        if (filterPauseReason !== "all") {
+          if (filterPauseReason === "MANUAL") {
+            if (r.pause_reason && r.pause_reason !== "MANUAL") return false;
+          } else if (r.pause_reason !== filterPauseReason) {
+            return false;
+          }
+        }
+      } else if (filterPaused === "active") {
+        if (r.is_paused) return false;
+      }
       if (filterType !== "all" && (r.reward_type ?? "FIXED") !== filterType) return false;
       if (!q) return true;
       return (
@@ -2049,7 +2171,7 @@ export default function RewardsPage() {
         r.twitch_description.toLowerCase().includes(q)
       );
     });
-  }, [rewards, search, filterPaused, filterType]);
+  }, [rewards, search, filterPaused, filterPauseReason, filterType]);
 
   const handleToggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -2190,7 +2312,10 @@ export default function RewardsPage() {
           {(["all", "active", "paused"] as const).map((f) => (
             <button
               key={f}
-              onClick={() => setFilterPaused(f)}
+              onClick={() => {
+                setFilterPaused(f);
+                if (f !== "paused") setFilterPauseReason("all");
+              }}
               className={cn(
                 "px-3 py-1 rounded-lg text-xs font-medium capitalize transition-all",
                 filterPaused === f
@@ -2202,6 +2327,31 @@ export default function RewardsPage() {
             </button>
           ))}
         </div>
+
+        {/* Pause reason filter (visible when paused is selected) */}
+        {filterPaused === "paused" && (
+          <div className="flex items-center gap-1 rounded-xl border border-orange-500/30 bg-card p-1">
+            {([
+              { key: "all", label: "All reasons" },
+              { key: "MANUAL", label: "Manual" },
+              { key: "NO_MONEY", label: "No balance" },
+              { key: "PRICE_LIMIT", label: "Price limit" },
+            ] as const).map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setFilterPauseReason(key)}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
+                  filterPauseReason === key
+                    ? "bg-orange-500/20 text-orange-300 font-semibold border border-orange-500/40"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Type filter */}
         <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1">

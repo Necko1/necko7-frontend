@@ -81,7 +81,7 @@ export interface GrantPermissionBody {
 
 // ===== Rewards =====
 
-export type PauseReason = "MANUAL" | "NO_MONEY";
+export type PauseReason = "MANUAL" | "NO_MONEY" | "PRICE_LIMIT";
 export type RewardType = "FIXED" | "POOL" | "FILTER";
 export type PricingMode = "AUTO" | "MANUAL";
 export type PriceStrategy = "AVERAGE" | "MEDIAN" | "MAX";
@@ -146,6 +146,8 @@ export interface RewardResponse {
   twitch_title: string;
   twitch_description: string;
   current_market_price: number;
+  min_market_price?: number | null;
+  max_market_price?: number | null;
   permissible_market_price_deviation: number;
   twitch_price_markup_percentage: number;
   global_cooldown_seconds: number;
@@ -167,6 +169,8 @@ export interface CreateRewardBody {
   filter_config?: FilterConfig | null;
   twitch_title: string;
   twitch_description: string;
+  min_market_price?: number | null;
+  max_market_price?: number | null;
   permissible_market_price_deviation: number;
   twitch_price_markup_percentage: number;
   global_cooldown_seconds: number;
@@ -187,6 +191,8 @@ export interface UpdateRewardBody {
   twitch_title?: string | null;
   twitch_description?: string | null;
   current_market_price?: number | null;
+  min_market_price?: number | null;
+  max_market_price?: number | null;
   permissible_market_price_deviation?: number | null;
   twitch_price_markup_percentage?: number | null;
   global_cooldown_seconds?: number | null;
