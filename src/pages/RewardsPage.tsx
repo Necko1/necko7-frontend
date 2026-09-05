@@ -77,8 +77,8 @@ const IconClose = () => (
     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
-const IconExternalLink = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+const IconExternalLink = ({ className }: { className?: string } = {}) => (
+  <svg className={cn("shrink-0", className)} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
     <polyline points="15 3 21 3 21 9" />
     <line x1="10" y1="14" x2="21" y2="3" />
@@ -673,10 +673,11 @@ function PoolItemsEditor({
                 href={`https://market.csgo.com/en/?search=${encodeURIComponent(it.market_hash_name)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-0.5 truncate"
+                className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-0.5 max-w-full min-w-0"
+                title={it.market_hash_name}
               >
-                <span className="truncate">{it.market_hash_name}</span>
-                <IconExternalLink />
+                <span className="truncate min-w-0">{it.market_hash_name}</span>
+                <IconExternalLink className="shrink-0" />
               </a>
             </div>
           )}
@@ -916,9 +917,9 @@ function PoolItemsDetail({
   const chances = calcPoolChances(items);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 min-w-0">
       <p className="text-sm font-medium text-foreground mb-3">Pool Items ({items.length})</p>
-      <div className="grid gap-2">
+      <div className="grid gap-2 min-w-0">
         {items.map((item, idx) => {
           const price = item.current_market_price;
           const devAmt = price != null
@@ -931,7 +932,7 @@ function PoolItemsDetail({
           return (
             <div
               key={idx}
-              className="flex items-center gap-3 rounded-xl border border-border bg-background/40 px-3 py-2.5"
+              className="flex items-center gap-3 rounded-xl border border-border bg-background/40 px-3 py-2.5 min-w-0"
             >
               <SkinImage
                 marketItemName={item.market_hash_name}
@@ -945,12 +946,13 @@ function PoolItemsDetail({
                   href={`https://market.csgo.com/en/?search=${encodeURIComponent(item.market_hash_name)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-medium hover:text-primary hover:underline inline-flex items-center gap-1 truncate max-w-full"
+                  className="text-sm font-medium hover:text-primary hover:underline inline-flex items-center gap-1 max-w-full min-w-0"
+                  title={item.market_hash_name}
                 >
-                  <span className="truncate">{item.market_hash_name}</span>
-                  <IconExternalLink />
+                  <span className="truncate min-w-0">{item.market_hash_name}</span>
+                  <IconExternalLink className="shrink-0" />
                 </a>
-                <p className="text-xs text-muted-foreground tabular-nums">
+                <p className="text-xs text-muted-foreground tabular-nums truncate">
                   {priceFmt}
                   {devAmt != null && (
                     <span className="text-muted-foreground/60 ml-1">
@@ -1695,7 +1697,7 @@ function RewardEditDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader className="pr-6">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
@@ -1741,10 +1743,11 @@ function RewardEditDialog({
                   href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline inline-flex items-center gap-1 font-medium"
+                  className="text-primary hover:underline inline-flex items-center gap-1 font-medium max-w-full min-w-0"
+                  title={reward.market_item_name}
                 >
-                  <span>{reward.market_item_name}</span>
-                  <IconExternalLink />
+                  <span className="truncate min-w-0">{reward.market_item_name}</span>
+                  <IconExternalLink className="shrink-0" />
                 </a>
               ) : type === "POOL" ? (
                 <span>{reward.pool_items?.length ?? 0} skins in pool</span>
@@ -1813,14 +1816,14 @@ function RewardEditDialog({
 
           <Separator className="my-2" />
 
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs defaultValue="overview" className="w-full min-w-0">
             <TabsList className="w-full justify-start">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="edit">Edit Reward</TabsTrigger>
               <TabsTrigger value="redemptions">Recent Redemptions</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="mt-4 space-y-5">
+            <TabsContent value="overview" className="mt-4 space-y-5 min-w-0">
               {/* PRICE_LIMIT warning alert if reward is auto-paused by price limit */}
               {reward.is_paused && reward.pause_reason === "PRICE_LIMIT" && (
                 <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3.5 text-xs text-orange-200 flex items-start gap-2.5">
