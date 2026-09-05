@@ -21,6 +21,15 @@ import type {
   ListRedemptionsQuery,
   StatsResponse,
   StatsPeriod,
+  // Chat Analytics (v0.4.0)
+  LeaderboardQuery,
+  PaginatedLeaderboardResponse,
+  UserMessagesQuery,
+  PaginatedUserMessagesResponse,
+  UserRedemptionsQuery,
+  UserStatsQuery,
+  UserChatStatsResponse,
+  UserChatSummary,
 } from "@/types/api";
 import { config } from "@/config";
 
@@ -169,4 +178,49 @@ export const statsApi = {
     api.get<StatsResponse>(`/api/v1/broadcasters/${channelId}/stats`, {
       params: { period, from, to },
     }),
+};
+
+// ===== Chat Analytics (v0.4.0) =====
+
+export const chatApi = {
+  getLeaderboard: (channelId: string, params?: LeaderboardQuery) =>
+    api.get<PaginatedLeaderboardResponse>(
+      `/api/v1/broadcasters/${channelId}/chat/leaderboard`,
+      { params }
+    ),
+
+  getUserMessages: (
+    channelId: string,
+    userId: string,
+    params?: UserMessagesQuery
+  ) =>
+    api.get<PaginatedUserMessagesResponse>(
+      `/api/v1/broadcasters/${channelId}/chat/users/${userId}/messages`,
+      { params }
+    ),
+
+  getUserRedemptions: (
+    channelId: string,
+    userId: string,
+    params?: UserRedemptionsQuery
+  ) =>
+    api.get<PaginatedRedemptionsResponse>(
+      `/api/v1/broadcasters/${channelId}/chat/users/${userId}/redemptions`,
+      { params }
+    ),
+
+  getUserStats: (
+    channelId: string,
+    userId: string,
+    params?: UserStatsQuery
+  ) =>
+    api.get<UserChatStatsResponse>(
+      `/api/v1/broadcasters/${channelId}/chat/users/${userId}/stats`,
+      { params }
+    ),
+
+  getUserSummary: (channelId: string, userId: string) =>
+    api.get<UserChatSummary | null>(
+      `/api/v1/broadcasters/${channelId}/chat/users/${userId}/summary`
+    ),
 };

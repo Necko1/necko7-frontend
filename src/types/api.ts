@@ -85,6 +85,7 @@ export type PauseReason = "MANUAL" | "NO_MONEY" | "PRICE_LIMIT";
 export type RewardType = "FIXED" | "POOL" | "FILTER";
 export type PricingMode = "AUTO" | "MANUAL";
 export type PriceStrategy = "AVERAGE" | "MEDIAN" | "MAX";
+export type ChatLogicalOperator = "AND" | "OR";
 
 export interface FilterConfig {
   min_price: number;
@@ -155,6 +156,12 @@ export interface RewardResponse {
   max_redemptions_per_user_per_stream: number;
   market_autobuy: boolean;
   currency: string;
+  // Chat activity requirements (v0.4.0)
+  chat_min_messages?: number | null;
+  chat_min_characters?: number | null;
+  chat_time_window_hours?: number | null;
+  chat_logical_operator?: ChatLogicalOperator | null;
+  refund_if_chat_req_failed?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -178,6 +185,12 @@ export interface CreateRewardBody {
   max_redemptions_per_user_per_stream: number;
   market_autobuy: boolean;
   is_paused: boolean;
+  // Chat activity requirements (v0.4.0)
+  chat_min_messages?: number | null;
+  chat_min_characters?: number | null;
+  chat_time_window_hours?: number | null;
+  chat_logical_operator?: ChatLogicalOperator | null;
+  refund_if_chat_req_failed?: boolean;
 }
 
 export interface UpdateRewardBody {
@@ -201,6 +214,12 @@ export interface UpdateRewardBody {
   market_autobuy?: boolean | null;
   is_paused?: boolean | null;
   pause_reason?: PauseReason | null;
+  // Chat activity requirements (v0.4.0)
+  chat_min_messages?: number | null;
+  chat_min_characters?: number | null;
+  chat_time_window_hours?: number | null;
+  chat_logical_operator?: ChatLogicalOperator | null;
+  refund_if_chat_req_failed?: boolean | null;
 }
 
 export interface ListRewardsQuery {
@@ -235,6 +254,7 @@ export interface RedemptionResponse {
   twitch_reward_id: string;
   user_id: string;
   user_login: string;
+  user_trade_link: string; // added in v0.4.0
   twitch_points_cost: number;
   currency: string;
   market_paid_price: number | null;
@@ -257,6 +277,7 @@ export interface PaginatedRedemptionsResponse {
 export interface ListRedemptionsQuery {
   status?: string | null;
   reward_id?: string | null;
+  user_id?: string | null; // added in v0.4.0
   offset?: number | null;
   limit?: number | null;
 }
@@ -272,3 +293,80 @@ export interface StatsResponse {
 }
 
 export type StatsPeriod = "year" | "month" | "week" | "custom";
+
+// ===== Chat Analytics (v0.4.0) =====
+
+export interface LeaderboardQuery {
+  time_window_hours?: number | null;
+  sort_by?: string | null;
+  order?: string | null;
+  search?: string | null;
+  offset?: number | null;
+  limit?: number | null;
+}
+
+export interface LeaderboardUserItem {
+  chatter_user_id: string;
+  chatter_user_login: string;
+  message_count: number;
+  char_count: number;
+  first_seen_at: string;
+  last_seen_at: string;
+}
+
+export interface PaginatedLeaderboardResponse {
+  items: LeaderboardUserItem[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface ChatMessage {
+  id: number;
+  message_id: string;
+  broadcaster_id: string;
+  chatter_user_id: string;
+  chatter_user_login: string;
+  message_text: string;
+  char_count: number;
+  sent_at: string;
+  created_at: string;
+}
+
+export interface PaginatedUserMessagesResponse {
+  items: ChatMessage[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface UserMessagesQuery {
+  time_window_hours?: number | null;
+  offset?: number | null;
+  limit?: number | null;
+}
+
+export interface UserRedemptionsQuery {
+  offset?: number | null;
+  limit?: number | null;
+}
+
+export interface UserChatStatsResponse {
+  user_id: string;
+  message_count: number;
+  char_count: number;
+  time_window_hours?: number | null;
+}
+
+export interface UserStatsQuery {
+  time_window_hours?: number | null;
+}
+
+export interface UserChatSummary {
+  chatter_user_id: string;
+  chatter_user_login: string;
+  total_messages: number;
+  total_chars: number;
+  first_seen_at?: string | null;
+  last_seen_at?: string | null;
+}

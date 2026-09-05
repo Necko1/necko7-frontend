@@ -14,6 +14,7 @@ import type {
   PoolItemConfig,
   PreviewFilterBody,
   PreviewFilterResponse,
+  ChatLogicalOperator,
 } from "@/types/api";
 import { formatMinorCurrency, minorToMajor, majorToMinor } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
@@ -521,6 +522,15 @@ function RewardCard({
           {isManual && (
             <Badge variant="outline" className="text-xs border-blue-500/30 text-blue-400 bg-blue-500/10">
               Manual price
+            </Badge>
+          )}
+          {(reward.chat_min_messages != null || reward.chat_min_characters != null) && (
+            <Badge variant="outline" className="text-xs border-violet-500/30 text-violet-400 bg-violet-500/10 gap-1" title="Has Chat Activity Requirements">
+              <span>💬</span>
+              {reward.chat_min_messages != null ? `${reward.chat_min_messages} msgs` : ""}
+              {reward.chat_min_messages != null && reward.chat_min_characters != null ? ` ${reward.chat_logical_operator ?? "AND"} ` : ""}
+              {reward.chat_min_characters != null ? `${reward.chat_min_characters} chars` : ""}
+              {reward.chat_time_window_hours != null ? ` / ${reward.chat_time_window_hours}h` : ""}
             </Badge>
           )}
         </div>
@@ -1457,9 +1467,160 @@ function StepTwitchSettings({
   );
 }
 
+// ── Step 4: Chat Requirements ──────────────────────────────────────────────
+function StepChatRequirements({
+  form,
+  onChange,
+}: {
+  form: Partial<CreateRewardBody>;
+  onChange: (patch: Partial<CreateRewardBody>) => void;
+}) {
+  const hasRequirements = !!(form.chat_min_messages || form.chat_min_characters);
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-xs flex items-start gap-2.5">
+        <span className="text-base leading-none">💬</span>
+        <div className="space-y-0.5">
+          <p className="font-semibold text-foreground">Twitch Chat Activity Requirements</p>
+          <p className="text-muted-foreground leading-relaxed">
+            Limit redemptions to active stream viewers. Leave message and character counts empty or 0 if you don&apos;t want to enforce any chat requirements for this reward.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="chat_min_messages">Minimum Messages</Label>
+          <Input
+            id="chat_min_messages"
+            type="number"
+            min={0}
+            placeholder="e.g. 50 (optional)"
+            value={form.chat_min_messages ?? ""}
+            onChange={(e) => {
+              const val = e.target.value.trim();
+              onChange({ chat_min_messages: val === "" ? null : Math.max(0, parseInt(val) || 0) });
+            }}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Minimum number of chat messages sent by the viewer.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="chat_min_characters">Minimum Characters</Label>
+          <Input
+            id="chat_min_characters"
+            type="number"
+            min={0}
+            placeholder="e.g. 500 (optional)"
+            value={form.chat_min_characters ?? ""}
+            onChange={(e) => {
+              const val = e.target.value.trim();
+              onChange({ chat_min_characters: val === "" ? null : Math.max(0, parseInt(val) || 0) });
+            }}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Minimum total length of chat messages in characters.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="chat_time_window_hours">Time Window (hours)</Label>
+          <Input
+            id="chat_time_window_hours"
+            type="number"
+            min={1}
+            placeholder="e.g. 24 (leave empty for all-time)"
+            value={form.chat_time_window_hours ?? ""}
+            onChange={(e) => {
+              const val = e.target.value.trim();
+              onChange({ chat_time_window_hours: val === "" ? null : Math.max(1, parseInt(val) || 0) });
+            }}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Count chat activity within the last N hours. Empty = all-time activity.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Requirement Logic</Label>
+          <div className="flex items-center gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={() => onChange({ chat_logical_operator: "AND" })}
+              className={cn(
+                "flex-1 px-3 py-2 text-xs font-medium rounded-lg border transition-all select-none text-center",
+                (form.chat_logical_operator ?? "AND") === "AND"
+                  ? "border-primary bg-primary/10 text-primary font-semibold shadow-sm"
+                  : "border-border bg-card hover:bg-muted/50 text-muted-foreground"
+              )}
+            >
+              AND (Both)
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({ chat_logical_operator: "OR" })}
+              className={cn(
+                "flex-1 px-3 py-2 text-xs font-medium rounded-lg border transition-all select-none text-center",
+                form.chat_logical_operator === "OR"
+                  ? "border-primary bg-primary/10 text-primary font-semibold shadow-sm"
+                  : "border-border bg-card hover:bg-muted/50 text-muted-foreground"
+              )}
+            >
+              OR (Either)
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {(form.chat_logical_operator ?? "AND") === "AND"
+              ? "Viewer must meet BOTH messages and characters requirements."
+              : "Viewer can meet EITHER messages OR characters requirement."}
+          </p>
+        </div>
+      </div>
+
+      <div className="pt-1">
+        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={form.refund_if_chat_req_failed ?? true}
+            onChange={(e) => onChange({ refund_if_chat_req_failed: e.target.checked })}
+            className="mt-0.5 rounded accent-primary"
+          />
+          <div className="text-xs space-y-0.5">
+            <span className="font-medium text-foreground block">
+              Auto-refund Channel Points if requirement fails
+            </span>
+            <span className="text-muted-foreground block leading-normal">
+              If enabled, points are immediately returned to the viewer if their chat activity doesn&apos;t meet the requirement.
+            </span>
+          </div>
+        </label>
+      </div>
+
+      {hasRequirements && (
+        <div className="rounded-lg bg-muted/40 border border-border/80 px-3.5 py-2.5 text-xs flex items-center gap-2">
+          <span className="text-primary font-bold">Rule Preview:</span>
+          <span className="text-foreground">
+            Viewer needs{" "}
+            {form.chat_min_messages ? <strong>{form.chat_min_messages} messages</strong> : null}
+            {form.chat_min_messages && form.chat_min_characters ? ` ${form.chat_logical_operator ?? "AND"} ` : null}
+            {form.chat_min_characters ? <strong>{form.chat_min_characters} characters</strong> : null}
+            {form.chat_time_window_hours ? ` in the last ${form.chat_time_window_hours} hours` : " of all-time activity"}
+            .
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Multi-step Reward Wizard ───────────────────────────────────────────────
-const STEPS = ["Type & Skin", "Pricing", "Twitch Settings"] as const;
-type StepIndex = 0 | 1 | 2;
+const STEPS = ["Type & Skin", "Pricing", "Twitch Settings", "Chat Requirements"] as const;
+type StepIndex = 0 | 1 | 2 | 3;
 
 function RewardWizard({
   initial,
@@ -1488,6 +1649,11 @@ function RewardWizard({
     is_paused: false,
     min_market_price: null,
     max_market_price: null,
+    chat_min_messages: null,
+    chat_min_characters: null,
+    chat_time_window_hours: null,
+    chat_logical_operator: "AND",
+    refund_if_chat_req_failed: true,
     ...initial,
   });
 
@@ -1504,7 +1670,10 @@ function RewardWizard({
       if (form.pricing_mode === "MANUAL") return !!(form.manual_twitch_points && form.manual_twitch_points > 0);
       return true;
     }
-    return !!(form.twitch_title?.trim());
+    if (step === 2) {
+      return !!(form.twitch_title?.trim());
+    }
+    return true;
   };
 
   const handleSubmit = () => {
@@ -1527,6 +1696,14 @@ function RewardWizard({
       max_redemptions_per_user_per_stream: form.max_redemptions_per_user_per_stream ?? 0,
       market_autobuy: form.market_autobuy ?? true,
       is_paused: form.is_paused ?? false,
+      chat_min_messages: form.chat_min_messages ? Number(form.chat_min_messages) : null,
+      chat_min_characters: form.chat_min_characters ? Number(form.chat_min_characters) : null,
+      chat_time_window_hours: form.chat_time_window_hours ? Number(form.chat_time_window_hours) : null,
+      chat_logical_operator:
+        (form.chat_min_messages || form.chat_min_characters)
+          ? (form.chat_logical_operator ?? "AND")
+          : null,
+      refund_if_chat_req_failed: form.refund_if_chat_req_failed ?? true,
     };
     onSubmit(body);
   };
@@ -1588,6 +1765,7 @@ function RewardWizard({
         {step === 0 && <StepTypeAndSkins form={form} onChange={patch} />}
         {step === 1 && <StepPricing form={form} channelId={channelId} onChange={patch} />}
         {step === 2 && <StepTwitchSettings form={form} onChange={patch} isEdit={isEdit} />}
+        {step === 3 && <StepChatRequirements form={form} onChange={patch} />}
       </div>
 
       {/* Navigation */}
@@ -1604,12 +1782,12 @@ function RewardWizard({
         <div className="flex items-center gap-2">
           {isEdit ? (
             <>
-              {step < 2 && (
+              {step < 3 && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setStep((s) => (s < 2 ? (s + 1) as StepIndex : s))}
+                  onClick={() => setStep((s) => (s < 3 ? (s + 1) as StepIndex : s))}
                   disabled={!canNext()}
                 >
                   Next →
@@ -1624,11 +1802,11 @@ function RewardWizard({
                 {loading ? "Saving…" : "Save Changes"}
               </Button>
             </>
-          ) : step < 2 ? (
+          ) : step < 3 ? (
             <Button
               type="button"
               size="sm"
-              onClick={() => setStep((s) => (s < 2 ? (s + 1) as StepIndex : s))}
+              onClick={() => setStep((s) => (s < 3 ? (s + 1) as StepIndex : s))}
               disabled={!canNext()}
             >
               Next →
@@ -1827,6 +2005,37 @@ function RewardEditDialog({
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-5 min-w-0">
+              {/* Chat Activity Requirements card */}
+              {(reward.chat_min_messages != null || reward.chat_min_characters != null) && (
+                <div className="space-y-2 rounded-xl border border-violet-500/30 bg-violet-500/5 p-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">💬</span>
+                    <p className="text-xs font-semibold text-violet-300">Chat Activity Requirements</p>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+                      <p className="text-muted-foreground mb-0.5">Min Messages</p>
+                      <p className="font-medium text-foreground">{reward.chat_min_messages ?? "None"}</p>
+                    </div>
+                    <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+                      <p className="text-muted-foreground mb-0.5">Min Characters</p>
+                      <p className="font-medium text-foreground">{reward.chat_min_characters ?? "None"}</p>
+                    </div>
+                    <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+                      <p className="text-muted-foreground mb-0.5">Logic Operator</p>
+                      <p className="font-medium text-foreground">{reward.chat_logical_operator ?? "AND"}</p>
+                    </div>
+                    <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+                      <p className="text-muted-foreground mb-0.5">Time Window</p>
+                      <p className="font-medium text-foreground">{reward.chat_time_window_hours ? `${reward.chat_time_window_hours}h` : "All time"}</p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Auto-refund points if requirement fails: <strong className="text-foreground">{reward.refund_if_chat_req_failed !== false ? "Yes" : "No"}</strong>
+                  </p>
+                </div>
+              )}
+
               {/* PRICE_LIMIT warning alert if reward is auto-paused by price limit */}
               {reward.is_paused && reward.pause_reason === "PRICE_LIMIT" && (
                 <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3.5 text-xs text-orange-200 flex items-start gap-2.5">
@@ -1944,6 +2153,11 @@ function RewardEditDialog({
                   max_redemptions_per_user_per_stream: reward.max_redemptions_per_user_per_stream,
                   market_autobuy: reward.market_autobuy,
                   is_paused: reward.is_paused,
+                  chat_min_messages: reward.chat_min_messages ?? undefined,
+                  chat_min_characters: reward.chat_min_characters ?? undefined,
+                  chat_time_window_hours: reward.chat_time_window_hours ?? undefined,
+                  chat_logical_operator: reward.chat_logical_operator ?? undefined,
+                  refund_if_chat_req_failed: reward.refund_if_chat_req_failed ?? true,
                 }}
                 channelId={channelId}
                 onSubmit={(data) => {

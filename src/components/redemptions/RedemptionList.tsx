@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { redemptionsApi } from "@/lib/apiClient";
 import type { RedemptionResponse, RedemptionStatus } from "@/types/api";
@@ -62,6 +63,21 @@ const IconChevron = ({ open }: { open: boolean }) => (
     <polyline points="6 9 12 15 18 9" />
   </svg>
 );
+const IconUser = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+  </svg>
+);
+const IconExternalLink = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+  </svg>
+);
+const IconCopy = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
 
 // ── Redemption Row ─────────────────────────────────────────────────────────
 function RedemptionRow({
@@ -74,7 +90,9 @@ function RedemptionRow({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [tradeCopied, setTradeCopied] = useState(false);
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const retryMutation = useMutation({
     mutationFn: () => redemptionsApi.retry(channelId, redemption.twitch_redemption_id),
@@ -98,6 +116,19 @@ function RedemptionRow({
     redemption.status === "PENDING" ||
     redemption.status === "Pending";
 
+  const handleUserClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/chat/users/${redemption.user_id}`);
+  };
+
+  const handleCopyTradeLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(redemption.user_trade_link).then(() => {
+      setTradeCopied(true);
+      setTimeout(() => setTradeCopied(false), 2000);
+    });
+  };
+
   return (
     <div className="rounded-xl border border-border overflow-hidden transition-all">
       {/* Main row */}
@@ -113,7 +144,14 @@ function RedemptionRow({
             {redemption.retry_count} {redemption.retry_count === 1 ? "retry" : "retries"}
           </Badge>
         )}
-        <span className="text-sm font-medium text-foreground shrink-0">@{redemption.user_login}</span>
+        {/* Clickable username */}
+        <button
+          type="button"
+          onClick={handleUserClick}
+          className="text-sm font-medium text-foreground hover:text-primary hover:underline shrink-0 flex items-center gap-1 transition-colors"
+        >
+          @{redemption.user_login}
+        </button>
         {redemption.market_item_name && (
           <span
             className="text-xs text-muted-foreground/80 truncate max-w-[140px] sm:max-w-[220px] md:max-w-[320px] font-medium"
@@ -147,7 +185,17 @@ function RedemptionRow({
             </div>
             <div>
               <p className="text-muted-foreground mb-0.5">User ID</p>
-              <p className="text-foreground">{redemption.user_id}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-foreground">{redemption.user_id}</p>
+                <button
+                  type="button"
+                  onClick={handleUserClick}
+                  className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                >
+                  <IconUser />
+                  View Profile
+                </button>
+              </div>
             </div>
             <div>
               <p className="text-muted-foreground mb-0.5">Retry Count</p>
@@ -181,6 +229,39 @@ function RedemptionRow({
                     <line x1="10" y1="14" x2="21" y2="3" />
                   </svg>
                 </a>
+              </div>
+            )}
+            {/* Trade link */}
+            {redemption.user_trade_link && (
+              <div className="col-span-2">
+                <p className="text-muted-foreground mb-1">Steam Trade Link</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-mono text-[10px] text-foreground break-all truncate max-w-[240px]">
+                    {redemption.user_trade_link}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCopyTradeLink}
+                    className={cn(
+                      "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border transition-all",
+                      tradeCopied
+                        ? "border-green-500/40 text-green-500 bg-green-500/10"
+                        : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    )}
+                  >
+                    <IconCopy />
+                    {tradeCopied ? "Copied!" : "Copy"}
+                  </button>
+                  <a
+                    href={redemption.user_trade_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <IconExternalLink />
+                    Open
+                  </a>
+                </div>
               </div>
             )}
             <div>
@@ -253,6 +334,7 @@ interface RedemptionListProps {
   channelId: string;
   rewardId?: string;
   statusFilter?: RedemptionStatus | null;
+  userIdFilter?: string | null;
   compact?: boolean;
   pageSize?: number;
 }
@@ -261,18 +343,20 @@ export default function RedemptionList({
   channelId,
   rewardId,
   statusFilter,
+  userIdFilter,
   compact,
   pageSize = 10,
 }: RedemptionListProps) {
   const [page, setPage] = useState(0);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["redemptions", channelId, rewardId, statusFilter, page, pageSize],
+    queryKey: ["redemptions", channelId, rewardId, statusFilter, userIdFilter, page, pageSize],
     queryFn: () =>
       redemptionsApi
         .list(channelId, {
           reward_id: rewardId ?? null,
           status: statusFilter ?? null,
+          user_id: userIdFilter ?? null,
           offset: page * pageSize,
           limit: pageSize,
         })
