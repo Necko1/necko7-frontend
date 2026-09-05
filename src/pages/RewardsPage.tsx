@@ -525,8 +525,7 @@ function RewardCard({
             </Badge>
           )}
           {(reward.chat_min_messages != null || reward.chat_min_characters != null) && (
-            <Badge variant="outline" className="text-xs border-violet-500/30 text-violet-400 bg-violet-500/10 gap-1" title="Has Chat Activity Requirements">
-              <span>💬</span>
+            <Badge variant="outline" className="text-xs border-violet-500/30 text-violet-400 bg-violet-500/10" title="Has Chat Activity Requirements">
               {reward.chat_min_messages != null ? `${reward.chat_min_messages} msgs` : ""}
               {reward.chat_min_messages != null && reward.chat_min_characters != null ? ` ${reward.chat_logical_operator ?? "AND"} ` : ""}
               {reward.chat_min_characters != null ? `${reward.chat_min_characters} chars` : ""}
@@ -572,16 +571,18 @@ function RewardCard({
         {/* Price info */}
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
-            <p className="text-xs text-muted-foreground">
-              {isManual ? "Twitch Points" : "Market price"}
-            </p>
+            <p className="text-xs text-muted-foreground">Market price</p>
             <p className="text-sm font-bold tabular-nums text-foreground">{formattedPrice}</p>
           </div>
           <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
             {isManual ? (
               <>
-                <p className="text-xs text-muted-foreground">Mode</p>
-                <p className="text-sm font-bold text-blue-400">Manual</p>
+                <p className="text-xs text-muted-foreground">Twitch Points</p>
+                <p className="text-sm font-bold tabular-nums text-foreground">
+                  {reward.manual_twitch_points != null
+                    ? reward.manual_twitch_points.toLocaleString()
+                    : "–"}
+                </p>
               </>
             ) : (
               <>
@@ -2188,7 +2189,9 @@ function RewardEditDialog({
                   { label: "Max / User", val: String(reward.max_redemptions_per_user_per_stream) },
                   { label: "Auto-buy", val: reward.market_autobuy ? "Yes" : "No" },
                   { label: "Pricing", val: reward.pricing_mode === "MANUAL" ? "Manual" : "Auto" },
-                  { label: "Markup", val: `+${reward.twitch_price_markup_percentage}%` },
+                  reward.pricing_mode === "MANUAL"
+                    ? { label: "Twitch Points", val: reward.manual_twitch_points != null ? `${reward.manual_twitch_points.toLocaleString()} pts` : "–" }
+                    : { label: "Markup", val: `+${reward.twitch_price_markup_percentage}%` },
                   { label: "Min Price Limit", val: reward.min_market_price != null ? formatMinorCurrency(reward.min_market_price, reward.currency) : "None" },
                   { label: "Max Price Limit", val: reward.max_market_price != null ? formatMinorCurrency(reward.max_market_price, reward.currency) : "None" },
                 ].map(({ label, val }) => (
@@ -2206,6 +2209,7 @@ function RewardEditDialog({
                   reward_type: reward.reward_type,
                   pricing_mode: reward.pricing_mode,
                   price_strategy: reward.price_strategy ?? undefined,
+                  manual_twitch_points: reward.manual_twitch_points ?? undefined,
                   market_item_name: reward.market_item_name ?? undefined,
                   pool_items: reward.pool_items ?? undefined,
                   filter_config: reward.filter_config ?? undefined,

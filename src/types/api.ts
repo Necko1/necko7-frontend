@@ -141,6 +141,7 @@ export interface RewardResponse {
   reward_type: RewardType;
   pricing_mode: PricingMode;
   price_strategy?: PriceStrategy | null;
+  manual_twitch_points?: number | null;
   market_item_name?: string | null;
   pool_items?: PoolItemConfig[] | null;
   filter_config?: FilterConfig | null;
