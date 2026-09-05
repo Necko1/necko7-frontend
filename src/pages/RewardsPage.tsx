@@ -88,7 +88,7 @@ const IconImage = () => (
 );
 
 // Direct CDN URL — for <img> display only (no CORS header, browser shows fine)
-function getSkinImageUrl(marketItemName: string, size: 150 | 300 = 150): string {
+function getSkinImageUrl(marketItemName: string, size: 150 | 300 = 300): string {
   return `https://cdn2.csgo.com/item/${encodeURIComponent(marketItemName)}/${size}.png`;
 }
 
@@ -103,7 +103,7 @@ function getSkinImageUrlProxied(marketItemName: string, size: 150 | 300 = 300): 
 // ── SkinImage: renders skin with center-crop to square ─────────────────────
 function SkinImage({
   marketItemName,
-  size = 150,
+  size = 300,
   objectFit = "cover",
   className,
   style,
@@ -343,9 +343,9 @@ function RewardCard({
       {/* Skin image banner */}
       <SkinImage
         marketItemName={reward.market_item_name}
-        size={150}
+        size={300}
         objectFit="contain"
-        className="w-full rounded-t-2xl aspect-[150/113]"
+        className="w-full rounded-t-2xl aspect-[4/3]"
       />
 
       <div className="p-4">
@@ -620,49 +620,38 @@ function RewardEditDialog({
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-start gap-4 pr-6">
-              {/* Skin thumbnail */}
-              <SkinImage
-                marketItemName={reward.market_item_name}
-                size={150}
-                className="rounded-xl flex-shrink-0 border border-border"
-                style={{ width: 96, height: 72 }}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <DialogTitle className="text-lg">{reward.twitch_title}</DialogTitle>
-                  {reward.is_paused && (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-xs gap-1",
-                        reward.pause_reason === "NO_MONEY"
-                          ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
-                          : "status-failed-refund"
-                      )}
-                    >
-                      <IconPause />
-                      {reward.pause_reason === "NO_MONEY" ? "Paused (No balance)" : "Paused"}
-                    </Badge>
+          <DialogHeader className="pr-6">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <DialogTitle className="text-lg">{reward.twitch_title}</DialogTitle>
+              {reward.is_paused && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-xs gap-1",
+                    reward.pause_reason === "NO_MONEY"
+                      ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
+                      : "status-failed-refund"
                   )}
-                </div>
-                <DialogDescription className="flex items-center gap-1.5 flex-wrap mt-1">
-                  <a
-                    href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline inline-flex items-center gap-1 font-medium"
-                    title={`View "${reward.market_item_name}" on Market`}
-                  >
-                    <span>{reward.market_item_name}</span>
-                    <IconExternalLink />
-                  </a>
-                  <span>·</span>
-                  <span>{formatMinorCurrency(reward.current_market_price, reward.currency)}</span>
-                </DialogDescription>
-              </div>
+                >
+                  <IconPause />
+                  {reward.pause_reason === "NO_MONEY" ? "Paused (No balance)" : "Paused"}
+                </Badge>
+              )}
             </div>
+            <DialogDescription className="flex items-center gap-1.5 flex-wrap mt-1">
+              <a
+                href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1 font-medium"
+                title={`View "${reward.market_item_name}" on Market`}
+              >
+                <span>{reward.market_item_name}</span>
+                <IconExternalLink />
+              </a>
+              <span>·</span>
+              <span>{formatMinorCurrency(reward.current_market_price, reward.currency)}</span>
+            </DialogDescription>
           </DialogHeader>
 
           {/* Action bar */}
