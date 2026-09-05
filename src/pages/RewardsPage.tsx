@@ -378,6 +378,7 @@ function RewardCard({
     : null;
 
   const handleCardClick = (e: React.MouseEvent) => {
+    if (reward.is_deleted) return;
     const target = e.target as HTMLElement | null;
     if (target?.closest("a, button, input")) {
       return;
@@ -401,7 +402,7 @@ function RewardCard({
       className={cn(
         "relative rounded-2xl border bg-card cursor-pointer transition-all duration-200 group overflow-hidden select-none",
         "hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
-        selected && "border-primary/80 bg-primary/10 shadow-lg shadow-primary/15 ring-2 ring-primary/50",
+        selected && !reward.is_deleted && "border-primary/80 bg-primary/10 shadow-lg shadow-primary/15 ring-2 ring-primary/50",
         reward.is_paused && !selected && "opacity-60",
         reward.is_deleted && "opacity-40 pointer-events-none"
       )}
@@ -446,35 +447,37 @@ function RewardCard({
 
       <div className="p-4">
         {/* Checkbox */}
-        <div
-          className="absolute top-3 right-3 z-10 p-1 cursor-pointer"
-          title={selected ? "Deselect (or Ctrl+Click)" : "Select (or Ctrl+Click)"}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (e.shiftKey) {
-              e.preventDefault();
-              window.getSelection()?.removeAllRanges();
-              onRangeSelect(reward.twitch_id);
-            } else {
-              onToggleSelect(reward.twitch_id);
-            }
-          }}
-        >
+        {!reward.is_deleted && (
           <div
-            className={cn(
-              "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all backdrop-blur-sm",
-              selected
-                ? "bg-primary border-primary shadow-sm shadow-primary/30"
-                : "border-white/60 bg-black/30 opacity-0 group-hover:opacity-100"
-            )}
+            className="absolute top-3 right-3 z-10 p-1 cursor-pointer"
+            title={selected ? "Deselect (or Ctrl+Click)" : "Select (or Ctrl+Click)"}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (e.shiftKey) {
+                e.preventDefault();
+                window.getSelection()?.removeAllRanges();
+                onRangeSelect(reward.twitch_id);
+              } else {
+                onToggleSelect(reward.twitch_id);
+              }
+            }}
           >
-            {selected && (
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            )}
+            <div
+              className={cn(
+                "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all backdrop-blur-sm",
+                selected
+                  ? "bg-primary border-primary shadow-sm shadow-primary/30"
+                  : "border-white/60 bg-black/30 opacity-0 group-hover:opacity-100"
+              )}
+            >
+              {selected && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Status badges */}
         <div className="flex flex-wrap gap-1.5 mb-2">
@@ -2021,6 +2024,7 @@ function CreateRewardModal({
 function BulkActionBar({
   count,
   allFilteredSelected,
+  hasSelectable = true,
   onSelectAll,
   onPause,
   onUnpause,
@@ -2030,6 +2034,7 @@ function BulkActionBar({
 }: {
   count: number;
   allFilteredSelected: boolean;
+  hasSelectable?: boolean;
   onSelectAll: () => void;
   onPause: () => void;
   onUnpause: () => void;
@@ -2053,7 +2058,7 @@ function BulkActionBar({
         variant="outline"
         className="gap-1.5 text-xs h-8 bg-background/60 hover:bg-background shrink-0"
         onClick={onSelectAll}
-        disabled={allFilteredSelected || loading}
+        disabled={allFilteredSelected || !hasSelectable || loading}
         title="Select all matching rewards"
       >
         <IconCheckAll />
@@ -2177,6 +2182,9 @@ export default function RewardsPage() {
   }, [rewards, search, filterPaused, filterPauseReason, filterType]);
 
   const handleToggleSelect = useCallback((id: string) => {
+    const r = rewards.find((item) => item.twitch_id === id);
+    if (r?.is_deleted) return;
+
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -2187,10 +2195,13 @@ export default function RewardsPage() {
       return next;
     });
     lastSelectedIdRef.current = id;
-  }, []);
+  }, [rewards]);
 
   const handleRangeSelect = useCallback(
     (targetId: string) => {
+      const targetReward = filtered.find((r) => r.twitch_id === targetId);
+      if (!targetReward || targetReward.is_deleted) return;
+
       const targetIndex = filtered.findIndex((r) => r.twitch_id === targetId);
       if (targetIndex === -1) return;
 
@@ -2199,7 +2210,7 @@ export default function RewardsPage() {
 
       if (anchorIndex === -1) {
         const visibleSelectedIndices = filtered
-          .map((r, idx) => (selectedIds.has(r.twitch_id) ? idx : -1))
+          .map((r, idx) => (!r.is_deleted && selectedIds.has(r.twitch_id) ? idx : -1))
           .filter((idx) => idx !== -1);
 
         if (visibleSelectedIndices.length > 0) {
@@ -2214,7 +2225,10 @@ export default function RewardsPage() {
       const start = Math.min(anchorIndex, targetIndex);
       const end = Math.max(anchorIndex, targetIndex);
 
-      const rangeIds = filtered.slice(start, end + 1).map((r) => r.twitch_id);
+      const rangeIds = filtered
+        .slice(start, end + 1)
+        .filter((r) => !r.is_deleted)
+        .map((r) => r.twitch_id);
 
       setSelectedIds((prev) => {
         const next = new Set(prev);
@@ -2232,7 +2246,9 @@ export default function RewardsPage() {
   const handleSelectAll = useCallback(() => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      filtered.forEach((r) => next.add(r.twitch_id));
+      filtered
+        .filter((r) => !r.is_deleted)
+        .forEach((r) => next.add(r.twitch_id));
       return next;
     });
   }, [filtered]);
@@ -2242,8 +2258,32 @@ export default function RewardsPage() {
     lastSelectedIdRef.current = null;
   }, []);
 
+  // Clean up selectedIds if any selected reward became deleted
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      let hasDeleted = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        const item = rewards.find((r) => r.twitch_id === id);
+        if (item?.is_deleted) {
+          hasDeleted = true;
+        } else {
+          next.add(id);
+        }
+      }
+      return hasDeleted ? next : prev;
+    });
+  }, [rewards]);
+
+  const selectableFiltered = useMemo(
+    () => filtered.filter((r) => !r.is_deleted),
+    [filtered]
+  );
+
   const allFilteredSelected =
-    filtered.length > 0 && filtered.every((r) => selectedIds.has(r.twitch_id));
+    selectableFiltered.length > 0 &&
+    selectableFiltered.every((r) => selectedIds.has(r.twitch_id));
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -2260,7 +2300,7 @@ export default function RewardsPage() {
           target instanceof HTMLInputElement ||
           target instanceof HTMLTextAreaElement ||
           target?.isContentEditable;
-        if (!isInput && filtered.length > 0) {
+        if (!isInput && selectableFiltered.length > 0) {
           e.preventDefault();
           handleSelectAll();
         }
@@ -2269,7 +2309,7 @@ export default function RewardsPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editingReward, showCreate, selectedIds.size, filtered, handleClearSelection, handleSelectAll]);
+  }, [editingReward, showCreate, selectedIds.size, selectableFiltered.length, handleClearSelection, handleSelectAll]);
 
   if (!channelId) {
     return (
@@ -2422,6 +2462,7 @@ export default function RewardsPage() {
         <BulkActionBar
           count={selectedIds.size}
           allFilteredSelected={allFilteredSelected}
+          hasSelectable={selectableFiltered.length > 0}
           onSelectAll={handleSelectAll}
           onPause={() => batchMutation.mutate("pause")}
           onUnpause={() => batchMutation.mutate("unpause")}
