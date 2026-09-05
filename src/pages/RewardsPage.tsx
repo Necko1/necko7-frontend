@@ -789,9 +789,16 @@ function FilterPreviewBlock({
 
           {/* Sample skins */}
           {preview.sample_items.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">Sample skins ({preview.sample_items.length})</p>
-              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground font-medium">
+                  Sample skins ({preview.sample_items.length})
+                </p>
+                <span className="text-[10px] text-muted-foreground/60">
+                  Click to view on Market
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 max-h-80 overflow-y-auto p-0.5">
                 {preview.sample_items.map((item) => (
                   <a
                     key={item.market_hash_name}
@@ -800,17 +807,37 @@ function FilterPreviewBlock({
                     rel="noopener noreferrer"
                     title={item.market_hash_name}
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1.5 rounded-lg border border-border bg-background/60 px-2 py-1 text-[10px] hover:border-primary/30 hover:bg-primary/5 transition-all max-w-[200px]"
+                    className="group relative flex flex-col justify-between rounded-lg border border-border bg-background/80 hover:border-primary/50 hover:bg-primary/5 transition-all p-2 overflow-hidden text-left"
                   >
-                    <img
-                      src={getSkinImageUrl(item.market_hash_name, 150)}
-                      alt=""
-                      className="w-6 h-5 object-contain shrink-0"
-                    />
-                    <span className="truncate text-muted-foreground">{item.market_hash_name}</span>
-                    <span className="shrink-0 font-mono text-primary">
-                      {item.price.toFixed(2)}
-                    </span>
+                    <div className="relative w-full h-16 rounded-md bg-muted/20 flex items-center justify-center overflow-hidden mb-1.5">
+                      <SkinImage
+                        marketItemName={item.market_hash_name}
+                        size={150}
+                        objectFit="contain"
+                        className="w-full h-full group-hover:scale-105 transition-transform duration-200"
+                      />
+                    </div>
+                    <div className="space-y-1 w-full">
+                      <p
+                        className="text-[11px] font-medium text-foreground line-clamp-2 leading-tight min-h-[26px]"
+                        title={item.market_hash_name}
+                      >
+                        {item.market_hash_name}
+                      </p>
+                      <div className="flex items-center justify-between text-[11px] pt-0.5">
+                        <span className="font-mono font-semibold text-primary">
+                          {fmt(item.price, preview.currency)}
+                        </span>
+                        {item.volume != null && item.volume > 0 && (
+                          <span
+                            className="text-[10px] text-muted-foreground/70"
+                            title={`Volume: ${item.volume}`}
+                          >
+                            {item.volume} шт.
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </a>
                 ))}
               </div>
@@ -1384,44 +1411,50 @@ function RewardWizard({
     <div className="space-y-5">
       {/* Step indicator */}
       <div className="flex items-center gap-0">
-        {STEPS.map((label, idx) => (
-          <div key={idx} className="flex items-center flex-1 last:flex-none">
-            <button
-              type="button"
-              onClick={() => idx < step && setStep(idx as StepIndex)}
-              className={cn(
-                "flex items-center gap-2 shrink-0 text-xs font-medium transition-colors",
-                idx === step
-                  ? "text-primary"
-                  : idx < step
-                  ? "text-foreground cursor-pointer hover:text-primary"
-                  : "text-muted-foreground/50 cursor-default"
-              )}
-            >
-              <span
+        {STEPS.map((label, idx) => {
+          const isClickable = isEdit || idx <= step;
+          return (
+            <div key={idx} className="flex items-center flex-1 last:flex-none">
+              <button
+                type="button"
+                onClick={() => isClickable && setStep(idx as StepIndex)}
                 className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all",
+                  "flex items-center gap-2 shrink-0 text-xs font-medium transition-colors select-none",
                   idx === step
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : idx < step
-                    ? "border-primary bg-primary/20 text-primary"
-                    : "border-border bg-transparent text-muted-foreground/50"
+                    ? "text-primary font-semibold"
+                    : isClickable
+                    ? "text-foreground cursor-pointer hover:text-primary"
+                    : "text-muted-foreground/50 cursor-not-allowed"
                 )}
+                title={isEdit ? `Go to step: ${label}` : undefined}
               >
-                {idx < step ? "✓" : idx + 1}
-              </span>
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-            {idx < STEPS.length - 1 && (
-              <div
-                className={cn(
-                  "flex-1 h-px mx-2 transition-colors",
-                  idx < step ? "bg-primary/40" : "bg-border"
-                )}
-              />
-            )}
-          </div>
-        ))}
+                <span
+                  className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all",
+                    idx === step
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                      : isEdit
+                      ? "border-primary/50 bg-primary/10 text-primary cursor-pointer hover:border-primary hover:bg-primary/25"
+                      : idx < step
+                      ? "border-primary bg-primary/20 text-primary cursor-pointer hover:bg-primary/30"
+                      : "border-border bg-transparent text-muted-foreground/50"
+                  )}
+                >
+                  {isEdit ? idx + 1 : idx < step ? "✓" : idx + 1}
+                </span>
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+              {idx < STEPS.length - 1 && (
+                <div
+                  className={cn(
+                    "flex-1 h-px mx-2 transition-colors",
+                    isEdit || idx < step ? "bg-primary/40" : "bg-border"
+                  )}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <Separator />
@@ -1444,24 +1477,48 @@ function RewardWizard({
         >
           Back
         </Button>
-        {step < 2 ? (
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setStep((s) => (s < 2 ? (s + 1) as StepIndex : s))}
-            disabled={!canNext()}
-          >
-            Next →
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading || !canNext()}
-          >
-            {loading ? "Saving…" : isEdit ? "Save Changes" : "Create Reward"}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isEdit ? (
+            <>
+              {step < 2 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setStep((s) => (s < 2 ? (s + 1) as StepIndex : s))}
+                  disabled={!canNext()}
+                >
+                  Next →
+                </Button>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSubmit}
+                disabled={loading || !canNext()}
+              >
+                {loading ? "Saving…" : "Save Changes"}
+              </Button>
+            </>
+          ) : step < 2 ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setStep((s) => (s < 2 ? (s + 1) as StepIndex : s))}
+              disabled={!canNext()}
+            >
+              Next →
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading || !canNext()}
+            >
+              {loading ? "Saving…" : "Create Reward"}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

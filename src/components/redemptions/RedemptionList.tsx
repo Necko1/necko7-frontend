@@ -114,12 +114,20 @@ function RedemptionRow({
           </Badge>
         )}
         <span className="text-sm font-medium text-foreground shrink-0">@{redemption.user_login}</span>
+        {redemption.market_item_name && (
+          <span
+            className="text-xs text-muted-foreground/80 truncate max-w-[140px] sm:max-w-[220px] md:max-w-[320px] font-medium"
+            title={redemption.market_item_name}
+          >
+            {redemption.market_item_name}
+          </span>
+        )}
         {!compact && (
           <span className="text-xs text-muted-foreground ml-auto shrink-0">
             {format(new Date(redemption.created_at), "dd MMM HH:mm")}
           </span>
         )}
-        <span className="text-xs tabular-nums text-primary font-medium ml-auto shrink-0">
+        <span className={cn("text-xs tabular-nums text-primary font-medium shrink-0", compact ? "ml-auto" : "ml-auto sm:ml-0")}>
           {redemption.twitch_points_cost.toLocaleString()} pts
         </span>
         <IconChevron open={open} />
