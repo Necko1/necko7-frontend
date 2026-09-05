@@ -110,6 +110,12 @@ const IconPool = () => (
     <rect x="14" y="14" width="7" height="7" rx="1" />
   </svg>
 );
+const IconCheckAll = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 6 7 17l-5-5" />
+    <path d="m22 10-7.5 7.5L13 16" />
+  </svg>
+);
 
 // ── Image helpers ──────────────────────────────────────────────────────────
 // Direct CDN URL — for <img> display only (no CORS header, browser shows fine)
@@ -351,12 +357,14 @@ function strategyLabel(s: PriceStrategy): string {
 function RewardCard({
   reward,
   selected,
-  onSelect,
+  onToggleSelect,
+  onRangeSelect,
   onClick,
 }: {
   reward: RewardResponse;
   selected: boolean;
-  onSelect: (id: string, checked: boolean) => void;
+  onToggleSelect: (id: string) => void;
+  onRangeSelect: (id: string) => void;
   onClick: () => void;
 }) {
   const formattedPrice = formatMinorCurrency(reward.current_market_price, reward.currency);
@@ -368,13 +376,31 @@ function RewardCard({
     ? mostExpensivePoolItem(reward.pool_items)?.market_hash_name
     : null;
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("a, button, input")) {
+      return;
+    }
+
+    if (e.shiftKey) {
+      e.preventDefault();
+      window.getSelection()?.removeAllRanges();
+      onRangeSelect(reward.twitch_id);
+    } else if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      onToggleSelect(reward.twitch_id);
+    } else {
+      onClick();
+    }
+  };
+
   return (
     <div
-      onClick={onClick}
+      onClick={handleCardClick}
       className={cn(
-        "relative rounded-2xl border bg-card cursor-pointer transition-all duration-200 group overflow-hidden",
+        "relative rounded-2xl border bg-card cursor-pointer transition-all duration-200 group overflow-hidden select-none",
         "hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
-        selected && "border-primary/60 bg-primary/5 shadow-md shadow-primary/10",
+        selected && "border-primary/80 bg-primary/10 shadow-lg shadow-primary/15 ring-2 ring-primary/50",
         reward.is_paused && !selected && "opacity-60",
         reward.is_deleted && "opacity-40 pointer-events-none"
       )}
@@ -420,17 +446,24 @@ function RewardCard({
       <div className="p-4">
         {/* Checkbox */}
         <div
-          className="absolute top-3 right-3 z-10"
+          className="absolute top-3 right-3 z-10 p-1 cursor-pointer"
+          title={selected ? "Deselect (or Ctrl+Click)" : "Select (or Ctrl+Click)"}
           onClick={(e) => {
             e.stopPropagation();
-            onSelect(reward.twitch_id, !selected);
+            if (e.shiftKey) {
+              e.preventDefault();
+              window.getSelection()?.removeAllRanges();
+              onRangeSelect(reward.twitch_id);
+            } else {
+              onToggleSelect(reward.twitch_id);
+            }
           }}
         >
           <div
             className={cn(
               "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all backdrop-blur-sm",
               selected
-                ? "bg-primary border-primary"
+                ? "bg-primary border-primary shadow-sm shadow-primary/30"
                 : "border-white/60 bg-black/30 opacity-0 group-hover:opacity-100"
             )}
           >
@@ -1873,6 +1906,8 @@ function CreateRewardModal({
 // ── Bulk Action Bar ────────────────────────────────────────────────────────
 function BulkActionBar({
   count,
+  allFilteredSelected,
+  onSelectAll,
   onPause,
   onUnpause,
   onDelete,
@@ -1880,6 +1915,8 @@ function BulkActionBar({
   loading,
 }: {
   count: number;
+  allFilteredSelected: boolean;
+  onSelectAll: () => void;
   onPause: () => void;
   onUnpause: () => void;
   onDelete: () => void;
@@ -1887,20 +1924,75 @@ function BulkActionBar({
   loading: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-primary/30 bg-primary/5">
-      <span className="text-sm font-medium text-primary">{count} selected</span>
-      <Separator orientation="vertical" className="h-4" />
-      <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={onPause} disabled={loading}>
-        <IconPause /> Pause all
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 px-4 rounded-2xl border border-border/80 bg-card/90 backdrop-blur-xl shadow-2xl shadow-black/50 ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-5 duration-200 max-w-[95vw] overflow-x-auto">
+      <div className="flex items-center gap-2 pr-1">
+        <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+        <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
+          {count} <span className="text-muted-foreground font-normal">selected</span>
+        </span>
+      </div>
+
+      <Separator orientation="vertical" className="h-5 mx-1" />
+
+      <Button
+        size="sm"
+        variant="outline"
+        className="gap-1.5 text-xs h-8 bg-background/60 hover:bg-background shrink-0"
+        onClick={onSelectAll}
+        disabled={allFilteredSelected || loading}
+        title="Select all matching rewards"
+      >
+        <IconCheckAll />
+        <span>{allFilteredSelected ? "All selected" : "Select all"}</span>
       </Button>
-      <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={onUnpause} disabled={loading}>
-        <IconPlay /> Unpause all
+
+      <Button
+        size="sm"
+        variant="outline"
+        className="gap-1.5 text-xs h-8 bg-background/60 hover:bg-background shrink-0"
+        onClick={onPause}
+        disabled={loading}
+      >
+        <IconPause />
+        <span>Pause all</span>
       </Button>
-      <Button size="sm" variant="destructive" className="gap-1.5 text-xs" onClick={onDelete} disabled={loading}>
-        <IconTrash /> Delete all
+
+      <Button
+        size="sm"
+        variant="outline"
+        className="gap-1.5 text-xs h-8 bg-background/60 hover:bg-background shrink-0"
+        onClick={onUnpause}
+        disabled={loading}
+      >
+        <IconPlay />
+        <span>Unpause all</span>
       </Button>
-      <Button size="sm" variant="ghost" className="gap-1.5 text-xs ml-auto" onClick={onClear}>
-        <IconClose /> Clear
+
+      <Button
+        size="sm"
+        variant="destructive"
+        className="gap-1.5 text-xs h-8 shrink-0"
+        onClick={onDelete}
+        disabled={loading}
+      >
+        <IconTrash />
+        <span>Delete all</span>
+      </Button>
+
+      <Separator orientation="vertical" className="h-5 mx-1" />
+
+      <Button
+        size="sm"
+        variant="ghost"
+        className="gap-1.5 text-xs h-8 text-muted-foreground hover:text-foreground shrink-0"
+        onClick={onClear}
+        title="Clear selection (Esc)"
+      >
+        <IconClose />
+        <span>Clear</span>
+        <kbd className="hidden sm:inline-block ml-0.5 px-1.5 py-0.5 text-[10px] font-mono bg-muted/60 text-muted-foreground rounded border border-border">
+          Esc
+        </kbd>
       </Button>
     </div>
   );
@@ -1917,6 +2009,8 @@ export default function RewardsPage() {
   const [filterType, setFilterType] = useState<"all" | RewardType>("all");
   const [showDeleted, setShowDeleted] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const lastSelectedIdRef = useRef<string | null>(null);
+
   const [editingReward, setEditingReward] = useState<RewardResponse | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
@@ -1938,6 +2032,7 @@ export default function RewardsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rewards", channelId] });
       setSelectedIds(new Set());
+      lastSelectedIdRef.current = null;
     },
   });
 
@@ -1956,14 +2051,100 @@ export default function RewardsPage() {
     });
   }, [rewards, search, filterPaused, filterType]);
 
-  const toggleSelect = (id: string, checked: boolean) => {
+  const handleToggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
-  };
+    lastSelectedIdRef.current = id;
+  }, []);
+
+  const handleRangeSelect = useCallback(
+    (targetId: string) => {
+      const targetIndex = filtered.findIndex((r) => r.twitch_id === targetId);
+      if (targetIndex === -1) return;
+
+      const anchorId = lastSelectedIdRef.current;
+      let anchorIndex = anchorId ? filtered.findIndex((r) => r.twitch_id === anchorId) : -1;
+
+      if (anchorIndex === -1) {
+        const visibleSelectedIndices = filtered
+          .map((r, idx) => (selectedIds.has(r.twitch_id) ? idx : -1))
+          .filter((idx) => idx !== -1);
+
+        if (visibleSelectedIndices.length > 0) {
+          anchorIndex = visibleSelectedIndices.reduce((prev, curr) =>
+            Math.abs(curr - targetIndex) < Math.abs(prev - targetIndex) ? curr : prev
+          );
+        } else {
+          anchorIndex = targetIndex;
+        }
+      }
+
+      const start = Math.min(anchorIndex, targetIndex);
+      const end = Math.max(anchorIndex, targetIndex);
+
+      const rangeIds = filtered.slice(start, end + 1).map((r) => r.twitch_id);
+
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const rid of rangeIds) {
+          next.add(rid);
+        }
+        return next;
+      });
+
+      lastSelectedIdRef.current = targetId;
+    },
+    [filtered, selectedIds]
+  );
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      filtered.forEach((r) => next.add(r.twitch_id));
+      return next;
+    });
+  }, [filtered]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    lastSelectedIdRef.current = null;
+  }, []);
+
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((r) => selectedIds.has(r.twitch_id));
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (editingReward || showCreate) return;
+
+      if (e.key === "Escape") {
+        if (selectedIds.size > 0) {
+          e.preventDefault();
+          handleClearSelection();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A")) {
+        const target = e.target as HTMLElement | null;
+        const isInput =
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target?.isContentEditable;
+        if (!isInput && filtered.length > 0) {
+          e.preventDefault();
+          handleSelectAll();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editingReward, showCreate, selectedIds.size, filtered, handleClearSelection, handleSelectAll]);
 
   if (!channelId) {
     return (
@@ -1974,7 +2155,7 @@ export default function RewardsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 space-y-6 pb-28">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -2051,20 +2232,6 @@ export default function RewardsPage() {
         </label>
       </div>
 
-      {/* Bulk action bar */}
-      {selectedIds.size > 0 && (
-        <BulkActionBar
-          count={selectedIds.size}
-          onPause={() => batchMutation.mutate("pause")}
-          onUnpause={() => batchMutation.mutate("unpause")}
-          onDelete={() => {
-            if (confirm(`Delete ${selectedIds.size} rewards?`)) batchMutation.mutate("delete");
-          }}
-          onClear={() => setSelectedIds(new Set())}
-          loading={batchMutation.isPending}
-        />
-      )}
-
       {/* Grid */}
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -2086,11 +2253,31 @@ export default function RewardsPage() {
               key={reward.twitch_id}
               reward={reward}
               selected={selectedIds.has(reward.twitch_id)}
-              onSelect={toggleSelect}
-              onClick={() => setEditingReward(reward)}
+              onToggleSelect={handleToggleSelect}
+              onRangeSelect={handleRangeSelect}
+              onClick={() => {
+                lastSelectedIdRef.current = reward.twitch_id;
+                setEditingReward(reward);
+              }}
             />
           ))}
         </div>
+      )}
+
+      {/* Floating bulk action bar */}
+      {selectedIds.size > 0 && (
+        <BulkActionBar
+          count={selectedIds.size}
+          allFilteredSelected={allFilteredSelected}
+          onSelectAll={handleSelectAll}
+          onPause={() => batchMutation.mutate("pause")}
+          onUnpause={() => batchMutation.mutate("unpause")}
+          onDelete={() => {
+            if (confirm(`Delete ${selectedIds.size} rewards?`)) batchMutation.mutate("delete");
+          }}
+          onClear={handleClearSelection}
+          loading={batchMutation.isPending}
+        />
       )}
 
       {/* Modals */}
