@@ -21,15 +21,19 @@ export function SkinFallbackIcon({ className }: { className?: string }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <polyline points="20 12 20 22 4 22 4 12" />
-      <rect x="2" y="7" width="20" height="5" rx="1" />
-      <line x1="12" y1="22" x2="12" y2="7" />
-      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+      {/* Box bottom */}
+      <path d="M4.5 9.5a1.5 1.5 0 0 1 1.5-1.5h12a1.5 1.5 0 0 1 1.5 1.5v8a3 3 0 0 1-3 3H7.5a3 3 0 0 1-3-3v-8z" />
+      {/* Ribbon vertical */}
+      <path d="M12 8v13" />
+      {/* Lid */}
+      <rect x="3" y="6" width="18" height="3" rx="1.5" />
+      {/* Ribbon bows */}
+      <path d="M12 6C10.5 3.5 7.5 3.5 7.5 6s4.5 0 4.5 0z" />
+      <path d="M12 6C13.5 3.5 16.5 3.5 16.5 6s-4.5 0-4.5 0z" />
     </svg>
   );
 }
@@ -61,10 +65,10 @@ export default function SkinImage({
       <div
         className={
           fallbackClassName ??
-          "w-full h-full flex items-center justify-center bg-muted/30"
+          "w-full h-full flex items-center justify-center bg-primary/5"
         }
       >
-        <SkinFallbackIcon className="w-1/2 h-1/2 text-muted-foreground/40" />
+        <SkinFallbackIcon className="w-14 h-14 text-primary" />
       </div>
     );
   }

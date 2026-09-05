@@ -353,6 +353,9 @@ export interface UserRedemptionsQuery {
 
 export interface UserChatStatsResponse {
   user_id: string;
+  user_login?: string | null;
+  display_name?: string | null;
+  profile_image_url?: string | null;
   message_count: number;
   char_count: number;
   time_window_hours?: number | null;

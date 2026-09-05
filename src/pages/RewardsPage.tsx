@@ -1619,7 +1619,55 @@ function StepChatRequirements({
 }
 
 // ── Multi-step Reward Wizard ───────────────────────────────────────────────
-const STEPS = ["Type & Skin", "Pricing", "Twitch Settings", "Chat Requirements"] as const;
+const STEPS = [
+  {
+    title: "Type & Skin",
+    subtitle: "Select reward type and CS skin item",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+        <line x1="12" y1="22.08" x2="12" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    title: "Pricing",
+    subtitle: "Configure market pricing strategy and markup",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    ),
+  },
+  {
+    title: "Twitch Settings",
+    subtitle: "Title, cooldowns and stream limits",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="4" y1="21" x2="4" y2="14" />
+        <line x1="4" y1="10" x2="4" y2="3" />
+        <line x1="12" y1="21" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12" y2="3" />
+        <line x1="20" y1="21" x2="20" y2="16" />
+        <line x1="20" y1="12" x2="20" y2="3" />
+        <line x1="1" y1="14" x2="7" y2="14" />
+        <line x1="9" y1="8" x2="15" y2="8" />
+        <line x1="17" y1="16" x2="23" y2="16" />
+      </svg>
+    ),
+  },
+  {
+    title: "Chat Requirements",
+    subtitle: "Require viewer chat activity before redemption",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+  },
+] as const;
 type StepIndex = 0 | 1 | 2 | 3;
 
 function RewardWizard({
@@ -1711,51 +1759,70 @@ function RewardWizard({
   return (
     <div className="space-y-5">
       {/* Step indicator */}
-      <div className="flex items-center gap-0">
-        {STEPS.map((label, idx) => {
-          const isClickable = isEdit || idx <= step;
-          return (
-            <div key={idx} className="flex items-center flex-1 last:flex-none">
-              <button
-                type="button"
-                onClick={() => isClickable && setStep(idx as StepIndex)}
-                className={cn(
-                  "flex items-center gap-2 shrink-0 text-xs font-medium transition-colors select-none",
-                  idx === step
-                    ? "text-primary font-semibold"
-                    : isClickable
-                    ? "text-foreground cursor-pointer hover:text-primary"
-                    : "text-muted-foreground/50 cursor-not-allowed"
-                )}
-                title={isEdit ? `Go to step: ${label}` : undefined}
-              >
-                <span
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-1 sm:gap-2">
+          {STEPS.map((s, idx) => {
+            const isClickable = isEdit || idx <= step;
+            const isCurrent = idx === step;
+            const isPast = idx < step;
+            return (
+              <div key={idx} className="flex items-center flex-1 last:flex-none">
+                <button
+                  type="button"
+                  onClick={() => isClickable && setStep(idx as StepIndex)}
+                  disabled={!isClickable}
                   className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all",
-                    idx === step
-                      ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-                      : isEdit
-                      ? "border-primary/50 bg-primary/10 text-primary cursor-pointer hover:border-primary hover:bg-primary/25"
-                      : idx < step
-                      ? "border-primary bg-primary/20 text-primary cursor-pointer hover:bg-primary/30"
-                      : "border-border bg-transparent text-muted-foreground/50"
+                    "relative w-12 h-12 rounded-xl flex items-center justify-center transition-all shrink-0",
+                    isCurrent
+                      ? "border-2 border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105"
+                      : isEdit || isPast
+                      ? "border-2 border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary cursor-pointer"
+                      : "border border-border bg-card/60 text-muted-foreground/40 cursor-not-allowed"
                   )}
+                  title={`Step ${idx + 1}: ${s.title}`}
                 >
-                  {isEdit ? idx + 1 : idx < step ? "✓" : idx + 1}
-                </span>
-                <span className="hidden sm:inline">{label}</span>
-              </button>
-              {idx < STEPS.length - 1 && (
-                <div
-                  className={cn(
-                    "flex-1 h-px mx-2 transition-colors",
-                    isEdit || idx < step ? "bg-primary/40" : "bg-border"
-                  )}
-                />
-              )}
-            </div>
-          );
-        })}
+                  {s.icon}
+                  {/* Step number badge */}
+                  <span
+                    className={cn(
+                      "absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center border",
+                      isCurrent
+                        ? "bg-background text-primary border-primary font-black"
+                        : isPast
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted text-muted-foreground border-border"
+                    )}
+                  >
+                    {isPast ? "✓" : idx + 1}
+                  </span>
+                </button>
+                {idx < STEPS.length - 1 && (
+                  <div
+                    className={cn(
+                      "flex-1 h-0.5 mx-2 rounded-full transition-colors",
+                      isEdit || isPast ? "bg-primary/50" : "bg-border/60"
+                    )}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Active step title & subtitle */}
+        <div className="flex items-baseline justify-between pt-0.5 px-0.5">
+          <div>
+            <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">
+              Step {step + 1} of {STEPS.length}
+            </span>
+            <h3 className="text-sm font-bold text-foreground leading-tight">
+              {STEPS[step].title}
+            </h3>
+          </div>
+          <p className="text-xs text-muted-foreground hidden sm:block">
+            {STEPS[step].subtitle}
+          </p>
+        </div>
       </div>
 
       <Separator />

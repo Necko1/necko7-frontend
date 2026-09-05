@@ -135,7 +135,7 @@ function RedemptionCard({ redemption }: { redemption: RedemptionResponse }) {
           marketItemName={redemption.market_item_name}
           size={150}
           className="w-full h-full object-contain p-2 transition-transform group-hover:scale-105"
-          fallbackClassName="w-full h-full flex items-center justify-center bg-muted/20"
+          fallbackClassName="w-full h-full flex items-center justify-center bg-primary/5"
         />
         <div className="absolute top-2 right-2">
           <Badge
@@ -314,7 +314,9 @@ export default function ChatUserPage() {
   const displayMessages = allMessages.length > 0 ? allMessages : messagesData?.items ?? [];
   const displayRedemptions = allRedemptions.length > 0 ? allRedemptions : redemptionsData?.items ?? [];
 
-  const userLogin = summary?.chatter_user_login ?? userId;
+  const userLogin = periodStats?.user_login || summary?.chatter_user_login || userId;
+  const displayName = periodStats?.display_name || userLogin;
+  const avatarUrl = periodStats?.profile_image_url;
 
   return (
     <div className="p-8 space-y-6">
@@ -330,11 +332,17 @@ export default function ChatUserPage() {
 
       {/* Profile header */}
       <div className="flex items-center gap-4 p-5 rounded-2xl border border-border bg-card">
-        {summaryLoading ? (
+        {summaryLoading && statsLoading ? (
           <Skeleton className="w-14 h-14 rounded-full shrink-0" />
+        ) : avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={displayName}
+            className="w-14 h-14 rounded-full object-cover shrink-0 ring-2 ring-border/80 shadow-sm"
+          />
         ) : (
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0"
+            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0 shadow-sm"
             style={{
               background: `hsl(${[...userLogin].reduce((a, c) => a + c.charCodeAt(0), 0) % 360}, 55%, 42%)`,
             }}
@@ -343,14 +351,39 @@ export default function ChatUserPage() {
           </div>
         )}
         <div className="flex-1 min-w-0 space-y-1">
-          {summaryLoading ? (
+          {summaryLoading && statsLoading ? (
             <>
               <Skeleton className="h-6 w-40" />
               <Skeleton className="h-4 w-56" />
             </>
           ) : (
             <>
-              <h1 className="text-xl font-bold text-foreground">@{userLogin}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-foreground">
+                  {displayName}
+                </h1>
+                {displayName.toLowerCase() !== userLogin.toLowerCase() ? (
+                  <span className="text-sm font-medium text-muted-foreground">
+                    (@{userLogin})
+                  </span>
+                ) : displayName !== userLogin ? (
+                  <span className="text-xs font-mono text-muted-foreground/70">
+                    @{userLogin}
+                  </span>
+                ) : null}
+                {userLogin && userLogin !== userId && (
+                  <a
+                    href={`https://twitch.tv/${userLogin}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline ml-1"
+                    title={`Open @${userLogin} Twitch channel`}
+                  >
+                    <IconExternalLink />
+                    Twitch
+                  </a>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 <span className="font-mono text-foreground/60">{userId}</span>
                 {summary?.first_seen_at && (
