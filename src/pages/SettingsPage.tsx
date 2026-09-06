@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { broadcastersApi, permissionsApi } from "@/lib/apiClient";
@@ -31,6 +31,21 @@ const IconPlus = () => (
 const IconSave = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
+  </svg>
+);
+const IconSearch = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+const IconRotateCcw = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" />
+  </svg>
+);
+const IconCheck = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
@@ -232,6 +247,55 @@ function GeneralTab({ channelId }: { channelId: string }) {
   );
 }
 
+// ── Category Metadata ──────────────────────────────────────────────────────
+interface CategoryMeta {
+  id: string;
+  label: string;
+  description: string;
+}
+
+const CATEGORY_META: Record<string, CategoryMeta> = {
+  orders: {
+    id: "orders",
+    label: "Orders",
+    description: "Market order creation, price filtering, and purchase outcomes.",
+  },
+  trades: {
+    id: "trades",
+    label: "Trades",
+    description: "Steam trade offer delivery, acceptance, declines, and timeouts.",
+  },
+  market_errors: {
+    id: "market_errors",
+    label: "Market Errors",
+    description: "CS:GO Market API and Steam inventory verification error messages.",
+  },
+  chat_requirements: {
+    id: "chat_requirements",
+    label: "Chat Requirements",
+    description: "Viewer chat activity requirements (messages and character count).",
+  },
+  limits: {
+    id: "limits",
+    label: "Limits",
+    description: "Global and per-user reward redemption rate limit alerts.",
+  },
+};
+
+function getCategoryMeta(key: string): CategoryMeta {
+  if (CATEGORY_META[key]) return CATEGORY_META[key];
+  const label = key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return { id: key, label, description: `Customizable chat messages for ${label}.` };
+}
+
+function formatMessageKey(key: string): string {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 // ── Chat Messages Tab ──────────────────────────────────────────────────────
 function ChatMessagesTab({ channelId }: { channelId: string }) {
   const qc = useQueryClient();
@@ -241,10 +305,18 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
     queryFn: () => broadcastersApi.getChatMessages(channelId).then((r) => r.data),
   });
 
-  const [messages, setMessages] = useState<Record<string, string>>({});
+  const [messages, setMessages] = useState<Record<string, Record<string, string>>>({});
+  const [activeCategory, setActiveCategory] = useState<string>("orders");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
-    if (data) setMessages({ ...data.messages });
+    if (data?.messages) {
+      const initial: Record<string, Record<string, string>> = {};
+      for (const [cat, catMsgs] of Object.entries(data.messages)) {
+        initial[cat] = { ...(catMsgs as Record<string, string>) };
+      }
+      setMessages(initial);
+    }
   }, [data]);
 
   const updateMutation = useMutation({
@@ -252,75 +324,414 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["chat-messages", channelId] }),
   });
 
+  const categories = useMemo(() => {
+    if (!data?.default_messages) return [];
+    const desiredOrder = ["orders", "trades", "market_errors", "chat_requirements", "limits"];
+    const serverCategories = Object.keys(data.default_messages);
+    return [
+      ...desiredOrder.filter((k) => serverCategories.includes(k)),
+      ...serverCategories.filter((k) => !desiredOrder.includes(k)),
+    ];
+  }, [data]);
+
+  useEffect(() => {
+    if (categories.length > 0 && !categories.includes(activeCategory)) {
+      setActiveCategory(categories[0]);
+    }
+  }, [categories, activeCategory]);
+
+  const handleMessageChange = (cat: string, msgKey: string, value: string) => {
+    setMessages((prev) => ({
+      ...prev,
+      [cat]: {
+        ...(prev[cat] || {}),
+        [msgKey]: value,
+      },
+    }));
+  };
+
+  const handleResetMessage = (cat: string, msgKey: string) => {
+    setMessages((prev) => {
+      const nextCat = { ...(prev[cat] || {}) };
+      delete nextCat[msgKey];
+      return {
+        ...prev,
+        [cat]: nextCat,
+      };
+    });
+  };
+
+  const handleResetCategory = (cat: string) => {
+    setMessages((prev) => {
+      const nextCat = { ...(prev[cat] || {}) };
+      const defaultKeys = Object.keys(data?.default_messages?.[cat] || {});
+      for (const k of defaultKeys) {
+        delete nextCat[k];
+      }
+      return {
+        ...prev,
+        [cat]: nextCat,
+      };
+    });
+  };
+
+  const isMessageCustomized = (cat: string, msgKey: string): boolean => {
+    if (!data) return false;
+    const currentVal = messages[cat]?.[msgKey];
+    const defaultVal = data.default_messages?.[cat]?.[msgKey] ?? "";
+    const hadCustomOnServer = Boolean(data.custom_messages?.[cat]?.[msgKey]);
+
+    if (currentVal === undefined) {
+      return false;
+    }
+    if (currentVal !== defaultVal) {
+      return true;
+    }
+    return hadCustomOnServer;
+  };
+
+  const getCustomCount = (cat: string): number => {
+    if (!data?.default_messages?.[cat]) return 0;
+    let count = 0;
+    for (const msgKey of Object.keys(data.default_messages[cat])) {
+      if (isMessageCustomized(cat, msgKey)) {
+        count++;
+      }
+    }
+    return count;
+  };
+
+  const insertPlaceholder = (cat: string, msgKey: string, placeholder: string) => {
+    const textarea = document.getElementById(
+      `msg-input-${cat}-${msgKey}`
+    ) as HTMLTextAreaElement | null;
+    const tagToInsert = `{${placeholder}}`;
+    const defaultVal = data?.default_messages?.[cat]?.[msgKey] ?? "";
+    const currentVal = messages[cat]?.[msgKey] ?? defaultVal;
+
+    if (textarea) {
+      const start = textarea.selectionStart ?? currentVal.length;
+      const end = textarea.selectionEnd ?? currentVal.length;
+      const updated =
+        currentVal.substring(0, start) + tagToInsert + currentVal.substring(end);
+      handleMessageChange(cat, msgKey, updated);
+
+      setTimeout(() => {
+        textarea.focus();
+        const newPos = start + tagToInsert.length;
+        textarea.setSelectionRange(newPos, newPos);
+      }, 0);
+    } else {
+      handleMessageChange(cat, msgKey, currentVal + tagToInsert);
+    }
+  };
+
+  const filteredMessages = useMemo(() => {
+    if (!data?.default_messages?.[activeCategory]) return [];
+    const entries = Object.entries(data.default_messages[activeCategory]);
+    if (!searchQuery.trim()) return entries;
+
+    const q = searchQuery.toLowerCase().trim();
+    return entries.filter(([msgKey, defaultText]) => {
+      const currentVal = messages[activeCategory]?.[msgKey] ?? "";
+      const placeholders = data.placeholders?.[activeCategory]?.[msgKey] || [];
+      return (
+        msgKey.toLowerCase().includes(q) ||
+        defaultText.toLowerCase().includes(q) ||
+        currentVal.toLowerCase().includes(q) ||
+        placeholders.some((p) => p.toLowerCase().includes(q))
+      );
+    });
+  }, [data, activeCategory, searchQuery, messages]);
+
+  const otherCategoryMatches = useMemo(() => {
+    if (!searchQuery.trim() || !data?.default_messages) return [];
+    const q = searchQuery.toLowerCase().trim();
+    const results: { cat: string; count: number }[] = [];
+
+    for (const [catKey, catDefaults] of Object.entries(data.default_messages)) {
+      if (catKey === activeCategory) continue;
+      let matches = 0;
+      for (const [msgKey, defaultText] of Object.entries(catDefaults)) {
+        const currentVal = messages[catKey]?.[msgKey] ?? "";
+        const placeholders = data.placeholders?.[catKey]?.[msgKey] || [];
+        if (
+          msgKey.toLowerCase().includes(q) ||
+          defaultText.toLowerCase().includes(q) ||
+          currentVal.toLowerCase().includes(q) ||
+          placeholders.some((p) => p.toLowerCase().includes(q))
+        ) {
+          matches++;
+        }
+      }
+      if (matches > 0) {
+        results.push({ cat: catKey, count: matches });
+      }
+    }
+    return results;
+  }, [searchQuery, data, messages, activeCategory]);
+
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
   if (!data) return null;
 
+  const currentCatMeta = getCategoryMeta(activeCategory);
+  const currentCatCustomCount = getCustomCount(activeCategory);
+
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Customize the bot's Twitch chat messages. Use placeholders like{" "}
-        <code className="px-1 py-0.5 rounded bg-muted text-xs font-mono">{"{buyer}"}</code> where indicated.
-      </p>
+      <div>
+        <p className="text-sm text-muted-foreground">
+          Customize the bot's Twitch chat announcements and responses. Click placeholder badges to insert variables like{" "}
+          <code className="px-1 py-0.5 rounded bg-muted text-xs font-mono">{"{buyer}"}</code> into the message template.
+        </p>
+      </div>
 
-      {Object.entries(data.default_messages).map(([msgId, defaultText]) => {
-        const placeholders = data.placeholders[msgId] ?? [];
-        return (
-          <div key={msgId} className="rounded-xl border border-border bg-card p-5 space-y-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <code className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">
-                {msgId}
-              </code>
-              {placeholders.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {placeholders.map((p) => (
-                    <Badge key={p} variant="outline" className="text-xs font-mono">
-                      {`{${p}}`}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-            <Textarea
-              rows={2}
-              placeholder={defaultText}
-              value={messages[msgId] ?? ""}
-              onChange={(e) =>
-                setMessages((m) => ({ ...m, [msgId]: e.target.value }))
-              }
-            />
-            <p className="text-xs text-muted-foreground">
-              Default:{" "}
-              <span className="italic">{defaultText}</span>
-            </p>
-            {data.custom_messages[msgId] && (
+      {/* Sub-Tabs Navigation & Search Bar */}
+      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+        <div className="flex flex-wrap gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/60">
+          {categories.map((catKey) => {
+            const meta = getCategoryMeta(catKey);
+            const isActive = activeCategory === catKey;
+            const customCount = getCustomCount(catKey);
+
+            return (
               <button
-                className="text-xs text-destructive hover:underline"
-                onClick={() =>
-                  setMessages((m) => {
-                    const next = { ...m };
-                    delete next[msgId];
-                    return next;
-                  })
-                }
+                key={catKey}
+                type="button"
+                onClick={() => setActiveCategory(catKey)}
+                className={cn(
+                  "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer select-none",
+                  isActive
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-card/50"
+                )}
               >
-                Reset to default
+                {meta.label}
+                {customCount > 0 && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-[10px] font-mono leading-none",
+                      isActive
+                        ? "bg-primary/15 text-primary font-bold"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {customCount}
+                  </span>
+                )}
               </button>
-            )}
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
 
-      <Button
-        className="gap-2"
-        onClick={() => updateMutation.mutate()}
-        disabled={updateMutation.isPending}
-      >
-        <IconSave />
-        {updateMutation.isPending ? "Saving…" : "Save Messages"}
-      </Button>
-      {updateMutation.isSuccess && (
-        <p className="text-sm text-emerald-400">Messages saved successfully.</p>
+        {/* Search filter input */}
+        <div className="relative w-full md:w-64">
+          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+            <IconSearch />
+          </div>
+          <Input
+            type="text"
+            placeholder="Search templates…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 pr-7 h-9 text-xs"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Active Category Header & Bulk Reset */}
+      <div className="flex items-center justify-between gap-4 flex-wrap pb-1 border-b border-border/40">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            {currentCatMeta.label}
+            {currentCatCustomCount > 0 ? (
+              <Badge variant="secondary" className="text-[11px] font-normal font-mono">
+                {currentCatCustomCount} customized
+              </Badge>
+            ) : (
+              <span className="text-xs text-muted-foreground font-normal">
+                (all using defaults)
+              </span>
+            )}
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {currentCatMeta.description}
+          </p>
+        </div>
+        {currentCatCustomCount > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5 h-8 cursor-pointer"
+            onClick={() => handleResetCategory(activeCategory)}
+            title="Reset all modified messages in this category back to defaults"
+          >
+            <IconRotateCcw />
+            Reset Category to Defaults
+          </Button>
+        )}
+      </div>
+
+      {/* Empty Search Results State */}
+      {filteredMessages.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center space-y-3">
+          <p className="text-sm text-muted-foreground">
+            No message templates found matching &ldquo;{searchQuery}&rdquo; in {currentCatMeta.label}.
+          </p>
+          {otherCategoryMatches.length > 0 && (
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>Found matches in other categories:</p>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                {otherCategoryMatches.map(({ cat, count }) => {
+                  const meta = getCategoryMeta(cat);
+                  return (
+                    <Button
+                      key={cat}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1.5 cursor-pointer"
+                      onClick={() => setActiveCategory(cat)}
+                    >
+                      {meta.label} ({count})
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-xs h-7"
+            onClick={() => setSearchQuery("")}
+          >
+            Clear Search
+          </Button>
+        </div>
+      ) : (
+        /* Message Cards */
+        <div className="space-y-4">
+          {filteredMessages.map(([msgKey, defaultText]) => {
+            const placeholders = data.placeholders?.[activeCategory]?.[msgKey] ?? [];
+            const isCustomized = isMessageCustomized(activeCategory, msgKey);
+
+            return (
+              <div
+                key={msgKey}
+                className={cn(
+                  "rounded-xl border bg-card p-5 space-y-3.5 transition-colors",
+                  isCustomized ? "border-primary/40 shadow-xs" : "border-border"
+                )}
+              >
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm text-foreground">
+                        {formatMessageKey(msgKey)}
+                      </span>
+                      <code className="text-[11px] font-mono text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded border border-border/50">
+                        {msgKey}
+                      </code>
+                      {isCustomized ? (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-500 border-amber-500/30 bg-amber-500/10">
+                          Customized
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground/70 border-border/60">
+                          Default
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Placeholder Buttons */}
+                  {placeholders.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] text-muted-foreground font-medium mr-0.5 select-none">
+                        Insert:
+                      </span>
+                      {placeholders.map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => insertPlaceholder(activeCategory, msgKey, p)}
+                          title={`Click to insert {${p}} at cursor`}
+                          className="group inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md border border-primary/20 bg-primary/5 hover:bg-primary/15 text-primary hover:border-primary/40 transition-all cursor-pointer active:scale-95 select-none"
+                        >
+                          <span>{`{${p}}`}</span>
+                          <span className="opacity-40 group-hover:opacity-100 text-[10px] leading-none">+</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Textarea
+                  id={`msg-input-${activeCategory}-${msgKey}`}
+                  rows={2}
+                  placeholder={defaultText}
+                  value={messages[activeCategory]?.[msgKey] ?? ""}
+                  onChange={(e) =>
+                    handleMessageChange(activeCategory, msgKey, e.target.value)
+                  }
+                  className="font-normal text-sm leading-relaxed resize-y"
+                />
+
+                <div className="flex items-center justify-between gap-2 pt-0.5 flex-wrap text-xs">
+                  <p className="text-muted-foreground text-xs leading-normal flex-1 min-w-[200px]">
+                    <span className="font-medium text-foreground/80">Default:</span>{" "}
+                    <span className="italic select-all">{defaultText}</span>
+                  </p>
+                  {isCustomized && (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs text-destructive hover:underline cursor-pointer font-medium ml-auto"
+                      onClick={() => handleResetMessage(activeCategory, msgKey)}
+                    >
+                      <IconRotateCcw />
+                      Reset to default
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
+
+      {/* Save Button & Notifications */}
+      <div className="flex items-center gap-4 pt-4 border-t border-border">
+        <Button
+          className="gap-2 cursor-pointer"
+          onClick={() => updateMutation.mutate()}
+          disabled={updateMutation.isPending}
+        >
+          <IconSave />
+          {updateMutation.isPending ? "Saving…" : "Save Messages"}
+        </Button>
+        {updateMutation.isSuccess && (
+          <p className="text-sm text-emerald-400 flex items-center gap-1.5 font-medium">
+            <IconCheck /> Messages saved successfully.
+          </p>
+        )}
+        {updateMutation.isError && (
+          <p className="text-sm text-destructive font-medium">
+            Failed to save messages. Please try again.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -453,7 +864,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
+    <div className="p-8 space-y-6 max-w-4xl">
       <div className="flex items-center gap-4">
         {settings?.profile_image_url ? (
           <img

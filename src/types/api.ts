@@ -22,6 +22,17 @@ export interface BroadcasterListItem {
   role: ChannelRole;
 }
 
+export type ChatMessageCategory =
+  | "orders"
+  | "market_errors"
+  | "trades"
+  | "chat_requirements"
+  | "limits"
+  | (string & {});
+
+export type CategorizedChatMessages = Record<string, Record<string, string>>;
+export type CategorizedPlaceholders = Record<string, Record<string, string[]>>;
+
 export interface BroadcasterSettingsResponse {
   channel_id: string;
   channel_login: string;
@@ -35,7 +46,7 @@ export interface BroadcasterSettingsResponse {
   refund_if_no_money: boolean;
   pause_reward_if_no_money: boolean;
   market_chance_to_transfer: number;
-  chat_messages: Record<string, string>;
+  chat_messages: Record<string, Record<string, string>>;
 }
 
 export interface UpdateBroadcasterSettingsBody {
@@ -47,7 +58,7 @@ export interface UpdateBroadcasterSettingsBody {
   refund_if_no_money?: boolean | null;
   pause_reward_if_no_money?: boolean | null;
   market_chance_to_transfer?: number | null;
-  chat_messages?: Record<string, string> | null;
+  chat_messages?: Record<string, Record<string, string>> | null;
 }
 
 export interface MarketBalanceResponse {
@@ -59,14 +70,14 @@ export interface MarketBalanceResponse {
 
 export interface ChatMessagesResponse {
   channel_id: string;
-  messages: Record<string, string>;
-  custom_messages: Record<string, string>;
-  default_messages: Record<string, string>;
-  placeholders: Record<string, string[]>;
+  messages: Record<string, Record<string, string>>;
+  custom_messages: Record<string, Record<string, string>>;
+  default_messages: Record<string, Record<string, string>>;
+  placeholders: Record<string, Record<string, string[]>>;
 }
 
 export interface UpdateChatMessagesBody {
-  messages: Record<string, string>;
+  messages: Record<string, Record<string, string>>;
 }
 
 // ===== Permissions =====
