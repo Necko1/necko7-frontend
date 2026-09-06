@@ -434,9 +434,15 @@ function PermissionsTab({ channelId }: { channelId: string }) {
   );
 }
 
-// ── Main Settings Page ─────────────────────────────────────────────────────
 export default function SettingsPage() {
   const { channelId } = useParams<{ channelId: string }>();
+
+  const { data: settings } = useQuery({
+    queryKey: ["settings", channelId],
+    queryFn: () => broadcastersApi.getSettings(channelId!).then((r) => r.data),
+    enabled: !!channelId,
+    staleTime: 60_000,
+  });
 
   if (!channelId) {
     return (
@@ -448,11 +454,22 @@ export default function SettingsPage() {
 
   return (
     <div className="p-8 space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Channel Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Configure bot behavior, pricing, messages, and access control.
-        </p>
+      <div className="flex items-center gap-4">
+        {settings?.profile_image_url ? (
+          <img
+            src={settings.profile_image_url}
+            alt={settings.display_name || settings.channel_login}
+            className="w-14 h-14 rounded-2xl object-cover ring-2 ring-primary/20 shrink-0 shadow-sm"
+          />
+        ) : null}
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {settings?.display_name ? `${settings.display_name} Settings` : "Channel Settings"}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {settings?.channel_login ? `@${settings.channel_login} · ` : ""}Configure bot behavior, pricing, messages, and access control.
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue="general">

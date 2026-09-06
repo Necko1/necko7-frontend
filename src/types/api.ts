@@ -17,12 +17,16 @@ export type ChannelRole = "Owner" | "Editor";
 export interface BroadcasterListItem {
   channel_id: string;
   channel_login: string;
+  display_name?: string | null;
+  profile_image_url?: string | null;
   role: ChannelRole;
 }
 
 export interface BroadcasterSettingsResponse {
   channel_id: string;
   channel_login: string;
+  display_name?: string | null;
+  profile_image_url?: string | null;
   is_active: boolean;
   market_api_key_set: boolean;
   base_price_multiplier: number;
@@ -132,7 +136,18 @@ export interface ImageProxyParams {
   url: string;
 }
 
+export interface PurchaseLimitRule {
+  max_redemptions: number;
+  window_hours?: number | null;
+}
+
+export interface RewardPurchaseLimitsConfig {
+  global?: PurchaseLimitRule[];
+  user?: PurchaseLimitRule[];
+}
+
 export interface RewardResponse {
+  id: string;
   twitch_id: string;
   is_paused: boolean;
   pause_reason: PauseReason | null;
@@ -163,6 +178,8 @@ export interface RewardResponse {
   chat_time_window_hours?: number | null;
   chat_logical_operator?: ChatLogicalOperator | null;
   refund_if_chat_req_failed?: boolean;
+  // Purchase limits (v0.4.3)
+  purchase_limits?: RewardPurchaseLimitsConfig | null;
   created_at: string;
   updated_at: string;
 }
@@ -192,6 +209,8 @@ export interface CreateRewardBody {
   chat_time_window_hours?: number | null;
   chat_logical_operator?: ChatLogicalOperator | null;
   refund_if_chat_req_failed?: boolean;
+  // Purchase limits (v0.4.3)
+  purchase_limits?: RewardPurchaseLimitsConfig | null;
 }
 
 export interface UpdateRewardBody {
@@ -221,6 +240,8 @@ export interface UpdateRewardBody {
   chat_time_window_hours?: number | null;
   chat_logical_operator?: ChatLogicalOperator | null;
   refund_if_chat_req_failed?: boolean | null;
+  // Purchase limits (v0.4.3)
+  purchase_limits?: RewardPurchaseLimitsConfig | null;
 }
 
 export interface ListRewardsQuery {
@@ -343,6 +364,7 @@ export interface PaginatedUserMessagesResponse {
 
 export interface UserMessagesQuery {
   time_window_hours?: number | null;
+  search?: string | null;
   offset?: number | null;
   limit?: number | null;
 }
@@ -373,4 +395,54 @@ export interface UserChatSummary {
   total_chars: number;
   first_seen_at?: string | null;
   last_seen_at?: string | null;
+}
+
+// ===== Chat Analytics & Dashboard (v0.4.3) =====
+
+export interface ChatDashboardQuery {
+  time_window_hours?: number | null;
+  bucket_hours?: number | null;
+}
+
+export interface ChatDashboardSummary {
+  total_messages: number;
+  total_characters: number;
+  unique_chatters: number;
+  avg_characters_per_message: number;
+}
+
+export interface ChatTimelinePoint {
+  bucket_start: string;
+  message_count: number;
+  char_count: number;
+  unique_chatters: number;
+}
+
+export interface ChatTopUserItem {
+  chatter_user_id: string;
+  chatter_user_login: string;
+  message_count: number;
+  char_count: number;
+}
+
+export interface ChatDashboardData {
+  summary: ChatDashboardSummary;
+  timeline: ChatTimelinePoint[];
+  top_chatters: ChatTopUserItem[];
+}
+
+export interface ChannelMessagesQuery {
+  chatter_login?: string | null;
+  user_id?: string | null;
+  search?: string | null;
+  time_window_hours?: number | null;
+  offset?: number | null;
+  limit?: number | null;
+}
+
+export interface PaginatedChannelMessagesResponse {
+  items: ChatMessage[];
+  total: number;
+  offset: number;
+  limit: number;
 }

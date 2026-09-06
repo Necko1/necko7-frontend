@@ -7,6 +7,7 @@ import type { LeaderboardUserItem } from "@/types/api";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import ChatDashboardWidget from "@/components/chat/ChatDashboardWidget";
 
 // ── Time window options ──────────────────────────────────────────────────────
 const TIME_WINDOWS: { label: string; value: number | null }[] = [
@@ -311,13 +312,20 @@ export default function ChatPage() {
   }
 
   return (
-    <div key={refreshKey} className="p-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+    <div key={refreshKey} className="p-8 space-y-8 max-w-7xl mx-auto">
+      {/* Activity Timeline & Metrics */}
+      <ChatDashboardWidget
+        channelId={channelId}
+        showTopChatters={false}
+        title="Channel Activity & Timeline"
+      />
+
+      {/* Leaderboard Header */}
+      <div className="flex items-start justify-between gap-4 pt-4 border-t border-border">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Chat Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Top chatters ranked by activity in your channel
+          <h2 className="text-xl font-bold text-foreground">Chatter Leaderboard</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Top chatters ranked by message count and character volume
           </p>
         </div>
         <button

@@ -12,6 +12,7 @@ import RedemptionsPage from "@/pages/RedemptionsPage";
 import ChannelsPage from "@/pages/ChannelsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ChatPage from "@/pages/ChatPage";
+import ChatMessagesPage from "@/pages/ChatMessagesPage";
 import ChatUserPage from "@/pages/ChatUserPage";
 
 const queryClient = new QueryClient({
@@ -44,7 +45,9 @@ export default function App() {
                 <Route path="/channels" element={<ChannelsPage />} />
                 <Route path="/rewards" element={<RewardsPage />} />
                 <Route path="/redemptions" element={<RedemptionsPage />} />
-                <Route path="/chat" element={<ChatPage />} />
+                <Route path="/leaderboard" element={<ChatPage />} />
+                <Route path="/chat/leaderboard" element={<Navigate to="/leaderboard" replace />} />
+                <Route path="/chat" element={<ChatMessagesPage />} />
                 <Route path="/chat/users/:userId" element={<ChatUserPage />} />
                 <Route
                   path="/broadcasters/:channelId/settings"

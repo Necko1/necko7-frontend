@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { formatMajorCurrency, formatMinorCurrency } from "@/lib/currency";
+import ChatDashboardWidget from "@/components/chat/ChatDashboardWidget";
 
 // ── Stat Card ──────────────────────────────────────────────────────────────
 interface StatCardProps {
@@ -264,6 +265,13 @@ export default function DashboardPage() {
           accentClass="border-primary/10"
         />
       </div>
+
+      {/* Chat Analytics Section */}
+      <ChatDashboardWidget
+        channelId={selectedBroadcasterId}
+        showTopChatters={true}
+        title="Chat Activity & Analytics"
+      />
     </div>
   );
 }

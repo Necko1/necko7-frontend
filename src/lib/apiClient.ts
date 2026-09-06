@@ -21,7 +21,7 @@ import type {
   ListRedemptionsQuery,
   StatsResponse,
   StatsPeriod,
-  // Chat Analytics (v0.4.0)
+  // Chat Analytics (v0.4.0 & v0.4.3)
   LeaderboardQuery,
   PaginatedLeaderboardResponse,
   UserMessagesQuery,
@@ -30,6 +30,10 @@ import type {
   UserStatsQuery,
   UserChatStatsResponse,
   UserChatSummary,
+  ChatDashboardQuery,
+  ChatDashboardData,
+  ChannelMessagesQuery,
+  PaginatedChannelMessagesResponse,
 } from "@/types/api";
 import { config } from "@/config";
 
@@ -183,6 +187,18 @@ export const statsApi = {
 // ===== Chat Analytics (v0.4.0) =====
 
 export const chatApi = {
+  getDashboard: (channelId: string, params?: ChatDashboardQuery) =>
+    api.get<ChatDashboardData>(
+      `/api/v1/broadcasters/${channelId}/chat/dashboard`,
+      { params }
+    ),
+
+  getChannelMessages: (channelId: string, params?: ChannelMessagesQuery) =>
+    api.get<PaginatedChannelMessagesResponse>(
+      `/api/v1/broadcasters/${channelId}/chat/messages`,
+      { params }
+    ),
+
   getLeaderboard: (channelId: string, params?: LeaderboardQuery) =>
     api.get<PaginatedLeaderboardResponse>(
       `/api/v1/broadcasters/${channelId}/chat/leaderboard`,

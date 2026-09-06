@@ -74,6 +74,7 @@ export default function ChannelsPage() {
     return broadcasters.filter(
       (b) =>
         b.channel_login.toLowerCase().includes(q) ||
+        (b.display_name ?? "").toLowerCase().includes(q) ||
         b.role.toLowerCase().includes(q)
     );
   }, [broadcasters, search]);
@@ -181,7 +182,8 @@ export default function ChannelsPage() {
                 <div className="flex items-start justify-between">
                   <Avatar className="h-14 w-14 rounded-xl ring-2 ring-primary/20 shrink-0">
                     <AvatarImage
-                      alt={b.channel_login}
+                      src={b.profile_image_url ?? undefined}
+                      alt={b.display_name || b.channel_login}
                     />
                     <AvatarFallback className="text-base font-bold bg-primary text-primary-foreground rounded-xl">
                       {(b.channel_login || "??").slice(0, 2).toUpperCase()}
@@ -214,11 +216,17 @@ export default function ChannelsPage() {
                 {/* Channel Name */}
                 <div>
                   <h3 className="text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">
-                    {b.channel_login}
+                    {b.display_name || b.channel_login}
                   </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-                    ID: {b.channel_id}
-                  </p>
+                  {b.display_name && b.display_name.toLowerCase() !== b.channel_login.toLowerCase() ? (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      @{b.channel_login} · ID: {b.channel_id}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-0.5 font-mono">
+                      ID: {b.channel_id}
+                    </p>
+                  )}
                 </div>
               </div>
 

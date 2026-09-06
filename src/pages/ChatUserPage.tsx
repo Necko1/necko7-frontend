@@ -1,13 +1,14 @@
-import { useState, useCallback, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
 import { chatApi } from "@/lib/apiClient";
 import type { ChatMessage, RedemptionResponse } from "@/types/api";
 import { cn } from "@/lib/utils";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import SkinImage from "@/components/common/SkinImage";
 import { formatMinorCurrency } from "@/lib/currency";
 
@@ -50,6 +51,12 @@ const STATUS_CLASSES: Record<string, string> = {
 };
 
 // ── Icons ────────────────────────────────────────────────────────────────────
+const IconSearch = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
 const IconArrowLeft = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
@@ -111,16 +118,40 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-// ── Message bubble ─────────────────────────────────────────────────────────────
-function MessageBubble({ msg }: { msg: ChatMessage }) {
+// ── Date grouping helpers ────────────────────────────────────────────────────
+function formatDateDivider(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return dateStr;
+  if (isToday(date)) return "Today";
+  if (isYesterday(date)) return "Yesterday";
+  return format(date, "dd MMMM yyyy");
+}
+
+function getDateKey(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return dateStr;
+  return format(date, "yyyy-MM-dd");
+}
+
+// ── Stream Chat Message Row ──────────────────────────────────────────────────
+function UserMessageRow({ msg }: { msg: ChatMessage }) {
+  const date = new Date(msg.sent_at);
+  const timeStr = !isNaN(date.getTime()) ? format(date, "HH:mm:ss") : "–";
+
   return (
-    <div className="px-3 py-2.5 rounded-xl border border-border bg-card hover:bg-muted/20 transition-colors space-y-1.5">
-      <p className="text-sm text-foreground leading-snug break-words">{msg.message_text}</p>
-      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-        <span>{format(new Date(msg.sent_at), "dd MMM yyyy HH:mm:ss")}</span>
-        <span>·</span>
-        <span>{msg.char_count} chars</span>
-      </div>
+    <div
+      className="group flex items-start gap-3 py-1.5 px-3 rounded-lg hover:bg-muted/40 transition-colors text-sm leading-relaxed"
+      title={`${msg.char_count} chars · sent at ${timeStr}`}
+    >
+      <span className="text-xs text-muted-foreground/60 tabular-nums shrink-0 pt-0.5 select-none font-mono">
+        {timeStr}
+      </span>
+      <p className="text-foreground break-words flex-1 min-w-0 font-normal">
+        {msg.message_text}
+      </p>
+      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-muted-foreground/60 tabular-nums shrink-0 pt-0.5 select-none font-mono">
+        {msg.char_count} chars
+      </span>
     </div>
   );
 }
@@ -195,6 +226,7 @@ function RedemptionCard({ redemption }: { redemption: RedemptionResponse }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ChatUserPage() {
   const { userId } = useParams<{ userId: string }>();
+  const targetUserId = userId ?? "";
   const navigate = useNavigate();
   const { selectedBroadcasterId } = useAppStore();
   const channelId = selectedBroadcasterId ?? "";
@@ -204,16 +236,25 @@ export default function ChatUserPage() {
   // Messages state
   const [msgOffset, setMsgOffset] = useState(0);
   const [allMessages, setAllMessages] = useState<ChatMessage[]>([]);
+  const [msgSearch, setMsgSearch] = useState("");
+  const [debouncedMsgSearch, setDebouncedMsgSearch] = useState("");
+  const msgSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMsgSearchChange = (val: string) => {
+    setMsgSearch(val);
+    if (msgSearchTimerRef.current) clearTimeout(msgSearchTimerRef.current);
+    msgSearchTimerRef.current = setTimeout(() => setDebouncedMsgSearch(val.trim()), 400);
+  };
 
   // Redemptions state
   const [redOffset, setRedOffset] = useState(0);
   const [allRedemptions, setAllRedemptions] = useState<RedemptionResponse[]>([]);
 
-  // Reset messages when filter changes
+  // Reset messages when filter or search changes
   useEffect(() => {
     setMsgOffset(0);
     setAllMessages([]);
-  }, [channelId, userId, timeWindow]);
+  }, [channelId, userId, timeWindow, debouncedMsgSearch]);
 
   // Reset redemptions when channel or user changes
   useEffect(() => {
@@ -221,44 +262,44 @@ export default function ChatUserPage() {
     setAllRedemptions([]);
   }, [channelId, userId]);
 
-  if (!channelId || !userId) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-96">
-        <p className="text-muted-foreground">Select a broadcaster channel first.</p>
-      </div>
-    );
-  }
-
   // ── Queries ────────────────────────────────────────────────────────────────
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ["userSummary", channelId, userId],
-    queryFn: () => chatApi.getUserSummary(channelId, userId).then((r) => r.data),
-    enabled: !!channelId && !!userId,
+    queryKey: ["userSummary", channelId, targetUserId],
+    queryFn: () => chatApi.getUserSummary(channelId, targetUserId).then((r) => r.data),
+    enabled: !!channelId && !!targetUserId,
     staleTime: 60_000,
   });
 
   const { data: periodStats, isLoading: statsLoading } = useQuery({
-    queryKey: ["userStats", channelId, userId, timeWindow],
+    queryKey: ["userStats", channelId, targetUserId, timeWindow],
     queryFn: () =>
       chatApi
-        .getUserStats(channelId, userId, { time_window_hours: timeWindow })
+        .getUserStats(channelId, targetUserId, { time_window_hours: timeWindow })
         .then((r) => r.data),
-    enabled: !!channelId && !!userId,
+    enabled: !!channelId && !!targetUserId,
     staleTime: 30_000,
   });
 
   const { data: messagesData, isFetching: msgsFetching } = useQuery({
-    queryKey: ["userMessages", channelId, userId, timeWindow, msgOffset],
+    queryKey: [
+      "userMessages",
+      channelId,
+      targetUserId,
+      timeWindow,
+      debouncedMsgSearch,
+      msgOffset,
+    ],
     queryFn: () =>
       chatApi
-        .getUserMessages(channelId, userId, {
+        .getUserMessages(channelId, targetUserId, {
           time_window_hours: timeWindow,
+          search: debouncedMsgSearch || null,
           offset: msgOffset,
           limit: PAGE_SIZE,
         })
         .then((r) => r.data),
-    enabled: !!channelId && !!userId,
+    enabled: !!channelId && !!targetUserId,
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
@@ -277,15 +318,15 @@ export default function ChatUserPage() {
   }, [messagesData, msgOffset]);
 
   const { data: redemptionsData, isFetching: redsFetching } = useQuery({
-    queryKey: ["userRedemptions", channelId, userId, redOffset],
+    queryKey: ["userRedemptions", channelId, targetUserId, redOffset],
     queryFn: () =>
       chatApi
-        .getUserRedemptions(channelId, userId, {
+        .getUserRedemptions(channelId, targetUserId, {
           offset: redOffset,
           limit: REDEMPTION_PAGE_SIZE,
         })
         .then((r) => r.data),
-    enabled: !!channelId && !!userId,
+    enabled: !!channelId && !!targetUserId,
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
@@ -314,16 +355,42 @@ export default function ChatUserPage() {
   const displayMessages = allMessages.length > 0 ? allMessages : messagesData?.items ?? [];
   const displayRedemptions = allRedemptions.length > 0 ? allRedemptions : redemptionsData?.items ?? [];
 
-  const userLogin = periodStats?.user_login || summary?.chatter_user_login || userId;
+  const userLogin = periodStats?.user_login || summary?.chatter_user_login || targetUserId || "user";
   const displayName = periodStats?.display_name || userLogin;
   const avatarUrl = periodStats?.profile_image_url;
+
+  // Group messages by date
+  const groupedMessages = useMemo(() => {
+    const msgs = allMessages.length > 0 ? allMessages : messagesData?.items ?? [];
+    const groups: { dateKey: string; label: string; messages: ChatMessage[] }[] = [];
+    const map = new Map<string, { label: string; messages: ChatMessage[] }>();
+
+    for (const msg of msgs) {
+      const key = getDateKey(msg.sent_at);
+      if (!map.has(key)) {
+        const item = { label: formatDateDivider(msg.sent_at), messages: [] };
+        map.set(key, item);
+        groups.push({ dateKey: key, ...item });
+      }
+      map.get(key)!.messages.push(msg);
+    }
+    return groups;
+  }, [allMessages, messagesData?.items]);
+
+  if (!channelId || !userId) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-96">
+        <p className="text-muted-foreground">Select a broadcaster channel first.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-6">
       {/* Back navigation */}
       <button
         type="button"
-        onClick={() => navigate("/chat")}
+        onClick={() => navigate("/leaderboard")}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <IconArrowLeft />
@@ -464,7 +531,7 @@ export default function ChatUserPage() {
 
       {/* Two-column content: messages | redemptions */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Left: Message history */}
+        {/* Left: Messages */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">
@@ -480,34 +547,74 @@ export default function ChatUserPage() {
             )}
           </div>
 
-          <div className="space-y-2">
-            {statsLoading && allMessages.length === 0
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-14 rounded-xl" />
-                ))
-              : displayMessages.map((msg) => (
-                  <MessageBubble key={msg.id} msg={msg} />
-                ))}
+          {/* Search bar for user messages */}
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+              <IconSearch />
+            </span>
+            <Input
+              placeholder="Search user messages…"
+              value={msgSearch}
+              onChange={(e) => handleMsgSearchChange(e.target.value)}
+              className="pl-9 h-9 bg-card rounded-xl text-xs"
+            />
           </div>
 
-          {msgHasMore && (
-            <button
-              type="button"
-              onClick={() => setMsgOffset((o) => o + PAGE_SIZE)}
-              disabled={msgsFetching}
-              className="w-full py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all disabled:opacity-50"
-            >
-              {msgsFetching
-                ? "Loading…"
-                : `Load more (${messagesData!.total - displayMessages.length} remaining)`}
-            </button>
-          )}
+          {/* Stream-style messages list with date dividers */}
+          <div className="rounded-2xl border border-border bg-card/60 p-3 sm:p-4 space-y-4">
+            {statsLoading && allMessages.length === 0 ? (
+              <div className="space-y-3 py-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-14 rounded" />
+                    <Skeleton className="h-4 flex-1 rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : displayMessages.length === 0 ? (
+              <div className="py-10 text-center text-muted-foreground text-xs">
+                {debouncedMsgSearch
+                  ? "No messages matching your search query."
+                  : "No messages in this period."}
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {groupedMessages.map((group) => (
+                  <div key={group.dateKey} className="space-y-1">
+                    {/* Centered Date Header */}
+                    <div className="relative flex items-center justify-center py-1.5 select-none">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-border/70" />
+                      </div>
+                      <div className="relative px-3 py-0.5 rounded-full bg-card border border-border text-[10px] font-semibold text-muted-foreground shadow-xs">
+                        {group.label}
+                      </div>
+                    </div>
 
-          {!statsLoading && displayMessages.length === 0 && (
-            <div className="py-10 text-center text-muted-foreground text-sm">
-              No messages in this period.
-            </div>
-          )}
+                    {/* Messages under date */}
+                    <div className="space-y-0.5">
+                      {group.messages.map((msg) => (
+                        <UserMessageRow key={msg.id} msg={msg} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {msgHasMore && (
+              <button
+                type="button"
+                onClick={() => setMsgOffset((o) => o + PAGE_SIZE)}
+                disabled={msgsFetching}
+                className="w-full py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all disabled:opacity-50 mt-2"
+              >
+                {msgsFetching
+                  ? "Loading…"
+                  : `Load more (${messagesData!.total - displayMessages.length} remaining)`}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Right: Redemptions */}

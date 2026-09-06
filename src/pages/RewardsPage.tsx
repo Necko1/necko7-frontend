@@ -14,7 +14,8 @@ import type {
   PoolItemConfig,
   PreviewFilterBody,
   PreviewFilterResponse,
-  ChatLogicalOperator,
+  PurchaseLimitRule,
+  RewardPurchaseLimitsConfig,
 } from "@/types/api";
 import { formatMinorCurrency, minorToMajor, majorToMinor } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
@@ -530,6 +531,18 @@ function RewardCard({
               {reward.chat_min_messages != null && reward.chat_min_characters != null ? ` ${reward.chat_logical_operator ?? "AND"} ` : ""}
               {reward.chat_min_characters != null ? `${reward.chat_min_characters} chars` : ""}
               {reward.chat_time_window_hours != null ? ` / ${reward.chat_time_window_hours}h` : ""}
+            </Badge>
+          )}
+          {((reward.purchase_limits?.user?.length ?? 0) > 0 || (reward.purchase_limits?.global?.length ?? 0) > 0) && (
+            <Badge
+              variant="outline"
+              className="text-xs border-amber-500/30 text-amber-400 bg-amber-500/10"
+              title={[
+                ...(reward.purchase_limits?.user ?? []).map((u) => `User: max ${u.max_redemptions}${u.window_hours ? ` / ${u.window_hours}h` : " all-time"}`),
+                ...(reward.purchase_limits?.global ?? []).map((g) => `Global: max ${g.max_redemptions}${g.window_hours ? ` / ${g.window_hours}h` : " all-time"}`),
+              ].join("; ")}
+            >
+              Limits: {((reward.purchase_limits?.user?.length ?? 0) + (reward.purchase_limits?.global?.length ?? 0))} rule{((reward.purchase_limits?.user?.length ?? 0) + (reward.purchase_limits?.global?.length ?? 0)) !== 1 ? "s" : ""}
             </Badge>
           )}
         </div>
@@ -1619,6 +1632,352 @@ function StepChatRequirements({
   );
 }
 
+// ── Step 5: Purchase Limits ────────────────────────────────────────────────
+function StepPurchaseLimits({
+  form,
+  onChange,
+}: {
+  form: Partial<CreateRewardBody>;
+  onChange: (patch: Partial<CreateRewardBody>) => void;
+}) {
+  const limits: RewardPurchaseLimitsConfig = form.purchase_limits ?? {};
+  const userRules: PurchaseLimitRule[] = limits.user ?? [];
+  const globalRules: PurchaseLimitRule[] = limits.global ?? [];
+
+  const updateLimits = (newLimits: RewardPurchaseLimitsConfig) => {
+    const hasUser = (newLimits.user?.length ?? 0) > 0;
+    const hasGlobal = (newLimits.global?.length ?? 0) > 0;
+    onChange({
+      purchase_limits: hasUser || hasGlobal ? newLimits : null,
+    });
+  };
+
+  const addUserRule = (maxRedemptions = 1, windowHours: number | null = 24) => {
+    updateLimits({
+      ...limits,
+      user: [...userRules, { max_redemptions: maxRedemptions, window_hours: windowHours }],
+    });
+  };
+
+  const removeUserRule = (index: number) => {
+    updateLimits({
+      ...limits,
+      user: userRules.filter((_, i) => i !== index),
+    });
+  };
+
+  const updateUserRule = (index: number, patch: Partial<PurchaseLimitRule>) => {
+    updateLimits({
+      ...limits,
+      user: userRules.map((r, i) => (i === index ? { ...r, ...patch } : r)),
+    });
+  };
+
+  const addGlobalRule = (maxRedemptions = 10, windowHours: number | null = 24) => {
+    updateLimits({
+      ...limits,
+      global: [...globalRules, { max_redemptions: maxRedemptions, window_hours: windowHours }],
+    });
+  };
+
+  const removeGlobalRule = (index: number) => {
+    updateLimits({
+      ...limits,
+      global: globalRules.filter((_, i) => i !== index),
+    });
+  };
+
+  const updateGlobalRule = (index: number, patch: Partial<PurchaseLimitRule>) => {
+    updateLimits({
+      ...limits,
+      global: globalRules.map((r, i) => (i === index ? { ...r, ...patch } : r)),
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Informational banner */}
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-xs flex items-start gap-2.5">
+        <span className="text-base leading-none">⏳</span>
+        <div className="space-y-0.5">
+          <p className="font-semibold text-foreground">Custom Purchase Limits (v0.4.3)</p>
+          <p className="text-muted-foreground leading-relaxed">
+            Restrict how often viewers or the entire channel can redeem this reward within rolling time windows (e.g. 24 hours, 7 days) or across all time.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Per-User Limits ── */}
+      <div className="space-y-3 rounded-xl border border-border p-4 bg-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <span>👤</span> Per-User Limits
+            </h4>
+            <p className="text-[11px] text-muted-foreground">
+              Maximum redemptions allowed for each individual viewer
+            </p>
+          </div>
+          {/* Quick preset buttons */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => addUserRule(1, 24)}
+              className="text-[11px] px-2 py-0.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              + 1 / 24h
+            </button>
+            <button
+              type="button"
+              onClick={() => addUserRule(1, 168)}
+              className="text-[11px] px-2 py-0.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              + 1 / week
+            </button>
+            <button
+              type="button"
+              onClick={() => addUserRule(1, null)}
+              className="text-[11px] px-2 py-0.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              + 1 all-time
+            </button>
+          </div>
+        </div>
+
+        {userRules.length === 0 ? (
+          <p className="text-xs text-muted-foreground/80 py-2 italic">
+            No per-user limits configured. Viewers can redeem subject only to Twitch settings.
+          </p>
+        ) : (
+          <div className="space-y-2 pt-1">
+            {userRules.map((rule, idx) => (
+              <div
+                key={idx}
+                className="flex flex-col sm:flex-row sm:items-center gap-2 p-2.5 rounded-lg border border-border/70 bg-muted/20 text-xs"
+              >
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-muted-foreground shrink-0">Max</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={rule.max_redemptions}
+                    onChange={(e) =>
+                      updateUserRule(idx, {
+                        max_redemptions: Math.max(1, parseInt(e.target.value) || 1),
+                      })
+                    }
+                    className="w-20 h-8 text-xs bg-card"
+                  />
+                  <span className="text-muted-foreground shrink-0">
+                    redemption{rule.max_redemptions > 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground shrink-0">Window:</span>
+                  <select
+                    value={
+                      rule.window_hours == null
+                        ? "all-time"
+                        : [24, 168, 720].includes(rule.window_hours)
+                        ? String(rule.window_hours)
+                        : "custom"
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "all-time") updateUserRule(idx, { window_hours: null });
+                      else if (v === "24") updateUserRule(idx, { window_hours: 24 });
+                      else if (v === "168") updateUserRule(idx, { window_hours: 168 });
+                      else if (v === "720") updateUserRule(idx, { window_hours: 720 });
+                      else updateUserRule(idx, { window_hours: rule.window_hours ?? 12 });
+                    }}
+                    className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus:outline-none"
+                  >
+                    <option value="24">24 hours (1 day)</option>
+                    <option value="168">168 hours (7 days)</option>
+                    <option value="720">720 hours (30 days)</option>
+                    <option value="all-time">All time (forever)</option>
+                    <option value="custom">Custom hours</option>
+                  </select>
+
+                  {rule.window_hours != null &&
+                    ![24, 168, 720].includes(rule.window_hours) && (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={rule.window_hours}
+                          onChange={(e) =>
+                            updateUserRule(idx, {
+                              window_hours: Math.max(1, parseInt(e.target.value) || 1),
+                            })
+                          }
+                          className="w-18 h-8 text-xs bg-card"
+                        />
+                        <span className="text-muted-foreground text-[11px]">hours</span>
+                      </div>
+                    )}
+
+                  <button
+                    type="button"
+                    onClick={() => removeUserRule(idx)}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto"
+                    title="Remove rule"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => addUserRule(1, 24)}
+          className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1 pt-1"
+        >
+          + Add custom user limit rule
+        </button>
+      </div>
+
+      {/* ── Global Limits ── */}
+      <div className="space-y-3 rounded-xl border border-border p-4 bg-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <span>🌐</span> Global Channel Limits
+            </h4>
+            <p className="text-[11px] text-muted-foreground">
+              Maximum total redemptions across all viewers on the channel
+            </p>
+          </div>
+          {/* Quick preset buttons */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => addGlobalRule(5, 24)}
+              className="text-[11px] px-2 py-0.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              + 5 / 24h
+            </button>
+            <button
+              type="button"
+              onClick={() => addGlobalRule(20, 168)}
+              className="text-[11px] px-2 py-0.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              + 20 / week
+            </button>
+            <button
+              type="button"
+              onClick={() => addGlobalRule(10, null)}
+              className="text-[11px] px-2 py-0.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              + 10 all-time
+            </button>
+          </div>
+        </div>
+
+        {globalRules.length === 0 ? (
+          <p className="text-xs text-muted-foreground/80 py-2 italic">
+            No global limits configured. Total redemptions are subject only to Twitch stream limits.
+          </p>
+        ) : (
+          <div className="space-y-2 pt-1">
+            {globalRules.map((rule, idx) => (
+              <div
+                key={idx}
+                className="flex flex-col sm:flex-row sm:items-center gap-2 p-2.5 rounded-lg border border-border/70 bg-muted/20 text-xs"
+              >
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-muted-foreground shrink-0">Max</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={rule.max_redemptions}
+                    onChange={(e) =>
+                      updateGlobalRule(idx, {
+                        max_redemptions: Math.max(1, parseInt(e.target.value) || 1),
+                      })
+                    }
+                    className="w-20 h-8 text-xs bg-card"
+                  />
+                  <span className="text-muted-foreground shrink-0">
+                    redemption{rule.max_redemptions > 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground shrink-0">Window:</span>
+                  <select
+                    value={
+                      rule.window_hours == null
+                        ? "all-time"
+                        : [24, 168, 720].includes(rule.window_hours)
+                        ? String(rule.window_hours)
+                        : "custom"
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "all-time") updateGlobalRule(idx, { window_hours: null });
+                      else if (v === "24") updateGlobalRule(idx, { window_hours: 24 });
+                      else if (v === "168") updateGlobalRule(idx, { window_hours: 168 });
+                      else if (v === "720") updateGlobalRule(idx, { window_hours: 720 });
+                      else updateGlobalRule(idx, { window_hours: rule.window_hours ?? 12 });
+                    }}
+                    className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus:outline-none"
+                  >
+                    <option value="24">24 hours (1 day)</option>
+                    <option value="168">168 hours (7 days)</option>
+                    <option value="720">720 hours (30 days)</option>
+                    <option value="all-time">All time (forever)</option>
+                    <option value="custom">Custom hours</option>
+                  </select>
+
+                  {rule.window_hours != null &&
+                    ![24, 168, 720].includes(rule.window_hours) && (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={rule.window_hours}
+                          onChange={(e) =>
+                            updateGlobalRule(idx, {
+                              window_hours: Math.max(1, parseInt(e.target.value) || 1),
+                            })
+                          }
+                          className="w-18 h-8 text-xs bg-card"
+                        />
+                        <span className="text-muted-foreground text-[11px]">hours</span>
+                      </div>
+                    )}
+
+                  <button
+                    type="button"
+                    onClick={() => removeGlobalRule(idx)}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto"
+                    title="Remove rule"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => addGlobalRule(10, 24)}
+          className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1 pt-1"
+        >
+          + Add custom global limit rule
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Multi-step Reward Wizard ───────────────────────────────────────────────
 const STEPS = [
   {
@@ -1668,8 +2027,18 @@ const STEPS = [
       </svg>
     ),
   },
+  {
+    title: "Purchase Limits",
+    subtitle: "Custom rolling window and all-time limits",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+  },
 ] as const;
-type StepIndex = 0 | 1 | 2 | 3;
+type StepIndex = 0 | 1 | 2 | 3 | 4;
 
 function RewardWizard({
   initial,
@@ -1703,6 +2072,7 @@ function RewardWizard({
     chat_time_window_hours: null,
     chat_logical_operator: "AND",
     refund_if_chat_req_failed: true,
+    purchase_limits: null,
     ...initial,
   });
 
@@ -1753,6 +2123,7 @@ function RewardWizard({
           ? (form.chat_logical_operator ?? "AND")
           : null,
       refund_if_chat_req_failed: form.refund_if_chat_req_failed ?? true,
+      purchase_limits: form.purchase_limits ?? null,
     };
     onSubmit(body);
   };
@@ -1834,6 +2205,7 @@ function RewardWizard({
         {step === 1 && <StepPricing form={form} channelId={channelId} onChange={patch} />}
         {step === 2 && <StepTwitchSettings form={form} onChange={patch} isEdit={isEdit} />}
         {step === 3 && <StepChatRequirements form={form} onChange={patch} />}
+        {step === 4 && <StepPurchaseLimits form={form} onChange={patch} />}
       </div>
 
       {/* Navigation */}
@@ -1850,12 +2222,12 @@ function RewardWizard({
         <div className="flex items-center gap-2">
           {isEdit ? (
             <>
-              {step < 3 && (
+              {step < 4 && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setStep((s) => (s < 3 ? (s + 1) as StepIndex : s))}
+                  onClick={() => setStep((s) => (s < 4 ? (s + 1) as StepIndex : s))}
                   disabled={!canNext()}
                 >
                   Next →
@@ -1870,11 +2242,11 @@ function RewardWizard({
                 {loading ? "Saving…" : "Save Changes"}
               </Button>
             </>
-          ) : step < 3 ? (
+          ) : step < 4 ? (
             <Button
               type="button"
               size="sm"
-              onClick={() => setStep((s) => (s < 3 ? (s + 1) as StepIndex : s))}
+              onClick={() => setStep((s) => (s < 4 ? (s + 1) as StepIndex : s))}
               disabled={!canNext()}
             >
               Next →
@@ -2104,6 +2476,44 @@ function RewardEditDialog({
                 </div>
               )}
 
+              {/* Purchase Limits card */}
+              {((reward.purchase_limits?.user?.length ?? 0) > 0 || (reward.purchase_limits?.global?.length ?? 0) > 0) && (
+                <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⏳</span>
+                    <p className="text-xs font-semibold text-amber-300">Custom Purchase Limits</p>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    {(reward.purchase_limits?.user?.length ?? 0) > 0 && (
+                      <div>
+                        <p className="text-muted-foreground font-medium mb-1">Per-User Limits:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {reward.purchase_limits!.user!.map((u, i) => (
+                            <span key={i} className="px-2.5 py-1 rounded-lg bg-background/60 border border-border">
+                              Max <strong>{u.max_redemptions}</strong> redemption{u.max_redemptions > 1 ? "s" : ""}
+                              {u.window_hours ? ` every ${u.window_hours}h` : " all-time"}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {(reward.purchase_limits?.global?.length ?? 0) > 0 && (
+                      <div>
+                        <p className="text-muted-foreground font-medium mb-1">Global Channel Limits:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {reward.purchase_limits!.global!.map((g, i) => (
+                            <span key={i} className="px-2.5 py-1 rounded-lg bg-background/60 border border-border">
+                              Max <strong>{g.max_redemptions}</strong> redemption{g.max_redemptions > 1 ? "s" : ""}
+                              {g.window_hours ? ` every ${g.window_hours}h` : " all-time"}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* PRICE_LIMIT warning alert if reward is auto-paused by price limit */}
               {reward.is_paused && reward.pause_reason === "PRICE_LIMIT" && (
                 <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3.5 text-xs text-orange-200 flex items-start gap-2.5">
@@ -2229,6 +2639,7 @@ function RewardEditDialog({
                   chat_time_window_hours: reward.chat_time_window_hours ?? undefined,
                   chat_logical_operator: reward.chat_logical_operator ?? undefined,
                   refund_if_chat_req_failed: reward.refund_if_chat_req_failed ?? true,
+                  purchase_limits: reward.purchase_limits ?? undefined,
                 }}
                 channelId={channelId}
                 onSubmit={(data) => {

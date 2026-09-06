@@ -76,10 +76,19 @@ const IconPlus = () => (
   </svg>
 );
 
+const IconTrophy = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+    <path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.45 1-1 1H8v4h8v-4h-1c-.55 0-1-.45-1-1v-2.34" />
+    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+  </svg>
+);
+
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: <IconGrid /> },
   { label: "Rewards", to: "/rewards", icon: <IconGift /> },
   { label: "Redemptions", to: "/redemptions", icon: <IconList /> },
+  { label: "Leaderboard", to: "/leaderboard", icon: <IconTrophy /> },
   { label: "Chat", to: "/chat", icon: <IconChat /> },
 ];
 
@@ -193,15 +202,16 @@ export default function AppLayout() {
               <div className="flex items-center gap-3 p-2.5 rounded-xl bg-sidebar-accent group">
                 <Avatar className="h-9 w-9 ring-2 ring-primary/30 shrink-0">
                   <AvatarImage
-                    alt={selectedBroadcaster.channel_login}
+                    src={selectedBroadcaster.profile_image_url ?? undefined}
+                    alt={selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
                   />
                   <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">
                     {(selectedBroadcaster.channel_login || "??").slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-sidebar-foreground truncate">
-                    {selectedBroadcaster.channel_login}
+                  <p className="text-sm font-semibold text-sidebar-foreground truncate" title={selectedBroadcaster.display_name || selectedBroadcaster.channel_login}>
+                    {selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
                   </p>
                   <p className="text-xs text-muted-foreground capitalize">
                     {selectedBroadcaster.role}
