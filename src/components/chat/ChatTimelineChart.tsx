@@ -77,11 +77,6 @@ export default function ChatTimelineChart({
     );
   }
 
-  const svgHeight = 180;
-  const svgPaddingTop = 20;
-  const svgPaddingBottom = 30;
-  const usableHeight = svgHeight - svgPaddingTop - svgPaddingBottom;
-
   return (
     <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
       {/* Header controls */}
@@ -90,7 +85,7 @@ export default function ChatTimelineChart({
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             Activity Timeline
             <span className="text-xs font-normal text-muted-foreground">
-              ({points.length} intervals)
+              ({points.length} {points.length === 1 ? "interval" : "intervals"})
             </span>
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -131,118 +126,105 @@ export default function ChatTimelineChart({
           <p>No activity points recorded in this period</p>
         </div>
       ) : (
-        <div className="relative">
-          <svg
-            viewBox={`0 0 ${Math.max(points.length * 16, 400)} ${svgHeight}`}
-            className="w-full h-44 overflow-visible"
-            preserveAspectRatio="none"
-          >
-            <defs>
-              <linearGradient id="grad-messages" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.15" />
-              </linearGradient>
-              <linearGradient id="grad-chars" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.15" />
-              </linearGradient>
-              <linearGradient id="grad-chatters" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.15" />
-              </linearGradient>
-            </defs>
+        <div className="relative pt-2 pb-1">
+          {/* Subtle horizontal grid lines */}
+          <div className="absolute inset-x-0 top-2 h-36 flex flex-col justify-between pointer-events-none z-0">
+            <div className="border-b border-border/40 border-dashed w-full" />
+            <div className="border-b border-border/40 border-dashed w-full" />
+            <div className="border-b border-border/40 border-dashed w-full" />
+          </div>
 
-            {/* Subtle horizontal grid lines */}
-            {[0, 0.5, 1].map((pct) => {
-              const y = svgPaddingTop + usableHeight * (1 - pct);
-              return (
-                <line
-                  key={pct}
-                  x1="0"
-                  y1={y}
-                  x2={Math.max(points.length * 16, 400)}
-                  y2={y}
-                  stroke="currentColor"
-                  strokeOpacity="0.08"
-                  strokeDasharray="4 4"
-                />
-              );
-            })}
-
-            {/* Bars */}
+          {/* Bars row */}
+          <div className="relative z-10 flex items-end h-36 w-full gap-1 sm:gap-1.5 px-1">
             {points.map((p, i) => {
-              const totalWidth = Math.max(points.length * 16, 400);
-              const barSlotWidth = totalWidth / points.length;
-              const barWidth = Math.max(barSlotWidth * 0.7, 4);
-              const x = i * barSlotWidth + (barSlotWidth - barWidth) / 2;
-
               const val = p[metricConfig.field];
-              const height = (val / maxValue) * usableHeight;
-              const y = svgPaddingTop + (usableHeight - height);
+              const heightPct = maxValue > 0 ? Math.max((val / maxValue) * 100, val > 0 ? 4 : 1) : 1;
               const isHovered = hoveredPoint?.point === p;
 
               return (
-                <g key={i}>
-                  {/* Interactive invisible hover hit area */}
-                  <rect
-                    x={i * barSlotWidth}
-                    y={0}
-                    width={barSlotWidth}
-                    height={svgHeight}
-                    fill="transparent"
-                    className="cursor-pointer"
-                    onMouseEnter={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setHoveredPoint({
-                        point: p,
-                        x: rect.left + rect.width / 2,
-                        y: rect.top,
-                      });
-                    }}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                  />
-                  {/* Visible bar */}
-                  <rect
-                    x={x}
-                    y={height > 0 ? y : svgPaddingTop + usableHeight - 1}
-                    width={barWidth}
-                    height={Math.max(height, 1)}
-                    rx={Math.min(barWidth / 2, 3)}
-                    fill={`url(#${metricConfig.gradientId})`}
+                <div
+                  key={i}
+                  className="flex-1 h-full flex flex-col justify-end items-center group relative cursor-pointer"
+                  onMouseEnter={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredPoint({
+                      point: p,
+                      x: rect.left + rect.width / 2,
+                      y: rect.top,
+                    });
+                  }}
+                  onMouseLeave={() => setHoveredPoint(null)}
+                >
+                  <div
                     className={cn(
-                      "transition-all duration-150 pointer-events-none",
-                      isHovered ? "opacity-100 filter brightness-125" : "opacity-85"
+                      "w-full max-w-[28px] min-w-[3px] rounded-t-md transition-all duration-150",
+                      metric === "messages" &&
+                        "bg-gradient-to-t from-cyan-500/20 via-cyan-500/60 to-cyan-400",
+                      metric === "characters" &&
+                        "bg-gradient-to-t from-violet-500/20 via-violet-500/60 to-violet-400",
+                      metric === "chatters" &&
+                        "bg-gradient-to-t from-emerald-500/20 via-emerald-500/60 to-emerald-400",
+                      isHovered
+                        ? "brightness-125 opacity-100 shadow-sm ring-1 ring-white/20"
+                        : "opacity-85 hover:opacity-100"
                     )}
+                    style={{ height: `${heightPct}%` }}
                   />
-                  {/* X-axis time label (every ~6-8 bars or first/last) */}
-                  {(i === 0 ||
-                    i === points.length - 1 ||
-                    (points.length > 10 && i % Math.ceil(points.length / 5) === 0)) && (
-                    <text
-                      x={x + barWidth / 2}
-                      y={svgHeight - 8}
-                      textAnchor="middle"
-                      fill="currentColor"
-                      className="text-[9px] fill-muted-foreground/60 select-none pointer-events-none"
-                    >
-                      {format(new Date(p.bucket_start), "HH:mm")}
-                    </text>
-                  )}
-                </g>
+                </div>
               );
             })}
-          </svg>
+          </div>
+
+          {/* X-axis time labels (clean HTML typography, never stretched) */}
+          <div className="relative w-full h-5 mt-2 px-1 select-none">
+            {points.map((p, i) => {
+              const step = Math.max(1, Math.ceil(points.length / 6));
+              const shouldShow =
+                points.length <= 8 ||
+                i === 0 ||
+                i === points.length - 1 ||
+                i % step === 0;
+
+              if (!shouldShow) return null;
+
+              const leftPct = ((i + 0.5) / points.length) * 100;
+              const isFirst = i === 0;
+              const isLast = i === points.length - 1;
+
+              return (
+                <span
+                  key={i}
+                  className={cn(
+                    "absolute text-[10px] text-muted-foreground/70 whitespace-nowrap font-mono transition-colors",
+                    hoveredPoint?.point === p && "text-foreground font-semibold"
+                  )}
+                  style={{
+                    left: `${leftPct}%`,
+                    transform: isFirst
+                      ? "translateX(0%)"
+                      : isLast
+                      ? "translateX(-100%)"
+                      : "translateX(-50%)",
+                  }}
+                >
+                  {format(new Date(p.bucket_start), "HH:mm")}
+                </span>
+              );
+            })}
+          </div>
 
           {/* Floating tooltip */}
           {hoveredPoint && (
             <div
-              className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-full mb-2 px-3 py-2 rounded-xl bg-popover/95 backdrop-blur-md border border-border shadow-xl text-xs space-y-1"
+              className="absolute z-30 pointer-events-none -translate-x-1/2 -top-14 px-3 py-2 rounded-xl bg-popover/95 backdrop-blur-md border border-border shadow-xl text-xs space-y-1"
               style={{
-                left: `${
-                  (points.indexOf(hoveredPoint.point) / points.length) * 100 +
-                  (1 / points.length) * 50
-                }%`,
-                top: 0,
+                left: `${Math.max(
+                  15,
+                  Math.min(
+                    85,
+                    ((points.indexOf(hoveredPoint.point) + 0.5) / points.length) * 100
+                  )
+                )}%`,
               }}
             >
               <p className="font-semibold text-foreground text-[11px]">

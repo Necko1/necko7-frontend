@@ -1700,7 +1700,7 @@ function StepPurchaseLimits({
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-xs flex items-start gap-2.5">
         <span className="text-base leading-none">⏳</span>
         <div className="space-y-0.5">
-          <p className="font-semibold text-foreground">Custom Purchase Limits (v0.4.3)</p>
+          <p className="font-semibold text-foreground">Custom Purchase Limits</p>
           <p className="text-muted-foreground leading-relaxed">
             Restrict how often viewers or the entire channel can redeem this reward within rolling time windows (e.g. 24 hours, 7 days) or across all time.
           </p>
@@ -1753,10 +1753,10 @@ function StepPurchaseLimits({
             {userRules.map((rule, idx) => (
               <div
                 key={idx}
-                className="flex flex-col sm:flex-row sm:items-center gap-2 p-2.5 rounded-lg border border-border/70 bg-muted/20 text-xs"
+                className="flex flex-wrap items-center gap-2.5 p-2.5 rounded-lg border border-border/70 bg-muted/20 text-xs"
               >
-                <div className="flex items-center gap-1.5 flex-1">
-                  <span className="text-muted-foreground shrink-0">Max</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-muted-foreground shrink-0 font-medium">Max</span>
                   <Input
                     type="number"
                     min={1}
@@ -1766,15 +1766,15 @@ function StepPurchaseLimits({
                         max_redemptions: Math.max(1, parseInt(e.target.value) || 1),
                       })
                     }
-                    className="w-20 h-8 text-xs bg-card"
+                    className="w-18 h-8 text-xs bg-card"
                   />
                   <span className="text-muted-foreground shrink-0">
                     redemption{rule.max_redemptions > 1 ? "s" : ""}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground shrink-0">Window:</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-muted-foreground shrink-0 font-medium">Window:</span>
                   <select
                     value={
                       rule.window_hours == null
@@ -1789,7 +1789,13 @@ function StepPurchaseLimits({
                       else if (v === "24") updateUserRule(idx, { window_hours: 24 });
                       else if (v === "168") updateUserRule(idx, { window_hours: 168 });
                       else if (v === "720") updateUserRule(idx, { window_hours: 720 });
-                      else updateUserRule(idx, { window_hours: rule.window_hours ?? 12 });
+                      else {
+                        const next =
+                          rule.window_hours != null && ![24, 168, 720].includes(rule.window_hours)
+                            ? rule.window_hours
+                            : 12;
+                        updateUserRule(idx, { window_hours: next });
+                      }
                     }}
                     className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus:outline-none"
                   >
@@ -1799,34 +1805,34 @@ function StepPurchaseLimits({
                     <option value="all-time">All time (forever)</option>
                     <option value="custom">Custom hours</option>
                   </select>
-
-                  {rule.window_hours != null &&
-                    ![24, 168, 720].includes(rule.window_hours) && (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          min={1}
-                          value={rule.window_hours}
-                          onChange={(e) =>
-                            updateUserRule(idx, {
-                              window_hours: Math.max(1, parseInt(e.target.value) || 1),
-                            })
-                          }
-                          className="w-18 h-8 text-xs bg-card"
-                        />
-                        <span className="text-muted-foreground text-[11px]">hours</span>
-                      </div>
-                    )}
-
-                  <button
-                    type="button"
-                    onClick={() => removeUserRule(idx)}
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto"
-                    title="Remove rule"
-                  >
-                    ✕
-                  </button>
                 </div>
+
+                {rule.window_hours != null &&
+                  ![24, 168, 720].includes(rule.window_hours) && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Input
+                        type="number"
+                        min={1}
+                        value={rule.window_hours}
+                        onChange={(e) =>
+                          updateUserRule(idx, {
+                            window_hours: Math.max(1, parseInt(e.target.value) || 1),
+                          })
+                        }
+                        className="w-18 h-8 text-xs bg-card"
+                      />
+                      <span className="text-muted-foreground text-[11px]">hours</span>
+                    </div>
+                  )}
+
+                <button
+                  type="button"
+                  onClick={() => removeUserRule(idx)}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto shrink-0"
+                  title="Remove rule"
+                >
+                  ✕
+                </button>
               </div>
             ))}
           </div>
@@ -1887,10 +1893,10 @@ function StepPurchaseLimits({
             {globalRules.map((rule, idx) => (
               <div
                 key={idx}
-                className="flex flex-col sm:flex-row sm:items-center gap-2 p-2.5 rounded-lg border border-border/70 bg-muted/20 text-xs"
+                className="flex flex-wrap items-center gap-2.5 p-2.5 rounded-lg border border-border/70 bg-muted/20 text-xs"
               >
-                <div className="flex items-center gap-1.5 flex-1">
-                  <span className="text-muted-foreground shrink-0">Max</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-muted-foreground shrink-0 font-medium">Max</span>
                   <Input
                     type="number"
                     min={1}
@@ -1900,15 +1906,15 @@ function StepPurchaseLimits({
                         max_redemptions: Math.max(1, parseInt(e.target.value) || 1),
                       })
                     }
-                    className="w-20 h-8 text-xs bg-card"
+                    className="w-18 h-8 text-xs bg-card"
                   />
                   <span className="text-muted-foreground shrink-0">
                     redemption{rule.max_redemptions > 1 ? "s" : ""}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground shrink-0">Window:</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-muted-foreground shrink-0 font-medium">Window:</span>
                   <select
                     value={
                       rule.window_hours == null
@@ -1923,7 +1929,13 @@ function StepPurchaseLimits({
                       else if (v === "24") updateGlobalRule(idx, { window_hours: 24 });
                       else if (v === "168") updateGlobalRule(idx, { window_hours: 168 });
                       else if (v === "720") updateGlobalRule(idx, { window_hours: 720 });
-                      else updateGlobalRule(idx, { window_hours: rule.window_hours ?? 12 });
+                      else {
+                        const next =
+                          rule.window_hours != null && ![24, 168, 720].includes(rule.window_hours)
+                            ? rule.window_hours
+                            : 12;
+                        updateGlobalRule(idx, { window_hours: next });
+                      }
                     }}
                     className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus:outline-none"
                   >
@@ -1933,34 +1945,34 @@ function StepPurchaseLimits({
                     <option value="all-time">All time (forever)</option>
                     <option value="custom">Custom hours</option>
                   </select>
-
-                  {rule.window_hours != null &&
-                    ![24, 168, 720].includes(rule.window_hours) && (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          min={1}
-                          value={rule.window_hours}
-                          onChange={(e) =>
-                            updateGlobalRule(idx, {
-                              window_hours: Math.max(1, parseInt(e.target.value) || 1),
-                            })
-                          }
-                          className="w-18 h-8 text-xs bg-card"
-                        />
-                        <span className="text-muted-foreground text-[11px]">hours</span>
-                      </div>
-                    )}
-
-                  <button
-                    type="button"
-                    onClick={() => removeGlobalRule(idx)}
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto"
-                    title="Remove rule"
-                  >
-                    ✕
-                  </button>
                 </div>
+
+                {rule.window_hours != null &&
+                  ![24, 168, 720].includes(rule.window_hours) && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Input
+                        type="number"
+                        min={1}
+                        value={rule.window_hours}
+                        onChange={(e) =>
+                          updateGlobalRule(idx, {
+                            window_hours: Math.max(1, parseInt(e.target.value) || 1),
+                          })
+                        }
+                        className="w-18 h-8 text-xs bg-card"
+                      />
+                      <span className="text-muted-foreground text-[11px]">hours</span>
+                    </div>
+                  )}
+
+                <button
+                  type="button"
+                  onClick={() => removeGlobalRule(idx)}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto shrink-0"
+                  title="Remove rule"
+                >
+                  ✕
+                </button>
               </div>
             ))}
           </div>
@@ -2613,7 +2625,7 @@ function RewardEditDialog({
               </div>
             </TabsContent>
 
-            <TabsContent value="edit" className="mt-4">
+            <TabsContent value="edit" className="mt-4 min-w-0">
               <RewardWizard
                 initial={{
                   reward_type: reward.reward_type,
@@ -2691,7 +2703,7 @@ function CreateRewardModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-xl sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Create New Reward</DialogTitle>
           <DialogDescription>
