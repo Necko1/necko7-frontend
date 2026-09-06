@@ -268,7 +268,7 @@ function SkinIconDownloader({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-base">Download Twitch Panel Icon</DialogTitle>
           <DialogDescription className="text-xs leading-relaxed">
@@ -2330,7 +2330,7 @@ function RewardEditDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <DialogContent className="w-full max-w-4xl sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader className="pr-6">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
