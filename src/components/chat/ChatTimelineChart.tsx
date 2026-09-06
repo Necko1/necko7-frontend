@@ -135,7 +135,7 @@ export default function ChatTimelineChart({
           </div>
 
           {/* Bars row */}
-          <div className="relative z-10 flex items-end h-36 w-full gap-1 sm:gap-1.5 px-1">
+          <div className="relative z-10 flex items-end h-36 w-full px-1">
             {points.map((p, i) => {
               const val = p[metricConfig.field];
               const heightPct = maxValue > 0 ? Math.max((val / maxValue) * 100, val > 0 ? 4 : 1) : 1;
@@ -157,7 +157,7 @@ export default function ChatTimelineChart({
                 >
                   <div
                     className={cn(
-                      "w-full max-w-[28px] min-w-[3px] rounded-t-md transition-all duration-150",
+                      "w-[85%] min-w-[3px] rounded-t-md transition-all duration-150",
                       metric === "messages" &&
                         "bg-gradient-to-t from-cyan-500/20 via-cyan-500/60 to-cyan-400",
                       metric === "characters" &&
@@ -188,23 +188,23 @@ export default function ChatTimelineChart({
               if (!shouldShow) return null;
 
               const leftPct = ((i + 0.5) / points.length) * 100;
-              const isFirst = i === 0;
-              const isLast = i === points.length - 1;
+              const transform =
+                leftPct < 5
+                  ? "translateX(0%)"
+                  : leftPct > 95
+                  ? "translateX(-100%)"
+                  : "translateX(-50%)";
 
               return (
                 <span
                   key={i}
                   className={cn(
-                    "absolute text-[10px] text-muted-foreground/70 whitespace-nowrap font-mono transition-colors",
+                    "absolute text-[11px] text-muted-foreground/70 whitespace-nowrap font-mono transition-colors",
                     hoveredPoint?.point === p && "text-foreground font-semibold"
                   )}
                   style={{
                     left: `${leftPct}%`,
-                    transform: isFirst
-                      ? "translateX(0%)"
-                      : isLast
-                      ? "translateX(-100%)"
-                      : "translateX(-50%)",
+                    transform,
                   }}
                 >
                   {format(new Date(p.bucket_start), "HH:mm")}
