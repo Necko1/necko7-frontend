@@ -525,6 +525,11 @@ function RewardCard({
               Manual price
             </Badge>
           )}
+          {reward.is_public === false && (
+            <Badge variant="outline" className="text-xs border-border text-muted-foreground/80 bg-muted/40" title="Hidden from public rewards showcase">
+              Private
+            </Badge>
+          )}
           {((reward.chat_min_messages ?? 0) > 0 || (reward.chat_min_characters ?? 0) > 0) && (
             <Badge variant="outline" className="text-xs border-violet-500/30 text-violet-400 bg-violet-500/10" title="Has Chat Activity Requirements">
               {(reward.chat_min_messages ?? 0) > 0 ? `${reward.chat_min_messages} msgs` : ""}
@@ -1455,7 +1460,7 @@ function StepTwitchSettings({
           />
         </div>
       </div>
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-6 flex-wrap">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
@@ -1476,6 +1481,15 @@ function StepTwitchSettings({
             <span className="text-sm">Create as paused</span>
           </label>
         )}
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.is_public ?? true}
+            onChange={(e) => onChange({ is_public: e.target.checked })}
+            className="rounded accent-primary"
+          />
+          <span className="text-sm">Show in public catalog</span>
+        </label>
       </div>
     </div>
   );
@@ -2102,6 +2116,7 @@ function RewardWizard({
     chat_logical_operator: "AND",
     refund_if_chat_req_failed: true,
     purchase_limits: null,
+    is_public: true,
     ...initial,
   });
 
@@ -2176,6 +2191,7 @@ function RewardWizard({
       chat_logical_operator: form.chat_logical_operator ?? "AND",
       refund_if_chat_req_failed: form.refund_if_chat_req_failed ?? true,
       purchase_limits: purchaseLimitsPayload,
+      is_public: form.is_public ?? true,
     };
     onSubmit(body);
   };
@@ -2698,6 +2714,7 @@ function RewardEditDialog({
                   chat_logical_operator: reward.chat_logical_operator ?? undefined,
                   refund_if_chat_req_failed: reward.refund_if_chat_req_failed ?? true,
                   purchase_limits: reward.purchase_limits ?? undefined,
+                  is_public: reward.is_public ?? true,
                 }}
                 channelId={channelId}
                 onSubmit={(data) => {

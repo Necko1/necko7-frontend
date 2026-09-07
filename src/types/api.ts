@@ -12,7 +12,14 @@ export interface LogoutResponse {
 
 // ===== Broadcasters =====
 
-export type ChannelRole = "Owner" | "Editor";
+export type ChannelRole =
+  | "OWNER"
+  | "EDITOR"
+  | "VIEWER"
+  | "Owner"
+  | "Editor"
+  | "Viewer";
+
 
 export interface BroadcasterListItem {
   channel_id: string;
@@ -33,6 +40,23 @@ export type ChatMessageCategory =
 export type CategorizedChatMessages = Record<string, Record<string, string>>;
 export type CategorizedPlaceholders = Record<string, Record<string, string[]>>;
 
+export interface PublicRewardsConfig {
+  enabled?: boolean;
+  show_chat_requirements?: boolean;
+  show_cooldown_and_limits?: boolean;
+  show_cost_points?: boolean;
+  show_description?: boolean;
+  show_filter_details?: boolean;
+  show_market_price?: boolean;
+  show_pause_reason?: boolean;
+  show_paused_rewards?: boolean;
+  show_pool_chances?: boolean;
+  show_pool_item_prices?: boolean;
+  show_pool_items?: boolean;
+  show_price_deviation?: boolean;
+  show_purchase_limits?: boolean;
+}
+
 export interface BroadcasterSettingsResponse {
   channel_id: string;
   channel_login: string;
@@ -47,6 +71,7 @@ export interface BroadcasterSettingsResponse {
   pause_reward_if_no_money: boolean;
   market_chance_to_transfer: number;
   add_bot_badge: boolean;
+  public_rewards_config?: PublicRewardsConfig | null;
   chat_messages: Record<string, Record<string, string>>;
 }
 
@@ -60,8 +85,15 @@ export interface UpdateBroadcasterSettingsBody {
   pause_reward_if_no_money?: boolean | null;
   market_chance_to_transfer?: number | null;
   add_bot_badge?: boolean | null;
+  public_rewards_config?: PublicRewardsConfig | null;
   chat_messages?: Record<string, Record<string, string>> | null;
 }
+
+export interface PinBroadcasterResponse {
+  success: boolean;
+  message: string;
+}
+
 
 export interface MarketBalanceResponse {
   money: number;
@@ -193,6 +225,8 @@ export interface RewardResponse {
   refund_if_chat_req_failed?: boolean;
   // Purchase limits (v0.4.3)
   purchase_limits?: RewardPurchaseLimitsConfig | null;
+  // Public showcase (v0.6.0)
+  is_public?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -224,6 +258,8 @@ export interface CreateRewardBody {
   refund_if_chat_req_failed?: boolean;
   // Purchase limits (v0.4.3)
   purchase_limits?: RewardPurchaseLimitsConfig | null;
+  // Public showcase (v0.6.0)
+  is_public?: boolean;
 }
 
 export interface UpdateRewardBody {
@@ -255,6 +291,8 @@ export interface UpdateRewardBody {
   refund_if_chat_req_failed?: boolean | null;
   // Purchase limits (v0.4.3)
   purchase_limits?: RewardPurchaseLimitsConfig | null;
+  // Public showcase (v0.6.0)
+  is_public?: boolean | null;
 }
 
 export interface ListRewardsQuery {
@@ -507,4 +545,147 @@ export interface PaginatedChannelLogsResponse {
   offset: number;
   limit: number;
 }
+
+// ===== Public Rewards Showcase (v0.6.0) =====
+
+export interface PublicBroadcasterInfo {
+  channel_id: string;
+  channel_login: string;
+  display_name?: string | null;
+  profile_image_url?: string | null;
+  public_rewards_enabled: boolean;
+}
+
+export interface PublicChatRequirements {
+  logical_operator?: string | null;
+  min_characters?: number | null;
+  min_messages?: number | null;
+  time_window_hours?: number | null;
+}
+
+export interface PublicFilterDetails {
+  max_price?: number | null;
+  min_price?: number | null;
+  name_contains?: string | null;
+  name_prefix?: string | null;
+  name_suffix?: string | null;
+}
+
+export interface PublicPoolItem {
+  market_hash_name: string;
+  chance_percentage?: number | null;
+  current_market_price?: number | null;
+  permissible_market_price_deviation?: number | null;
+}
+
+export interface PublicRewardResponse {
+  twitch_id: string;
+  twitch_title: string;
+  reward_type: RewardType;
+  pricing_mode: PricingMode;
+  is_paused: boolean;
+  twitch_description?: string | null;
+  cost_points?: number | null;
+  currency?: string | null;
+  market_price?: number | null;
+  market_item_name?: string | null;
+  permissible_market_price_deviation?: number | null;
+  pool_items?: PublicPoolItem[] | null;
+  filter_details?: PublicFilterDetails | null;
+  pause_reason?: string | null;
+  global_cooldown_seconds?: number | null;
+  max_redemptions_per_stream?: number | null;
+  max_redemptions_per_user_per_stream?: number | null;
+  chat_requirements?: PublicChatRequirements | null;
+  purchase_limits?: RewardPurchaseLimitsConfig | null;
+}
+
+// ===== Viewer Profile (v0.6.0) =====
+
+export interface ViewerRewardLimitStatus {
+  twitch_reward_id: string;
+  reward_title: string;
+  max_redemptions: number;
+  used_redemptions: number;
+  remaining_redemptions: number;
+  is_limit_reached: boolean;
+  window_hours?: number | null;
+}
+
+export interface ViewerRedemptionStats {
+  total_redemptions: number;
+  completed: number;
+  failed: number;
+  pending: number;
+  total_points_spent: number;
+  total_market_value: number;
+}
+
+export interface ViewerChannelChatStats {
+  total_messages: number;
+  total_characters: number;
+  first_seen_at?: string | null;
+  last_seen_at?: string | null;
+  leaderboard_rank?: number | null;
+}
+
+export interface ViewerChannelProfileResponse {
+  channel_id: string;
+  channel_login: string;
+  display_name?: string | null;
+  profile_image_url?: string | null;
+  chat_stats: ViewerChannelChatStats;
+  redemption_stats: ViewerRedemptionStats;
+  limits: ViewerRewardLimitStatus[];
+}
+
+export interface ViewerChannelRedemption {
+  twitch_redemption_id: string;
+  twitch_reward_id: string;
+  reward_title: string;
+  twitch_points_cost: number;
+  currency: string;
+  status: RedemptionStatus;
+  market_item_name?: string | null;
+  market_paid_price?: number | null;
+  fail_cause?: string | null;
+  fail_description?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ViewerGlobalChannelSummary {
+  channel_id: string;
+  channel_login: string;
+  display_name?: string | null;
+  profile_image_url?: string | null;
+  messages_count: number;
+  redemptions_count: number;
+}
+
+export interface ViewerGlobalProfileResponse {
+  user_id: string;
+  total_chat_messages: number;
+  total_chat_characters: number;
+  redemption_stats: ViewerRedemptionStats;
+  channels: ViewerGlobalChannelSummary[];
+}
+
+export interface ViewerGlobalRedemption {
+  twitch_redemption_id: string;
+  twitch_reward_id: string;
+  channel_id: string;
+  channel_login: string;
+  reward_title: string;
+  twitch_points_cost: number;
+  currency: string;
+  status: RedemptionStatus;
+  market_item_name?: string | null;
+  market_paid_price?: number | null;
+  fail_cause?: string | null;
+  fail_description?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 

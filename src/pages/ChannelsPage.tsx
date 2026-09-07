@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
-import { authApi } from "@/lib/apiClient";
+import { authApi, broadcastersApi } from "@/lib/apiClient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,15 @@ const IconArrowRight = () => (
   </svg>
 );
 
+const IconPinOff = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="2" y1="2" x2="22" y2="22" />
+    <line x1="12" y1="17" x2="12" y2="22" />
+    <path d="M9 9v-.24A2 2 0 0 1 11 7h2a2 2 0 0 1 2 2v4a4 4 0 0 0 .86 2.45" />
+    <path d="M5 17h12" />
+  </svg>
+);
+
 export default function ChannelsPage() {
   const navigate = useNavigate();
   const {
@@ -79,9 +89,22 @@ export default function ChannelsPage() {
     );
   }, [broadcasters, search]);
 
-  const handleSelectChannel = (channelId: string) => {
+  const qc = useQueryClient();
+
+  const unpinMutation = useMutation({
+    mutationFn: (channelId: string) => broadcastersApi.unpin(channelId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["broadcasters"] });
+    },
+  });
+
+  const handleSelectChannel = (channelId: string, role: string, login: string) => {
     setSelectedBroadcasterId(channelId);
-    navigate("/dashboard");
+    if (role.toUpperCase() === "VIEWER") {
+      navigate(`/c/${login}`);
+    } else {
+      navigate("/dashboard");
+    }
   };
 
   const handleConnectChannel = () => {
@@ -163,13 +186,16 @@ export default function ChannelsPage() {
         {/* ── Broadcaster cards ── */}
         {filteredBroadcasters.map((b) => {
           const isSelected = b.channel_id === selectedBroadcasterId;
+          const roleUpper = b.role.toUpperCase();
+          const isViewer = roleUpper === "VIEWER";
+
           return (
             <div
               key={b.channel_id}
               role="button"
               tabIndex={0}
-              onClick={() => handleSelectChannel(b.channel_id)}
-              onKeyDown={(e) => e.key === "Enter" && handleSelectChannel(b.channel_id)}
+              onClick={() => handleSelectChannel(b.channel_id, b.role, b.channel_login)}
+              onKeyDown={(e) => e.key === "Enter" && handleSelectChannel(b.channel_id, b.role, b.channel_login)}
               className={cn(
                 "group relative flex flex-col justify-between p-5 rounded-2xl border bg-card transition-all duration-200 cursor-pointer min-h-56 text-left focus:outline-none focus:ring-2 focus:ring-primary/40 hover:shadow-lg hover:shadow-primary/5",
                 isSelected
@@ -192,24 +218,23 @@ export default function ChannelsPage() {
 
                   {/* Status / Role badge */}
                   <div className="flex items-center gap-1.5">
-                    {isSelected ? (
+                    {isSelected && (
                       <Badge className="bg-primary/20 text-primary border border-primary/30 gap-1 text-[11px] font-semibold">
                         <IconCheck />
                         Active
                       </Badge>
-                    ) : (
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "text-[11px] font-medium capitalize",
-                          b.role === "Owner"
-                            ? "bg-purple-500/15 text-purple-600 dark:text-purple-300 border-purple-500/20"
-                            : "bg-teal-500/15 text-teal-600 dark:text-teal-300 border-teal-500/20"
-                        )}
-                      >
-                        {b.role}
-                      </Badge>
                     )}
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "text-[11px] font-medium capitalize",
+                        roleUpper === "OWNER" && "bg-purple-500/15 text-purple-600 dark:text-purple-300 border-purple-500/20",
+                        roleUpper === "EDITOR" && "bg-teal-500/15 text-teal-600 dark:text-teal-300 border-teal-500/20",
+                        roleUpper === "VIEWER" && "bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/20"
+                      )}
+                    >
+                      {roleUpper === "VIEWER" ? "Viewer" : b.role}
+                    </Badge>
                   </div>
                 </div>
 
@@ -233,22 +258,37 @@ export default function ChannelsPage() {
               {/* Card bottom: Actions */}
               <div className="pt-4 mt-2 border-t border-border flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors flex items-center gap-1">
-                  {isSelected ? "Currently active" : "Switch to channel"}
+                  {isSelected ? (isViewer ? "View rewards" : "Currently active") : (isViewer ? "Open rewards" : "Switch to channel")}
                   {!isSelected && <IconArrowRight />}
                 </span>
 
-                {/* Settings shortcut button */}
-                <button
-                  type="button"
-                  title="Channel settings"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/broadcasters/${b.channel_id}/settings`);
-                  }}
-                  className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                >
-                  <IconSettings />
-                </button>
+                {/* Card Action: Settings for Owner/Editor, Unpin for Viewer */}
+                {isViewer ? (
+                  <button
+                    type="button"
+                    title="Unpin / hide this channel from your list"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      unpinMutation.mutate(b.channel_id);
+                    }}
+                    disabled={unpinMutation.isPending}
+                    className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <IconPinOff />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    title="Channel settings"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/broadcasters/${b.channel_id}/settings`);
+                    }}
+                    className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <IconSettings />
+                  </button>
+                )}
               </div>
             </div>
           );

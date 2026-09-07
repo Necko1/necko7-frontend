@@ -15,6 +15,9 @@ import ChatPage from "@/pages/ChatPage";
 import ChatMessagesPage from "@/pages/ChatMessagesPage";
 import ChatUserPage from "@/pages/ChatUserPage";
 import LogsPage from "@/pages/LogsPage";
+import PublicRewardsPage from "@/pages/PublicRewardsPage";
+import ChannelProfilePage from "@/pages/ChannelProfilePage";
+import GlobalProfilePage from "@/pages/GlobalProfilePage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,7 +43,7 @@ export default function App() {
               {/* Standalone — no layout, self-contained background */}
               <Route path="/init-bot" element={<InitBotPage />} />
 
-              {/* Protected app routes */}
+              {/* App routes (handles both viewer and admin layouts) */}
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/channels" element={<ChannelsPage />} />
@@ -55,6 +58,12 @@ export default function App() {
                   path="/broadcasters/:channelId/settings"
                   element={<SettingsPage />}
                 />
+
+                {/* v0.6.0 Public showcase & viewer profile routes */}
+                <Route path="/c/:identifier" element={<PublicRewardsPage />} />
+                <Route path="/c/:identifier/rewards/:rewardId" element={<PublicRewardsPage />} />
+                <Route path="/c/:identifier/profile" element={<ChannelProfilePage />} />
+                <Route path="/me" element={<GlobalProfilePage />} />
               </Route>
 
               {/* Catch-all */}

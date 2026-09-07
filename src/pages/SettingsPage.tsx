@@ -5,6 +5,7 @@ import { broadcastersApi, permissionsApi } from "@/lib/apiClient";
 import type {
   UpdateBroadcasterSettingsBody,
   PermissionResponse,
+  PublicRewardsConfig,
 } from "@/types/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -828,11 +829,11 @@ function PermissionsTab({ channelId }: { channelId: string }) {
                 </div>
                 <Badge variant="outline" className={cn(
                   "text-xs capitalize",
-                  perm.role === "Owner" ? "border-primary/40 text-primary" : "border-border text-muted-foreground"
+                  perm.role.toUpperCase() === "OWNER" ? "border-primary/40 text-primary" : "border-border text-muted-foreground"
                 )}>
-                  {perm.role}
+                  {perm.role.toUpperCase() === "OWNER" ? "Owner" : perm.role.toUpperCase() === "EDITOR" ? "Editor" : perm.role}
                 </Badge>
-                {perm.role !== "Owner" && (
+                {perm.role.toUpperCase() !== "OWNER" && (
                   <Button
                     size="icon"
                     variant="ghost"
@@ -855,6 +856,278 @@ function PermissionsTab({ channelId }: { channelId: string }) {
     </div>
   );
 }
+
+// ── Public Catalog Tab (v0.6.0) ────────────────────────────────────────────
+function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; channelLogin?: string }) {
+  const qc = useQueryClient();
+  const [copied, setCopied] = useState(false);
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["settings", channelId],
+    queryFn: () => broadcastersApi.getSettings(channelId).then((r) => r.data),
+  });
+
+  const [config, setConfig] = useState<PublicRewardsConfig>({
+    enabled: true,
+    show_cost_points: true,
+    show_description: true,
+    show_market_price: true,
+    show_price_deviation: true,
+    show_paused_rewards: true,
+    show_pause_reason: true,
+    show_cooldown_and_limits: true,
+    show_purchase_limits: true,
+    show_chat_requirements: true,
+    show_pool_items: true,
+    show_pool_chances: true,
+    show_pool_item_prices: true,
+    show_filter_details: true,
+  });
+
+  useEffect(() => {
+    if (settings?.public_rewards_config) {
+      setConfig({
+        enabled: settings.public_rewards_config.enabled ?? true,
+        show_cost_points: settings.public_rewards_config.show_cost_points ?? true,
+        show_description: settings.public_rewards_config.show_description ?? true,
+        show_market_price: settings.public_rewards_config.show_market_price ?? true,
+        show_price_deviation: settings.public_rewards_config.show_price_deviation ?? true,
+        show_paused_rewards: settings.public_rewards_config.show_paused_rewards ?? true,
+        show_pause_reason: settings.public_rewards_config.show_pause_reason ?? true,
+        show_cooldown_and_limits: settings.public_rewards_config.show_cooldown_and_limits ?? true,
+        show_purchase_limits: settings.public_rewards_config.show_purchase_limits ?? true,
+        show_chat_requirements: settings.public_rewards_config.show_chat_requirements ?? true,
+        show_pool_items: settings.public_rewards_config.show_pool_items ?? true,
+        show_pool_chances: settings.public_rewards_config.show_pool_chances ?? true,
+        show_pool_item_prices: settings.public_rewards_config.show_pool_item_prices ?? true,
+        show_filter_details: settings.public_rewards_config.show_filter_details ?? true,
+      });
+    }
+  }, [settings]);
+
+  const updateMutation = useMutation({
+    mutationFn: (newCfg: PublicRewardsConfig) =>
+      broadcastersApi.updateSettings(channelId, { public_rewards_config: newCfg }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["settings", channelId] }),
+  });
+
+  const activeLogin = settings?.channel_login || channelLogin || channelId;
+  const showcaseUrl = `${window.location.origin}/c/${activeLogin}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(showcaseUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const setFlag = <K extends keyof PublicRewardsConfig>(key: K, val: boolean) =>
+    setConfig((prev) => ({ ...prev, [key]: val }));
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Shareable Link Banner */}
+      <div className="p-5 rounded-2xl border border-primary/20 bg-primary/5 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-foreground">
+              Public Rewards Showcase URL
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Share this link with your Twitch viewers so they can browse skin rewards anytime.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCopyLink}
+              className="text-xs h-8 gap-1.5"
+            >
+              {copied ? <IconCheck /> : null}
+              <span>{copied ? "Copied!" : "Copy Link"}</span>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => window.open(`/c/${activeLogin}`, "_blank")}
+              className="text-xs h-8"
+            >
+              Open Showcase ↗
+            </Button>
+          </div>
+        </div>
+
+        <div className="p-2.5 rounded-xl bg-card border border-border/80 font-mono text-xs text-foreground/90 truncate select-all">
+          {showcaseUrl}
+        </div>
+      </div>
+
+      {/* Master Enable/Disable */}
+      <Section title="Master Switch" description="Toggle public rewards catalog on or off.">
+        <ToggleField
+          id="public_enabled"
+          label="Enable Public Rewards Catalog"
+          description="When turned off, visitors to your public link will see a message that the catalog is currently disabled."
+          checked={config.enabled ?? true}
+          onChange={(v) => setFlag("enabled", v)}
+        />
+      </Section>
+
+      {/* Pricing & Economy */}
+      <Section title="Pricing & Market Visibility" description="Choose which pricing details are visible to public visitors.">
+        <div className="space-y-4">
+          <ToggleField
+            id="show_cost_points"
+            label="Show Channel Points Cost"
+            description="Display the Twitch channel points cost required to redeem each reward."
+            checked={config.show_cost_points ?? true}
+            onChange={(v) => setFlag("show_cost_points", v)}
+          />
+          <Separator />
+          <ToggleField
+            id="show_market_price"
+            label="Show Estimated Market Price"
+            description="Display real-time CS market item prices in your store currency (RUB/USD)."
+            checked={config.show_market_price ?? true}
+            onChange={(v) => setFlag("show_market_price", v)}
+          />
+          <Separator />
+          <ToggleField
+            id="show_price_deviation"
+            label="Show Permissible Price Deviation"
+            description="Show allowable market price deviation percentage (±%)."
+            checked={config.show_price_deviation ?? true}
+            onChange={(v) => setFlag("show_price_deviation", v)}
+          />
+        </div>
+      </Section>
+
+      {/* Skin Pools */}
+      <Section title="Skin Pool Visibility" description="Configure what information is shown for POOL reward types.">
+        <div className="space-y-4">
+          <ToggleField
+            id="show_pool_items"
+            label="Show Pool Item Names and Icons"
+            description="List all skins contained inside the randomized pool."
+            checked={config.show_pool_items ?? true}
+            onChange={(v) => setFlag("show_pool_items", v)}
+          />
+          <Separator />
+          <ToggleField
+            id="show_pool_chances"
+            label="Show Drop Chance Percentages"
+            description="Show calculated percentage chance (e.g. 15.5%) for each skin in the pool."
+            checked={config.show_pool_chances ?? true}
+            onChange={(v) => setFlag("show_pool_chances", v)}
+          />
+          <Separator />
+          <ToggleField
+            id="show_pool_item_prices"
+            label="Show Individual Pool Skin Prices"
+            description="Display the current market price for each separate skin inside the pool."
+            checked={config.show_pool_item_prices ?? true}
+            onChange={(v) => setFlag("show_pool_item_prices", v)}
+          />
+        </div>
+      </Section>
+
+      {/* Reward Info & Status */}
+      <Section title="Reward Information & Status" description="Control descriptions, pause status, and filter rules.">
+        <div className="space-y-4">
+          <ToggleField
+            id="show_description"
+            label="Show Reward Descriptions"
+            description="Display the custom description text configured for each reward."
+            checked={config.show_description ?? true}
+            onChange={(v) => setFlag("show_description", v)}
+          />
+          <Separator />
+          <ToggleField
+            id="show_paused_rewards"
+            label="Show Paused Rewards"
+            description="Keep paused rewards visible in the public showcase (with a 'Paused' tag)."
+            checked={config.show_paused_rewards ?? true}
+            onChange={(v) => setFlag("show_paused_rewards", v)}
+          />
+          <Separator />
+          <ToggleField
+            id="show_pause_reason"
+            label="Show Pause Reason"
+            description="Show why a reward is paused (e.g., market balance ran out or price exceeded limit)."
+            checked={config.show_pause_reason ?? true}
+            onChange={(v) => setFlag("show_pause_reason", v)}
+          />
+          <Separator />
+          <ToggleField
+            id="show_filter_details"
+            label="Show Filter Auto-Pick Details"
+            description="Show price range (min/max) and name filter criteria for FILTER reward types."
+            checked={config.show_filter_details ?? true}
+            onChange={(v) => setFlag("show_filter_details", v)}
+          />
+        </div>
+      </Section>
+
+      {/* Limits & Cooldowns */}
+      <Section title="Limits & Cooldowns" description="Control visibility of redemption rate limits and chat activity requirements.">
+        <div className="space-y-4">
+          <ToggleField
+            id="show_cooldown_and_limits"
+            label="Show Twitch Cooldowns and Stream Limits"
+            description="Show per-stream redemption limits and global cooldown timers."
+            checked={config.show_cooldown_and_limits ?? true}
+            onChange={(v) => setFlag("show_cooldown_and_limits", v)}
+          />
+          <Separator />
+          <ToggleField
+            id="show_purchase_limits"
+            label="Show User & Global Purchase Limits"
+            description="Display windowed purchase limits (e.g. max 1 reward per 24 hours)."
+            checked={config.show_purchase_limits ?? true}
+            onChange={(v) => setFlag("show_purchase_limits", v)}
+          />
+          <Separator />
+          <ToggleField
+            id="show_chat_requirements"
+            label="Show Chat Activity Requirements"
+            description="Display the required chat messages count and time window needed to redeem."
+            checked={config.show_chat_requirements ?? true}
+            onChange={(v) => setFlag("show_chat_requirements", v)}
+          />
+        </div>
+      </Section>
+
+      {/* Save Button */}
+      <div className="flex items-center gap-4 pt-4 border-t border-border">
+        <Button
+          className="gap-2 cursor-pointer"
+          onClick={() => updateMutation.mutate(config)}
+          disabled={updateMutation.isPending}
+        >
+          <IconSave />
+          {updateMutation.isPending ? "Saving…" : "Save Public Settings"}
+        </Button>
+        {updateMutation.isSuccess && (
+          <p className="text-sm text-emerald-400 flex items-center gap-1.5 font-medium">
+            <IconCheck /> Public showcase settings saved successfully.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 export default function SettingsPage() {
   const { channelId } = useParams<{ channelId: string }>();
@@ -899,6 +1172,7 @@ export default function SettingsPage() {
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="messages">Chat Messages</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
+          <TabsTrigger value="public">Public Catalog</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -909,6 +1183,9 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="permissions">
           <PermissionsTab channelId={channelId} />
+        </TabsContent>
+        <TabsContent value="public">
+          <PublicCatalogTab channelId={channelId} channelLogin={settings?.channel_login} />
         </TabsContent>
       </Tabs>
     </div>

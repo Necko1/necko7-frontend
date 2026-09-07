@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Navigate, Outlet, NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useMemo } from "react";
+import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -91,6 +91,12 @@ const IconTerminal = () => (
   </svg>
 );
 
+const IconUser = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: <IconGrid /> },
   { label: "Rewards", to: "/rewards", icon: <IconGift /> },
@@ -161,8 +167,57 @@ export default function AppLayout() {
     }
   }, [broadcastersData, selectedBroadcasterId, setBroadcasters, setSelectedBroadcasterId]);
 
-  // ── ALL HOOKS CALLED UNCONDITIONALLY ABOVE ────────────────────────────────
-  // Early returns are STRICTLY below all hooks to satisfy React Rules of Hooks!
+  const location = useLocation();
+
+  // Sync selected broadcaster if navigating directly to a /c/:identifier URL
+  useEffect(() => {
+    if (location.pathname.startsWith("/c/")) {
+      const ident = location.pathname.split("/")[2]?.toLowerCase();
+      if (ident && broadcasters.length > 0) {
+        const match = broadcasters.find(
+          (b) =>
+            b.channel_id === ident ||
+            b.channel_login.toLowerCase() === ident
+        );
+        if (match && match.channel_id !== selectedBroadcasterId) {
+          setSelectedBroadcasterId(match.channel_id);
+        }
+      }
+    }
+  }, [location.pathname, broadcasters, selectedBroadcasterId, setSelectedBroadcasterId]);
+
+  const selectedBroadcaster = getSelectedBroadcaster();
+  const roleUpper = selectedBroadcaster?.role?.toUpperCase();
+  const isViewer = roleUpper === "VIEWER";
+
+  // Route protection for VIEWER role: redirect away from admin pages
+  useEffect(() => {
+    if (isViewer && selectedBroadcaster) {
+      const adminPrefixes = ["/dashboard", "/rewards", "/redemptions", "/logs", "/leaderboard", "/chat", "/broadcasters"];
+      if (adminPrefixes.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`))) {
+        navigate(`/c/${selectedBroadcaster.channel_login}`, { replace: true });
+      }
+    }
+  }, [isViewer, selectedBroadcaster, location.pathname, navigate]);
+
+  const navItems: NavItem[] = useMemo(() => {
+    if (isViewer && selectedBroadcaster) {
+      return [
+        {
+          label: "Rewards",
+          to: `/c/${selectedBroadcaster.channel_login}`,
+          icon: <IconGift />,
+        },
+        {
+          label: "Profile",
+          to: `/c/${selectedBroadcaster.channel_login}/profile`,
+          icon: <IconUser />,
+        },
+      ];
+    }
+    return NAV_ITEMS;
+  }, [isViewer, selectedBroadcaster]);
+
 
   // While checking auth — show full-screen loader
   if (meLoading || (!meData && !meError)) {
@@ -187,10 +242,15 @@ export default function AppLayout() {
   if (meError) {
     const status = (meError as AxiosError)?.response?.status;
     if (status === 404) return <Navigate to="/init-bot" replace />;
+    if (location.pathname.startsWith("/c/")) {
+      return (
+        <main className="min-h-screen bg-background">
+          <Outlet />
+        </main>
+      );
+    }
     return <Navigate to="/login" replace />;
   }
-
-  const selectedBroadcaster = getSelectedBroadcaster();
 
   return (
     <div className="flex w-full min-h-screen">
@@ -222,20 +282,22 @@ export default function AppLayout() {
                     {selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
                   </p>
                   <p className="text-xs text-muted-foreground capitalize">
-                    {selectedBroadcaster.role}
+                    {isViewer ? "Viewer" : selectedBroadcaster.role}
                   </p>
                 </div>
-                <Tooltip>
-                  <TooltipTrigger
-                    className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-sidebar-foreground hover:bg-accent"
-                    onClick={() =>
-                      navigate(`/broadcasters/${selectedBroadcaster.channel_id}/settings`)
-                    }
-                  >
-                    <IconSettings />
-                  </TooltipTrigger>
-                  <TooltipContent>Channel settings</TooltipContent>
-                </Tooltip>
+                {!isViewer && (
+                  <Tooltip>
+                    <TooltipTrigger
+                      className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-sidebar-foreground hover:bg-accent"
+                      onClick={() =>
+                        navigate(`/broadcasters/${selectedBroadcaster.channel_id}/settings`)
+                      }
+                    >
+                      <IconSettings />
+                    </TooltipTrigger>
+                    <TooltipContent>Channel settings</TooltipContent>
+                  </Tooltip>
+                )}
               </div>
 
               {/* Switch channel button — always shown */}
@@ -272,7 +334,7 @@ export default function AppLayout() {
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -294,23 +356,41 @@ export default function AppLayout() {
         <Separator className="bg-sidebar-border" />
 
         {/* User profile at bottom */}
-        <div className="p-4">
-          <div className="flex items-center gap-3 group">
-            <Avatar className="h-8 w-8 shrink-0">
+        <div className="p-3">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate("/me")}
+            onKeyDown={(e) => e.key === "Enter" && navigate("/me")}
+            className={cn(
+              "w-full flex items-center gap-3 p-2 rounded-xl transition-all cursor-pointer group text-left select-none",
+              location.pathname === "/me"
+                ? "bg-sidebar-accent border border-primary/30 shadow-xs"
+                : "hover:bg-sidebar-accent/60"
+            )}
+            title="Open your global viewer profile"
+          >
+            <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border group-hover:ring-primary/40 transition-all">
               <AvatarImage src={meData?.avatar_url ?? undefined} alt={meData?.login} />
               <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
                 {(meData?.login || "??").slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
+              <p className="text-sm font-medium text-sidebar-foreground truncate group-hover:text-primary transition-colors">
                 {meData?.login}
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-none">
+                My Global Profile
               </p>
             </div>
             <Tooltip>
               <TooltipTrigger
                 className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-accent"
-                onClick={() => logoutMutation.mutate()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  logoutMutation.mutate();
+                }}
                 aria-disabled={logoutMutation.isPending}
               >
                 <IconLogOut />

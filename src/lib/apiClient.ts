@@ -38,6 +38,14 @@ import type {
   ListChannelLogsQuery,
   PaginatedChannelLogsResponse,
   ChannelLogsSummaryResponse,
+  // v0.6.0
+  PinBroadcasterResponse,
+  PublicBroadcasterInfo,
+  PublicRewardResponse,
+  ViewerChannelProfileResponse,
+  ViewerChannelRedemption,
+  ViewerGlobalProfileResponse,
+  ViewerGlobalRedemption,
 } from "@/types/api";
 import { config } from "@/config";
 
@@ -85,6 +93,12 @@ export const broadcastersApi = {
       `/api/v1/broadcasters/${channelId}/messages`,
       body
     ),
+
+  pin: (channelId: string) =>
+    api.post<PinBroadcasterResponse>(`/api/v1/broadcasters/${channelId}/pin`),
+
+  unpin: (channelId: string) =>
+    api.delete<PinBroadcasterResponse>(`/api/v1/broadcasters/${channelId}/pin`),
 };
 
 // ===== Permissions =====
@@ -259,4 +273,46 @@ export const logsApi = {
       `/api/v1/broadcasters/${channelId}/logs/summary`
     ),
 };
+
+// ===== Public Showcase (v0.6.0) =====
+
+export const publicApi = {
+  getBroadcasterInfo: (identifier: string) =>
+    api.get<PublicBroadcasterInfo>(`/api/v1/public/broadcasters/${identifier}`),
+
+  getRewards: (identifier: string) =>
+    api.get<PublicRewardResponse[]>(
+      `/api/v1/public/broadcasters/${identifier}/rewards`
+    ),
+
+  getRewardById: (identifier: string, rewardId: string) =>
+    api.get<PublicRewardResponse>(
+      `/api/v1/public/broadcasters/${identifier}/rewards/${rewardId}`
+    ),
+};
+
+// ===== Viewer Profiles (v0.6.0) =====
+
+export const viewerApi = {
+  getChannelProfile: (channelId: string) =>
+    api.get<ViewerChannelProfileResponse>(
+      `/api/v1/broadcasters/${channelId}/me/profile`
+    ),
+
+  getChannelRedemptions: (
+    channelId: string,
+    params?: { limit?: number; offset?: number }
+  ) =>
+    api.get<ViewerChannelRedemption[]>(
+      `/api/v1/broadcasters/${channelId}/me/redemptions`,
+      { params }
+    ),
+
+  getGlobalProfile: () =>
+    api.get<ViewerGlobalProfileResponse>("/api/v1/me/profile"),
+
+  getGlobalRedemptions: (params?: { limit?: number; offset?: number }) =>
+    api.get<ViewerGlobalRedemption[]>("/api/v1/me/redemptions", { params }),
+};
+
 
