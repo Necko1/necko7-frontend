@@ -1636,9 +1636,11 @@ function StepChatRequirements({
 function StepPurchaseLimits({
   form,
   onChange,
+  isEdit,
 }: {
   form: Partial<CreateRewardBody>;
   onChange: (patch: Partial<CreateRewardBody>) => void;
+  isEdit?: boolean;
 }) {
   const limits: RewardPurchaseLimitsConfig = form.purchase_limits ?? {};
   const userRules: PurchaseLimitRule[] = limits.user ?? [];
@@ -1647,9 +1649,18 @@ function StepPurchaseLimits({
   const updateLimits = (newLimits: RewardPurchaseLimitsConfig) => {
     const hasUser = (newLimits.user?.length ?? 0) > 0;
     const hasGlobal = (newLimits.global?.length ?? 0) > 0;
-    onChange({
-      purchase_limits: hasUser || hasGlobal ? newLimits : null,
-    });
+    if (isEdit) {
+      onChange({
+        purchase_limits: {
+          global: hasGlobal ? (newLimits.global ?? []) : [],
+          user: hasUser ? (newLimits.user ?? []) : [],
+        },
+      });
+    } else {
+      onChange({
+        purchase_limits: hasUser || hasGlobal ? newLimits : null,
+      });
+    }
   };
 
   const addUserRule = (maxRedemptions = 1, windowHours: number | null = 24) => {
@@ -2108,6 +2119,23 @@ function RewardWizard({
   };
 
   const handleSubmit = () => {
+    const hasUserLimits = (form.purchase_limits?.user?.length ?? 0) > 0;
+    const hasGlobalLimits = (form.purchase_limits?.global?.length ?? 0) > 0;
+    let purchaseLimitsPayload: RewardPurchaseLimitsConfig | null = null;
+    if (isEdit) {
+      purchaseLimitsPayload = {
+        global: hasGlobalLimits ? (form.purchase_limits?.global ?? []) : [],
+        user: hasUserLimits ? (form.purchase_limits?.user ?? []) : [],
+      };
+    } else if (hasUserLimits || hasGlobalLimits) {
+      purchaseLimitsPayload = {
+        ...(hasGlobalLimits ? { global: form.purchase_limits?.global } : {}),
+        ...(hasUserLimits ? { user: form.purchase_limits?.user } : {}),
+      };
+    } else {
+      purchaseLimitsPayload = null;
+    }
+
     const body: CreateRewardBody = {
       reward_type: form.reward_type ?? "FIXED",
       pricing_mode: form.pricing_mode ?? "AUTO",
@@ -2127,15 +2155,21 @@ function RewardWizard({
       max_redemptions_per_user_per_stream: form.max_redemptions_per_user_per_stream ?? 0,
       market_autobuy: form.market_autobuy ?? true,
       is_paused: form.is_paused ?? false,
-      chat_min_messages: form.chat_min_messages ? Number(form.chat_min_messages) : null,
-      chat_min_characters: form.chat_min_characters ? Number(form.chat_min_characters) : null,
-      chat_time_window_hours: form.chat_time_window_hours ? Number(form.chat_time_window_hours) : null,
-      chat_logical_operator:
-        (form.chat_min_messages || form.chat_min_characters)
-          ? (form.chat_logical_operator ?? "AND")
-          : null,
+      chat_min_messages:
+        form.chat_min_messages != null
+          ? Math.max(0, Number(form.chat_min_messages) || 0)
+          : 0,
+      chat_min_characters:
+        form.chat_min_characters != null
+          ? Math.max(0, Number(form.chat_min_characters) || 0)
+          : 0,
+      chat_time_window_hours:
+        form.chat_time_window_hours != null
+          ? Math.max(0, Number(form.chat_time_window_hours) || 0)
+          : 0,
+      chat_logical_operator: form.chat_logical_operator ?? "AND",
       refund_if_chat_req_failed: form.refund_if_chat_req_failed ?? true,
-      purchase_limits: form.purchase_limits ?? null,
+      purchase_limits: purchaseLimitsPayload,
     };
     onSubmit(body);
   };
@@ -2217,7 +2251,7 @@ function RewardWizard({
         {step === 1 && <StepPricing form={form} channelId={channelId} onChange={patch} />}
         {step === 2 && <StepTwitchSettings form={form} onChange={patch} isEdit={isEdit} />}
         {step === 3 && <StepChatRequirements form={form} onChange={patch} />}
-        {step === 4 && <StepPurchaseLimits form={form} onChange={patch} />}
+        {step === 4 && <StepPurchaseLimits form={form} onChange={patch} isEdit={isEdit} />}
       </div>
 
       {/* Navigation */}
@@ -2646,9 +2680,9 @@ function RewardEditDialog({
                   max_redemptions_per_user_per_stream: reward.max_redemptions_per_user_per_stream,
                   market_autobuy: reward.market_autobuy,
                   is_paused: reward.is_paused,
-                  chat_min_messages: reward.chat_min_messages ?? undefined,
-                  chat_min_characters: reward.chat_min_characters ?? undefined,
-                  chat_time_window_hours: reward.chat_time_window_hours ?? undefined,
+                  chat_min_messages: (reward.chat_min_messages && reward.chat_min_messages > 0) ? reward.chat_min_messages : undefined,
+                  chat_min_characters: (reward.chat_min_characters && reward.chat_min_characters > 0) ? reward.chat_min_characters : undefined,
+                  chat_time_window_hours: (reward.chat_time_window_hours && reward.chat_time_window_hours > 0) ? reward.chat_time_window_hours : undefined,
                   chat_logical_operator: reward.chat_logical_operator ?? undefined,
                   refund_if_chat_req_failed: reward.refund_if_chat_req_failed ?? true,
                   purchase_limits: reward.purchase_limits ?? undefined,
