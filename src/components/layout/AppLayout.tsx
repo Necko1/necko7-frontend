@@ -381,7 +381,7 @@ export default function AppLayout() {
                 {meData?.login}
               </p>
               <p className="text-[10px] text-muted-foreground leading-none">
-                My Global Profile
+                • My profile
               </p>
             </div>
             <Tooltip>
