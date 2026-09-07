@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
 import { logsApi } from "@/lib/apiClient";
 import type {
@@ -10,27 +10,27 @@ import type {
   ListChannelLogsQuery,
 } from "@/types/api";
 import { cn } from "@/lib/utils";
-import { format, subHours, subDays, parseISO, isValid } from "date-fns";
+import { format, subHours, isValid } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
 // ── Level & Category Definitions ──────────────────────────────────────────
-const LEVELS: { value: ChannelLogLevel | ""; label: string; color: string; badgeClass: string }[] = [
-  { value: "", label: "ALL", color: "text-foreground", badgeClass: "border-border text-foreground" },
-  { value: "ERROR", label: "ERROR", color: "text-rose-400", badgeClass: "border-rose-500/30 text-rose-400 bg-rose-500/10" },
-  { value: "WARN", label: "WARN", color: "text-amber-400", badgeClass: "border-amber-500/30 text-amber-400 bg-amber-500/10" },
-  { value: "INFO", label: "INFO", color: "text-sky-400", badgeClass: "border-sky-500/30 text-sky-400 bg-sky-500/10" },
-  { value: "DEBUG", label: "DEBUG", color: "text-zinc-400", badgeClass: "border-zinc-500/30 text-zinc-400 bg-zinc-500/10" },
+const LEVELS: { value: ChannelLogLevel | ""; label: string }[] = [
+  { value: "", label: "ALL" },
+  { value: "ERROR", label: "ERROR" },
+  { value: "WARN", label: "WARN" },
+  { value: "INFO", label: "INFO" },
+  { value: "DEBUG", label: "DEBUG" },
 ];
 
 const CATEGORIES: { value: ChannelLogCategory | ""; label: string }[] = [
-  { value: "", label: "All Categories" },
-  { value: "REDEMPTION", label: "Redemption" },
-  { value: "REWARD", label: "Reward" },
-  { value: "MARKET", label: "Market" },
-  { value: "BOT", label: "Bot" },
-  { value: "AUTH", label: "Auth" },
-  { value: "SYSTEM", label: "System" },
+  { value: "", label: "ALL" },
+  { value: "REDEMPTION", label: "REDEMPTION" },
+  { value: "REWARD", label: "REWARD" },
+  { value: "MARKET", label: "MARKET" },
+  { value: "BOT", label: "BOT" },
+  { value: "AUTH", label: "AUTH" },
+  { value: "SYSTEM", label: "SYSTEM" },
 ];
 
 const TIME_PRESETS = [
@@ -85,15 +85,6 @@ const IconCopy = () => (
 const IconCheck = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-const IconCalendar = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect width="18" height="18" x="3" y="4" rx="2" />
-    <line x1="16" x2="16" y1="2" y2="6" />
-    <line x1="8" x2="8" y1="2" y2="6" />
-    <line x1="3" x2="21" y1="10" y2="10" />
   </svg>
 );
 
@@ -182,7 +173,7 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
       {/* Main Single-Line Console Row */}
       <div
         onClick={onToggle}
-        className="flex items-baseline gap-3 px-3 py-2 text-xs font-mono cursor-pointer select-text overflow-x-auto"
+        className="flex items-baseline gap-3 px-4 py-2 text-xs font-mono cursor-pointer select-text"
       >
         {/* Timestamp */}
         <span className="text-muted-foreground/60 shrink-0 tabular-nums select-none">
@@ -209,7 +200,7 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
           [{log.category}]
         </span>
 
-        {/* Event Type (optional inline indicator if present) */}
+        {/* Event Type */}
         <span className="text-muted-foreground/80 shrink-0 select-none">
           {log.event_type}
         </span>
@@ -219,7 +210,7 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
           {log.message}
         </span>
 
-        {/* Expand indicator / hint on hover */}
+        {/* Expand indicator on hover */}
         {(hasDetails || hasSolution) && (
           <span className="text-[10px] text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 select-none">
             {isExpanded ? "collapse" : "details"}
@@ -229,7 +220,7 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
 
       {/* Expanded Console Details (Indented, No tree symbols/chevrons) */}
       {isExpanded && (
-        <div className="pl-10 pr-4 pb-3 pt-1 text-xs font-mono space-y-2 select-text border-t border-white/[0.02]">
+        <div className="pl-12 pr-4 pb-3 pt-1 text-xs font-mono space-y-2 select-text border-t border-white/[0.02]">
           {/* event_type line */}
           <div className="flex items-baseline gap-2">
             <span className="text-muted-foreground/70 w-32 shrink-0">event_type:</span>
@@ -285,29 +276,31 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
 
 // ── Main LogsPage ──────────────────────────────────────────────────────────
 export default function LogsPage() {
-  const { selectedBroadcasterId, broadcasters } = useAppStore();
+  const { selectedBroadcasterId } = useAppStore();
   const channelId = selectedBroadcasterId ?? "";
-  const qc = useQueryClient();
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Filters state from query parameters or defaults
+  // Filters state
   const initialLevel = (searchParams.get("level") as ChannelLogLevel) || "";
   const [levelFilter, setLevelFilter] = useState<ChannelLogLevel | "">(initialLevel);
   const [categoryFilter, setCategoryFilter] = useState<ChannelLogCategory | "">("");
   const [searchInput, setSearchInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
-  const [presetHours, setPresetHours] = useState<number | null>(24);
-  const [isCustomDate, setIsCustomDate] = useState(false);
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
+
+  // Time filters: presets directly update fromInput & toInput
+  const [fromInput, setFromInput] = useState<string>(() =>
+    format(subHours(new Date(), 24), "yyyy-MM-dd'T'HH:mm")
+  );
+  const [toInput, setToInput] = useState<string>("");
+
   const [pageSize, setPageSize] = useState(50);
-  const [page, setPage] = useState(0); // 0-indexed page
+  const [page, setPage] = useState(0);
 
   // Expanded log IDs set
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
-  // Keep levelFilter in sync if URL query changes (e.g. from Dashboard widget click)
+  // Keep levelFilter in sync if URL query changes
   useEffect(() => {
     const qLevel = searchParams.get("level") as ChannelLogLevel | null;
     if (qLevel && (qLevel === "ERROR" || qLevel === "WARN" || qLevel === "INFO" || qLevel === "DEBUG")) {
@@ -315,20 +308,32 @@ export default function LogsPage() {
     }
   }, [searchParams]);
 
-  // Compute ISO time boundaries
-  const { fromIso, toIso } = useMemo(() => {
-    if (isCustomDate) {
-      const f = customFrom ? new Date(customFrom).toISOString() : null;
-      const t = customTo ? new Date(customTo).toISOString() : null;
-      return { fromIso: f, toIso: t };
+  // Apply preset
+  const applyPreset = (hours: number | null) => {
+    if (hours === null) {
+      setFromInput("");
+      setToInput("");
+      setPage(0);
+      return;
     }
-    if (presetHours !== null) {
-      const now = new Date();
-      const f = subHours(now, presetHours).toISOString();
-      return { fromIso: f, toIso: null };
-    }
-    return { fromIso: null, toIso: null };
-  }, [isCustomDate, presetHours, customFrom, customTo]);
+    const current = new Date();
+    setFromInput(format(subHours(current, hours), "yyyy-MM-dd'T'HH:mm"));
+    setToInput("");
+    setPage(0);
+  };
+
+  // Convert inputs to ISO strings for API
+  const fromIso = useMemo(() => {
+    if (!fromInput) return null;
+    const d = new Date(fromInput);
+    return isValid(d) ? d.toISOString() : null;
+  }, [fromInput]);
+
+  const toIso = useMemo(() => {
+    if (!toInput) return null;
+    const d = new Date(toInput);
+    return isValid(d) ? d.toISOString() : null;
+  }, [toInput]);
 
   // Query logs list
   const queryParams: ListChannelLogsQuery = useMemo(() => {
@@ -354,23 +359,6 @@ export default function LogsPage() {
     enabled: !!channelId,
     staleTime: 10_000,
   });
-
-  // Query 24h summary
-  const {
-    data: summary,
-    isLoading: summaryLoading,
-    refetch: refetchSummary,
-  } = useQuery({
-    queryKey: ["logs-summary", channelId],
-    queryFn: () => logsApi.summary(channelId).then((r) => r.data),
-    enabled: !!channelId,
-    staleTime: 15_000,
-  });
-
-  const handleRefresh = () => {
-    refetchLogs();
-    refetchSummary();
-  };
 
   const handleApplySearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -419,24 +407,22 @@ export default function LogsPage() {
     !!levelFilter ||
     !!categoryFilter ||
     !!activeSearch ||
-    isCustomDate ||
-    presetHours !== 24;
+    !!fromInput ||
+    !!toInput;
 
   const resetFilters = () => {
     setLevelFilter("");
     setCategoryFilter("");
     setSearchInput("");
     setActiveSearch("");
-    setPresetHours(24);
-    setIsCustomDate(false);
-    setCustomFrom("");
-    setCustomTo("");
+    setFromInput("");
+    setToInput("");
     setPage(0);
     setSearchParams({});
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 space-y-6 w-full">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -450,7 +436,7 @@ export default function LogsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleRefresh}
+            onClick={() => refetchLogs()}
             disabled={logsFetching}
             className="gap-2"
           >
@@ -460,262 +446,147 @@ export default function LogsPage() {
         </div>
       </div>
 
-      {/* 24h Summary Bar (Interactive Counters) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* Errors */}
-        <div
-          onClick={() => {
-            setLevelFilter("ERROR");
-            setPage(0);
-          }}
-          className={cn(
-            "rounded-xl border p-4 cursor-pointer transition-all hover:scale-[1.01] select-none",
-            levelFilter === "ERROR"
-              ? "border-rose-500 bg-rose-500/15 shadow-sm shadow-rose-500/10"
-              : (summary?.errors_last_24h ?? 0) > 0
-              ? "border-rose-500/30 bg-rose-500/5 hover:border-rose-500/50"
-              : "border-border bg-card hover:border-border/80"
-          )}
-        >
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-            <span className="font-medium text-rose-400">Errors (24h)</span>
-            <span className="text-[10px] uppercase font-mono tracking-wider">Click to filter</span>
-          </div>
-          {summaryLoading ? (
-            <Skeleton className="h-8 w-16" />
-          ) : (
-            <p className={cn("text-2xl font-bold tabular-nums", (summary?.errors_last_24h ?? 0) > 0 ? "text-rose-400" : "text-foreground")}>
-              {summary?.errors_last_24h ?? 0}
-            </p>
-          )}
-        </div>
-
-        {/* Warnings */}
-        <div
-          onClick={() => {
-            setLevelFilter("WARN");
-            setPage(0);
-          }}
-          className={cn(
-            "rounded-xl border p-4 cursor-pointer transition-all hover:scale-[1.01] select-none",
-            levelFilter === "WARN"
-              ? "border-amber-500 bg-amber-500/15 shadow-sm shadow-amber-500/10"
-              : (summary?.warnings_last_24h ?? 0) > 0
-              ? "border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50"
-              : "border-border bg-card hover:border-border/80"
-          )}
-        >
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-            <span className="font-medium text-amber-400">Warnings (24h)</span>
-            <span className="text-[10px] uppercase font-mono tracking-wider">Click to filter</span>
-          </div>
-          {summaryLoading ? (
-            <Skeleton className="h-8 w-16" />
-          ) : (
-            <p className={cn("text-2xl font-bold tabular-nums", (summary?.warnings_last_24h ?? 0) > 0 ? "text-amber-400" : "text-foreground")}>
-              {summary?.warnings_last_24h ?? 0}
-            </p>
-          )}
-        </div>
-
-        {/* Info */}
-        <div
-          onClick={() => {
-            setLevelFilter("INFO");
-            setPage(0);
-          }}
-          className={cn(
-            "rounded-xl border p-4 cursor-pointer transition-all hover:scale-[1.01] select-none",
-            levelFilter === "INFO"
-              ? "border-sky-500 bg-sky-500/15 shadow-sm shadow-sky-500/10"
-              : "border-border bg-card hover:border-sky-500/40"
-          )}
-        >
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-            <span className="font-medium text-sky-400">Info (24h)</span>
-            <span className="text-[10px] uppercase font-mono tracking-wider">Click to filter</span>
-          </div>
-          {summaryLoading ? (
-            <Skeleton className="h-8 w-16" />
-          ) : (
-            <p className="text-2xl font-bold tabular-nums text-foreground">
-              {summary?.info_last_24h ?? 0}
-            </p>
-          )}
-        </div>
-
-        {/* Total */}
-        <div
-          onClick={() => {
-            setLevelFilter("");
-            setPage(0);
-          }}
-          className={cn(
-            "rounded-xl border p-4 cursor-pointer transition-all hover:scale-[1.01] select-none",
-            levelFilter === ""
-              ? "border-primary/60 bg-card shadow-sm shadow-primary/10"
-              : "border-border bg-card hover:border-primary/40"
-          )}
-        >
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-            <span className="font-medium text-foreground">Total (24h)</span>
-            <span className="text-[10px] uppercase font-mono tracking-wider">Reset level</span>
-          </div>
-          {summaryLoading ? (
-            <Skeleton className="h-8 w-16" />
-          ) : (
-            <p className="text-2xl font-bold tabular-nums text-foreground">
-              {summary?.total_last_24h ?? 0}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Filter Toolbar */}
+      {/* Filter Toolbar with 3 distinct lines */}
       <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
-        {/* Row 1: Level Pills + Category + Quick Presets + Custom Date Button */}
-        <div className="flex flex-wrap items-center gap-3 justify-between">
-          {/* Level Filter Pills */}
-          <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/20 p-1 flex-wrap">
-            {LEVELS.map((lvl) => (
+        {/* Line 1: Levels & Categories */}
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Level Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider font-mono">
+              Level:
+            </span>
+            <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/20 p-1 flex-wrap">
+              {LEVELS.map((lvl) => (
+                <button
+                  key={lvl.value}
+                  type="button"
+                  onClick={() => {
+                    setLevelFilter(lvl.value);
+                    setPage(0);
+                    if (lvl.value) setSearchParams({ level: lvl.value });
+                    else setSearchParams({});
+                  }}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-xs font-semibold font-mono transition-all select-none",
+                    levelFilter === lvl.value
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {lvl.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="h-4 w-px bg-border hidden lg:block" />
+
+          {/* Category Filter */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider font-mono">
+              Category:
+            </span>
+            <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/20 p-1 flex-wrap">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.value}
+                  type="button"
+                  onClick={() => {
+                    setCategoryFilter(cat.value);
+                    setPage(0);
+                  }}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-xs font-semibold font-mono transition-all select-none",
+                    categoryFilter === cat.value
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Line 2: Date & Time (Presets directly set from/to) */}
+        <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-border/40">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider font-mono">
+            Time Range:
+          </span>
+
+          {/* Presets */}
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/20 p-1">
+            {TIME_PRESETS.map((p) => (
               <button
-                key={lvl.value}
-                onClick={() => {
-                  setLevelFilter(lvl.value);
-                  setPage(0);
-                  if (lvl.value) setSearchParams({ level: lvl.value });
-                  else setSearchParams({});
-                }}
-                className={cn(
-                  "px-3 py-1 rounded-lg text-xs font-semibold font-mono transition-all select-none",
-                  levelFilter === lvl.value
-                    ? cn("bg-primary text-primary-foreground shadow-sm", lvl.value && lvl.color && "bg-white/10")
-                    : "text-muted-foreground hover:text-foreground"
-                )}
+                key={p.label}
+                type="button"
+                onClick={() => applyPreset(p.hours)}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all select-none"
               >
-                {lvl.label}
+                {p.label}
               </button>
             ))}
           </div>
 
-          {/* Category Dropdown */}
-          <div className="flex items-center gap-2">
-            <select
-              value={categoryFilter}
+          {/* From Input */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground font-mono">From:</span>
+            <input
+              type="datetime-local"
+              value={fromInput}
               onChange={(e) => {
-                setCategoryFilter(e.target.value as ChannelLogCategory | "");
+                setFromInput(e.target.value);
                 setPage(0);
               }}
-              className="h-9 px-3 rounded-lg border border-border bg-muted/20 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              {CATEGORIES.map((cat) => (
-                <option key={cat.value} value={cat.value} className="bg-card text-foreground">
-                  {cat.label}
-                </option>
-              ))}
-            </select>
+              className="h-8 px-2.5 rounded-lg border border-border bg-muted/20 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+            />
           </div>
 
-          {/* Time Presets & Custom Range Toggle */}
-          <div className="flex items-center gap-2">
-            {!isCustomDate ? (
-              <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/20 p-1">
-                {TIME_PRESETS.map((p) => (
-                  <button
-                    key={p.label}
-                    onClick={() => {
-                      setPresetHours(p.hours);
-                      setPage(0);
-                    }}
-                    className={cn(
-                      "px-2.5 py-1 rounded-lg text-xs font-medium transition-all select-none",
-                      presetHours === p.hours
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
+          {/* To Input */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground font-mono">To:</span>
+            <input
+              type="datetime-local"
+              value={toInput}
+              onChange={(e) => {
+                setToInput(e.target.value);
+                setPage(0);
+              }}
+              className="h-8 px-2.5 rounded-lg border border-border bg-muted/20 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+            />
+          </div>
 
+          {(fromInput || toInput) && (
             <Button
-              variant={isCustomDate ? "secondary" : "outline"}
+              variant="ghost"
               size="sm"
-              onClick={() => {
-                setIsCustomDate(!isCustomDate);
-                setPage(0);
-              }}
-              className="gap-1.5 text-xs h-9"
+              onClick={() => applyPreset(null)}
+              className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
             >
-              <IconCalendar />
-              {isCustomDate ? "Presets" : "Custom Dates"}
+              <IconX />
+              Clear Time
             </Button>
-          </div>
+          )}
         </div>
 
-        {/* Row 2: Custom Dates input (if opened) */}
-        {isCustomDate && (
-          <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-muted/20 border border-border/60">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">From:</span>
-              <input
-                type="datetime-local"
-                value={customFrom}
-                onChange={(e) => {
-                  setCustomFrom(e.target.value);
-                  setPage(0);
-                }}
-                className="h-8 px-2.5 rounded-md border border-border bg-card text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">To:</span>
-              <input
-                type="datetime-local"
-                value={customTo}
-                onChange={(e) => {
-                  setCustomTo(e.target.value);
-                  setPage(0);
-                }}
-                className="h-8 px-2.5 rounded-md border border-border bg-card text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"
-              />
-            </div>
-            {(customFrom || customTo) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setCustomFrom("");
-                  setCustomTo("");
-                  setPage(0);
-                }}
-                className="text-xs h-8 px-2 text-muted-foreground"
-              >
-                Clear Dates
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Row 3: Search input + Page size + Clear filters */}
-        <div className="flex flex-wrap items-center gap-3 justify-between">
-          {/* Substring Search Form */}
-          <form onSubmit={handleApplySearch} className="flex items-center gap-2 flex-1 max-w-md">
+        {/* Line 3: Search (wider) + Expand/Collapse + Rows per page + Reset */}
+        <div className="flex flex-wrap items-center gap-3 justify-between pt-1 border-t border-border/40">
+          {/* Substring Search Form (wider max-w-xl) */}
+          <form onSubmit={handleApplySearch} className="flex items-center gap-2 flex-1 max-w-xl">
             <div className="relative flex-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
                 <IconSearch />
               </div>
               <input
                 type="text"
-                placeholder="Search message or event type…"
+                placeholder="Search within log messages, event types, or details…"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full h-9 pl-9 pr-4 rounded-lg border border-border bg-muted/20 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
-            <Button type="submit" size="sm" className="h-9 text-xs">
+            <Button type="submit" size="sm" className="h-9 text-xs px-4">
               Search
             </Button>
             {activeSearch && (
@@ -732,7 +603,7 @@ export default function LogsPage() {
             )}
           </form>
 
-          {/* Page size & Expand Controls */}
+          {/* Controls */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 text-xs">
               <Button
@@ -759,6 +630,7 @@ export default function LogsPage() {
                 {PAGE_SIZES.map((s) => (
                   <button
                     key={s}
+                    type="button"
                     onClick={() => {
                       setPageSize(s);
                       setPage(0);
@@ -792,7 +664,7 @@ export default function LogsPage() {
       </div>
 
       {/* Terminal Console Stream Container */}
-      <div className="rounded-2xl border border-border/80 bg-[#14100c] shadow-2xl overflow-hidden">
+      <div className="rounded-2xl border border-border/80 bg-[#14100c] shadow-2xl overflow-hidden w-full">
         {/* Terminal Header Bar */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-black/40 border-b border-white/[0.06] text-xs font-mono select-none">
           <div className="flex items-center gap-2">
@@ -818,7 +690,7 @@ export default function LogsPage() {
         </div>
 
         {/* Log Stream Body */}
-        <div className="min-h-[400px]">
+        <div className="min-h-[400px] overflow-x-auto">
           {logsLoading ? (
             <div className="p-4 space-y-3 font-mono text-xs">
               {[...Array(8)].map((_, i) => (
@@ -831,10 +703,10 @@ export default function LogsPage() {
               ))}
             </div>
           ) : !logsData?.items || logsData.items.length === 0 ? (
-            <div className="p-12 flex flex-col items-center justify-center text-center space-y-3 font-mono text-xs text-muted-foreground">
+            <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-3 font-mono text-xs text-muted-foreground p-8">
               <p className="text-sm font-medium text-foreground">No logs recorded for this criteria</p>
               <p className="max-w-md">
-                Try loosening your filters, selecting a wider time range, or waiting for new bot activity.
+                Try loosening your filters, adjusting the time range, or waiting for new bot activity.
               </p>
               {hasActiveFilters && (
                 <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2 text-xs">

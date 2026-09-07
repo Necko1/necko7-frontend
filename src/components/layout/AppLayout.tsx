@@ -322,7 +322,7 @@ export default function AppLayout() {
       </aside>
 
       {/* ── Main content ── */}
-      <main className="flex-1 min-w-0 min-h-screen overflow-y-auto bg-background">
+      <main className="flex-1 min-w-0 min-h-screen overflow-y-scroll [scrollbar-gutter:stable] bg-background">
         <Outlet />
       </main>
     </div>

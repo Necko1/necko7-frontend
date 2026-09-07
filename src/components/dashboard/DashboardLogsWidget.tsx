@@ -39,13 +39,6 @@ const IconActivity = () => (
   </svg>
 );
 
-const IconCheckCircle = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <polyline points="22 4 12 14.01 9 11.01" />
-  </svg>
-);
-
 const IconArrowRight = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="5" y1="12" x2="19" y2="12" />
@@ -71,40 +64,9 @@ export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetPr
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <h2 className="text-base font-semibold text-foreground">
-              System Health & Logs
-            </h2>
-            {!isLoading && summary && (
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border",
-                  hasErrors
-                    ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                    : hasWarnings
-                    ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                    : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                )}
-              >
-                {hasErrors ? (
-                  <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-                    {summary.errors_last_24h} error{summary.errors_last_24h > 1 ? "s" : ""}
-                  </>
-                ) : hasWarnings ? (
-                  <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    {summary.warnings_last_24h} warning{summary.warnings_last_24h > 1 ? "s" : ""}
-                  </>
-                ) : (
-                  <>
-                    <IconCheckCircle />
-                    Healthy
-                  </>
-                )}
-              </span>
-            )}
-          </div>
+          <h2 className="text-base font-semibold text-foreground">
+            System Health & Logs
+          </h2>
           <p className="text-xs text-muted-foreground">
             Activity, errors, and warnings recorded over the last 24 hours
           </p>
@@ -143,9 +105,6 @@ export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetPr
               {summary?.errors_last_24h ?? 0}
             </p>
           )}
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Last 24h failures
-          </p>
         </div>
 
         {/* Warnings */}
@@ -171,19 +130,16 @@ export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetPr
               {summary?.warnings_last_24h ?? 0}
             </p>
           )}
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Last 24h warnings
-          </p>
         </div>
 
         {/* Info */}
         <div
           onClick={() => navigate("/logs?level=INFO")}
-          className="rounded-xl border border-border/60 bg-muted/20 p-4 cursor-pointer transition-all hover:border-sky-500/30 hover:bg-sky-500/5 hover:scale-[1.01] select-none"
+          className="rounded-xl border border-border/60 bg-muted/20 p-4 cursor-pointer transition-all hover:border-border hover:bg-muted/30 hover:scale-[1.01] select-none"
         >
           <div className="flex items-center justify-between text-muted-foreground mb-2">
             <span className="text-xs font-medium">Info</span>
-            <span className="text-sky-400">
+            <span className="text-muted-foreground/60">
               <IconInfo />
             </span>
           </div>
@@ -194,19 +150,16 @@ export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetPr
               {summary?.info_last_24h ?? 0}
             </p>
           )}
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Informational events
-          </p>
         </div>
 
         {/* Total Events */}
         <div
           onClick={() => navigate("/logs")}
-          className="rounded-xl border border-border/60 bg-muted/20 p-4 cursor-pointer transition-all hover:border-primary/30 hover:bg-muted/40 hover:scale-[1.01] select-none"
+          className="rounded-xl border border-border/60 bg-muted/20 p-4 cursor-pointer transition-all hover:border-border hover:bg-muted/30 hover:scale-[1.01] select-none"
         >
           <div className="flex items-center justify-between text-muted-foreground mb-2">
             <span className="text-xs font-medium">Total Events</span>
-            <span className="text-muted-foreground">
+            <span className="text-muted-foreground/60">
               <IconActivity />
             </span>
           </div>
@@ -217,9 +170,6 @@ export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetPr
               {summary?.total_last_24h ?? 0}
             </p>
           )}
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Total log entries
-          </p>
         </div>
       </div>
     </div>
