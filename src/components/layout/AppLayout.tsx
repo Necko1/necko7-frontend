@@ -297,23 +297,9 @@ export default function AppLayout() {
       <aside className="w-64 shrink-0 flex flex-col border-r border-sidebar-border bg-sidebar h-screen sticky top-0 overflow-hidden">
 
         {/* Broadcaster section */}
+        {meData ? (
         <div className="p-4 space-y-2">
-          {!meData ? (
-            /* Guest header: brand title only, no account switch or broadcaster select */
-            <div className="flex items-center gap-3 p-2">
-              <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm tracking-wider shadow-sm">
-                n7
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-base tracking-tight text-sidebar-foreground leading-tight">
-                  necko7
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  rewards bot
-                </span>
-              </div>
-            </div>
-          ) : bcastLoading ? (
+          {bcastLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full rounded-xl" />
               <Skeleton className="h-7 w-3/4 rounded-lg" />
@@ -383,11 +369,12 @@ export default function AppLayout() {
             </button>
           )}
         </div>
+        ) : null}
 
-        <Separator className="bg-sidebar-border" />
+        {meData && <Separator className="bg-sidebar-border" />}
 
         {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        <nav className={cn("flex-1 p-3 space-y-0.5 overflow-y-auto", !meData && "pt-4")}>
           {navItems.map((item) => (
             <NavLink
               key={item.to}
