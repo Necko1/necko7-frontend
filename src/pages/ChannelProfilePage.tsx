@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { publicApi, viewerApi, authApi } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -60,21 +61,26 @@ const IconClock = () => (
   </svg>
 );
 
-function getStatusBadge(status: RedemptionStatus) {
+function getStatusBadge(status: RedemptionStatus, t: (k: string) => string) {
   const norm = status.toUpperCase();
   if (norm === "COMPLETED") {
-    return <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[10px]">Completed</Badge>;
+    return <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[10px]">{t("redemptions.statuses.completed")}</Badge>;
   }
   if (norm === "PENDING" || norm === "ORDER_CREATED") {
-    return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30 text-[10px]">Pending</Badge>;
+    return (
+      <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30 text-[10px]">
+        {norm === "ORDER_CREATED" ? t("redemptions.statuses.orderCreated") : t("redemptions.statuses.pending")}
+      </Badge>
+    );
   }
   if (norm.includes("FAILED")) {
-    return <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px]">Failed</Badge>;
+    return <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px]">{t("redemptions.statuses.refunded")}</Badge>;
   }
   return <Badge variant="secondary" className="text-[10px]">{status}</Badge>;
 }
 
 export default function ChannelProfilePage() {
+  const { t } = useTranslation();
   const { identifier } = useParams<{ identifier: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAppStore();
@@ -126,9 +132,9 @@ export default function ChannelProfilePage() {
   if (!broadcasterInfo) {
     return (
       <div className="p-12 max-w-md mx-auto text-center space-y-4">
-        <h2 className="text-xl font-bold text-foreground">Channel Not Found</h2>
+        <h2 className="text-xl font-bold text-foreground">{t("profile.channelNotFound")}</h2>
         <Button onClick={() => navigate("/channels")} variant="outline" className="text-xs">
-          Browse Channels
+          {t("profile.browseChannels")}
         </Button>
       </div>
     );
@@ -145,7 +151,7 @@ export default function ChannelProfilePage() {
           className="gap-2 text-xs text-muted-foreground hover:text-foreground"
         >
           <IconArrowLeft />
-          <span>Back to @{broadcasterInfo.channel_login} showcase</span>
+          <span>{t("profile.backToShowcase", { channel: broadcasterInfo.channel_login })}</span>
         </Button>
 
         <div className="rounded-3xl border border-border bg-card p-12 text-center space-y-6 max-w-xl mx-auto">
@@ -158,10 +164,10 @@ export default function ChannelProfilePage() {
 
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-foreground">
-              Personal Channel Profile
+              {t("profile.channelProfileTitle")}
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Log in with Twitch to view your chat activity rank, points spent, active limits, and personal reward history on @{broadcasterInfo.display_name || broadcasterInfo.channel_login}'s stream.
+              {t("profile.channelProfileSubtitle", { channel: broadcasterInfo.display_name || broadcasterInfo.channel_login })}
             </p>
           </div>
 
@@ -172,7 +178,7 @@ export default function ChannelProfilePage() {
             className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-md"
           >
             <IconTwitch />
-            <span>Sign In with Twitch</span>
+            <span>{t("profile.signInWithTwitch")}</span>
           </Button>
         </div>
       </div>
@@ -190,7 +196,7 @@ export default function ChannelProfilePage() {
           className="gap-2 text-xs text-muted-foreground hover:text-foreground"
         >
           <IconArrowLeft />
-          <span>Rewards Showcase</span>
+          <span>{t("profile.rewardsShowcase")}</span>
         </Button>
 
         <span className="text-xs text-muted-foreground font-mono">
@@ -213,7 +219,7 @@ export default function ChannelProfilePage() {
                 @{currentUser.login}
               </h1>
               <p className="text-xs text-muted-foreground">
-                Statistics on stream <span className="font-semibold text-foreground">@{broadcasterInfo.display_name || broadcasterInfo.channel_login}</span>
+                {t("profile.statsOnStream", { channel: broadcasterInfo.display_name || broadcasterInfo.channel_login })}
               </p>
             </div>
           </div>
@@ -222,7 +228,7 @@ export default function ChannelProfilePage() {
             to="/me"
             className="text-xs font-semibold text-primary hover:underline flex items-center gap-1.5"
           >
-            <span>View All Channels (Global Profile) →</span>
+            <span>{t("profile.viewAllChannels")}</span>
           </Link>
         </div>
       </div>
@@ -242,25 +248,25 @@ export default function ChannelProfilePage() {
                 <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
                   <IconChat />
                 </div>
-                <h3 className="text-sm font-bold text-foreground">Chat Activity</h3>
+                <h3 className="text-sm font-bold text-foreground">{t("profile.chatActivity")}</h3>
               </div>
               {profile.chat_stats.leaderboard_rank != null && (
                 <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30 gap-1 text-xs font-bold">
                   <IconTrophy />
-                  <span>#{profile.chat_stats.leaderboard_rank} in Chat</span>
+                  <span>{t("profile.inChatRank", { rank: profile.chat_stats.leaderboard_rank })}</span>
                 </Badge>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="p-3 rounded-xl bg-secondary/30 border border-border/50">
-                <span className="text-xs text-muted-foreground block">Messages</span>
+                <span className="text-xs text-muted-foreground block">{t("profile.messages")}</span>
                 <span className="text-xl font-black text-foreground font-mono">
                   {profile.chat_stats.total_messages.toLocaleString()}
                 </span>
               </div>
               <div className="p-3 rounded-xl bg-secondary/30 border border-border/50">
-                <span className="text-xs text-muted-foreground block">Characters</span>
+                <span className="text-xs text-muted-foreground block">{t("profile.characters")}</span>
                 <span className="text-xl font-black text-foreground font-mono">
                   {profile.chat_stats.total_characters.toLocaleString()}
                 </span>
@@ -269,8 +275,8 @@ export default function ChannelProfilePage() {
 
             {(profile.chat_stats.first_seen_at || profile.chat_stats.last_seen_at) && (
               <div className="text-[11px] text-muted-foreground flex items-center justify-between pt-1 border-t border-border/40">
-                <span>First active: {profile.chat_stats.first_seen_at ? new Date(profile.chat_stats.first_seen_at).toLocaleDateString() : "—"}</span>
-                <span>Last active: {profile.chat_stats.last_seen_at ? new Date(profile.chat_stats.last_seen_at).toLocaleDateString() : "—"}</span>
+                <span>{t("profile.firstActive", { date: profile.chat_stats.first_seen_at ? new Date(profile.chat_stats.first_seen_at).toLocaleDateString() : "—" })}</span>
+                <span>{t("profile.lastActive", { date: profile.chat_stats.last_seen_at ? new Date(profile.chat_stats.last_seen_at).toLocaleDateString() : "—" })}</span>
               </div>
             )}
           </div>
@@ -282,28 +288,28 @@ export default function ChannelProfilePage() {
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
                   <IconGift />
                 </div>
-                <h3 className="text-sm font-bold text-foreground">Rewards Overview</h3>
+                <h3 className="text-sm font-bold text-foreground">{t("profile.rewardsOverview")}</h3>
               </div>
               <span className="text-xs font-mono text-purple-400 font-semibold">
-                {profile.redemption_stats.total_points_spent.toLocaleString()} pts spent
+                {t("profile.pointsSpent", { points: profile.redemption_stats.total_points_spent.toLocaleString() })}
               </span>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5 pt-1 text-center">
               <div className="p-2.5 rounded-xl bg-secondary/30 border border-border/50">
-                <span className="text-[11px] text-muted-foreground block">Total</span>
+                <span className="text-[11px] text-muted-foreground block">{t("profile.total")}</span>
                 <span className="text-lg font-black text-foreground font-mono">
                   {profile.redemption_stats.total_redemptions}
                 </span>
               </div>
               <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 block">Completed</span>
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 block">{t("profile.completed")}</span>
                 <span className="text-lg font-black text-emerald-500 font-mono">
                   {profile.redemption_stats.completed}
                 </span>
               </div>
               <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/20">
-                <span className="text-[11px] text-destructive block">Failed</span>
+                <span className="text-[11px] text-destructive block">{t("profile.failed")}</span>
                 <span className="text-lg font-black text-destructive font-mono">
                   {profile.redemption_stats.failed}
                 </span>
@@ -311,8 +317,8 @@ export default function ChannelProfilePage() {
             </div>
 
             <div className="text-[11px] text-muted-foreground flex items-center justify-between pt-1 border-t border-border/40">
-              <span>Pending delivery: {profile.redemption_stats.pending}</span>
-              <span>Total skin value: ~{formatMinorCurrency(profile.redemption_stats.total_market_value, redemptions[0]?.currency ?? "RUB")}</span>
+              <span>{t("profile.pendingDelivery", { count: profile.redemption_stats.pending })}</span>
+              <span>{t("profile.totalSkinValue", { value: formatMinorCurrency(profile.redemption_stats.total_market_value, redemptions[0]?.currency ?? "RUB") })}</span>
             </div>
           </div>
         </div>
@@ -324,7 +330,7 @@ export default function ChannelProfilePage() {
           <div className="flex items-center gap-2">
             <IconClock />
             <h3 className="text-sm font-bold text-foreground">
-              Your Reward Limits & Cooldowns
+              {t("profile.limitsAndCooldowns")}
             </h3>
           </div>
 
@@ -349,11 +355,11 @@ export default function ChannelProfilePage() {
                     <div className="flex items-center gap-1.5 shrink-0">
                       {limit.is_limit_reached ? (
                         <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px]">
-                          Limit Reached
+                          {t("profile.limitReached")}
                         </Badge>
                       ) : (
                         <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[10px]">
-                          {limit.remaining_redemptions} left
+                          {t("profile.leftCount", { count: limit.remaining_redemptions })}
                         </Badge>
                       )}
                       <IconExternalLink className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -372,8 +378,8 @@ export default function ChannelProfilePage() {
                   </div>
 
                   <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>{limit.used_redemptions} / {limit.max_redemptions} used</span>
-                    <span>{limit.window_hours ? `Per ${limit.window_hours}h` : "All-time"}</span>
+                    <span>{t("profile.usedOfMax", { used: limit.used_redemptions, max: limit.max_redemptions })}</span>
+                    <span>{limit.window_hours ? t("profile.perHours", { hours: limit.window_hours }) : t("profile.allTime")}</span>
                   </div>
                 </Link>
               );
@@ -385,7 +391,7 @@ export default function ChannelProfilePage() {
       {/* ── Redemption History on this Channel ── */}
       <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
         <h3 className="text-sm font-bold text-foreground">
-          Channel Redemption History
+          {t("profile.channelRedemptionsHistory")}
         </h3>
 
         {isRedemptionsLoading ? (
@@ -396,7 +402,7 @@ export default function ChannelProfilePage() {
           </div>
         ) : redemptions.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-8">
-            You haven't redeemed any rewards on this channel yet.
+            {t("profile.noRedemptionsChannel")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -423,14 +429,14 @@ export default function ChannelProfilePage() {
                       <IconExternalLink className="text-muted-foreground shrink-0" />
                     </Link>
                     <p className="text-[11px] text-muted-foreground truncate">
-                      {redemption.market_item_name || "Custom item"}
+                      {redemption.market_item_name || t("profile.customItem")}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4 text-xs">
                   <span className="font-mono text-purple-400 font-semibold">
-                    {redemption.twitch_points_cost.toLocaleString()} pts
+                    {redemption.twitch_points_cost.toLocaleString()} {t("common.pts")}
                   </span>
 
                   {redemption.market_paid_price != null && (
@@ -439,7 +445,7 @@ export default function ChannelProfilePage() {
                     </span>
                   )}
 
-                  {getStatusBadge(redemption.status)}
+                  {getStatusBadge(redemption.status, t)}
 
                   <span className="text-[11px] text-muted-foreground font-mono">
                     {new Date(redemption.created_at).toLocaleDateString()}
@@ -448,7 +454,7 @@ export default function ChannelProfilePage() {
 
                 {redemption.fail_cause && (
                   <div className="w-full text-[11px] text-destructive bg-destructive/5 p-2 rounded-lg border border-destructive/20">
-                    Failure reason: {redemption.fail_description || redemption.fail_cause}
+                    {t("profile.failReason", { reason: redemption.fail_description || redemption.fail_cause })}
                   </div>
                 )}
               </div>
@@ -463,9 +469,9 @@ export default function ChannelProfilePage() {
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 className="h-8 text-xs"
               >
-                Previous
+                {t("common.prev")}
               </Button>
-              <span className="text-muted-foreground font-mono">Page {page + 1}</span>
+              <span className="text-muted-foreground font-mono">{page + 1}</span>
               <Button
                 variant="outline"
                 size="sm"
@@ -473,7 +479,7 @@ export default function ChannelProfilePage() {
                 onClick={() => setPage((p) => p + 1)}
                 className="h-8 text-xs"
               >
-                Next
+                {t("common.next")}
               </Button>
             </div>
           </div>
@@ -482,3 +488,4 @@ export default function ChannelProfilePage() {
     </div>
   );
 }
+

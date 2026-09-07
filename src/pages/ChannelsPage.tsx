@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import { authApi, broadcastersApi } from "@/lib/apiClient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -52,6 +53,7 @@ const IconArrowRight = () => (
 const IconPinOff = () => <HugeiconsIcon icon={PinOffIcon} size={15} strokeWidth={2} />;
 
 export default function ChannelsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const {
     currentUser,
@@ -112,10 +114,10 @@ export default function ChannelsPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
-            Channels
+            {t("channels.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Choose an active channel to manage or connect your own Twitch stream
+            {t("channels.subtitle")}
           </p>
         </div>
 
@@ -127,7 +129,7 @@ export default function ChannelsPage() {
             </span>
             <Input
               type="search"
-              placeholder="Search channels…"
+              placeholder={t("channels.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 bg-card border-border"
@@ -140,7 +142,7 @@ export default function ChannelsPage() {
             className="shrink-0 gap-2 border-primary/30 hover:border-primary hover:bg-primary/5 text-foreground"
           >
             <IconTwitch />
-            <span>Connect Channel</span>
+            <span>{t("channels.connectChannel")}</span>
           </Button>
         </div>
       </div>
@@ -162,17 +164,17 @@ export default function ChannelsPage() {
               </div>
               <div>
                 <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
-                  Connect your channel
+                  {t("channels.connectYourChannel")}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                  Authorize necko7 bot to manage channel point skin rewards on your personal Twitch stream.
+                  {t("channels.connectYourChannelDesc")}
                 </p>
               </div>
             </div>
 
             <div className="pt-4 flex items-center gap-2 text-xs font-semibold text-primary group-hover:translate-x-0.5 transition-transform">
               <IconTwitch />
-              <span>Connect via Twitch</span>
+              <span>{t("channels.connectViaTwitch")}</span>
               <IconArrowRight />
             </div>
           </div>
@@ -216,7 +218,7 @@ export default function ChannelsPage() {
                     {isSelected && (
                       <Badge className="bg-primary/20 text-primary border border-primary/30 gap-1 text-[11px] font-semibold">
                         <IconCheck />
-                        Active
+                        {t("channels.active")}
                       </Badge>
                     )}
                     <Badge
@@ -228,7 +230,7 @@ export default function ChannelsPage() {
                         roleUpper === "VIEWER" && "bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/20"
                       )}
                     >
-                      {roleUpper === "VIEWER" ? "Viewer" : b.role}
+                      {roleUpper === "VIEWER" ? t("channels.viewer") : roleUpper === "OWNER" ? t("channels.owner") : roleUpper === "EDITOR" ? t("channels.editor") : b.role}
                     </Badge>
                   </div>
                 </div>
@@ -253,7 +255,7 @@ export default function ChannelsPage() {
               {/* Card bottom: Actions */}
               <div className="pt-4 mt-2 border-t border-border flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors flex items-center gap-1">
-                  {isSelected ? (isViewer ? "View rewards" : "Currently active") : (isViewer ? "Open rewards" : "Switch to channel")}
+                  {isSelected ? (isViewer ? t("channels.viewRewards") : t("channels.currentlyActive")) : (isViewer ? t("channels.openRewards") : t("channels.switchToChannel"))}
                   {!isSelected && <IconArrowRight />}
                 </span>
 
@@ -261,7 +263,7 @@ export default function ChannelsPage() {
                 {isViewer ? (
                   <button
                     type="button"
-                    title="Unpin / hide this channel from your list"
+                    title={t("channels.unpinChannel")}
                     onClick={(e) => {
                       e.stopPropagation();
                       unpinMutation.mutate(b.channel_id);
@@ -274,7 +276,7 @@ export default function ChannelsPage() {
                 ) : (
                   <button
                     type="button"
-                    title="Channel settings"
+                    title={t("channels.channelSettings")}
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/broadcasters/${b.channel_id}/settings`);
@@ -294,17 +296,17 @@ export default function ChannelsPage() {
       {filteredBroadcasters.length === 0 && search.trim() && (
         <div className="py-16 text-center space-y-3">
           <p className="text-base font-semibold text-foreground">
-            No channels match "{search}"
+            {t("channels.noChannelsMatch", { query: search })}
           </p>
           <p className="text-xs text-muted-foreground">
-            Try a different search query or clear the filter.
+            {t("channels.tryDifferent")}
           </p>
           <Button
             variant="ghost"
             onClick={() => setSearch("")}
             className="text-primary text-xs"
           >
-            Clear search
+            {t("channels.clearSearch")}
           </Button>
         </div>
       )}

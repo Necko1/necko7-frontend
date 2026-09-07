@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { logsApi } from "@/lib/apiClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ const IconArrowRight = () => (
 );
 
 export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const { data: summary, isLoading } = useQuery({
@@ -65,16 +67,16 @@ export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetPr
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-foreground">
-            System Health & Logs
+            {t("logs.systemHealth")}
           </h2>
           <p className="text-xs text-muted-foreground">
-            Activity, errors, and warnings recorded over the last 24 hours
+            {t("logs.systemHealthDesc")}
           </p>
         </div>
 
         <Link to="/logs">
           <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-            Open Logs
+            {t("logs.openLogs")}
             <IconArrowRight />
           </Button>
         </Link>
@@ -93,7 +95,7 @@ export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetPr
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground mb-2">
-            <span className="text-xs font-medium">Errors</span>
+            <span className="text-xs font-medium">{t("logs.errors")}</span>
             <span className={cn(hasErrors ? "text-rose-400" : "text-muted-foreground/60")}>
               <IconAlertCircle />
             </span>
@@ -118,7 +120,7 @@ export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetPr
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground mb-2">
-            <span className="text-xs font-medium">Warnings</span>
+            <span className="text-xs font-medium">{t("logs.warnings")}</span>
             <span className={cn(hasWarnings ? "text-amber-400" : "text-muted-foreground/60")}>
               <IconAlertTriangle />
             </span>
@@ -138,7 +140,7 @@ export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetPr
           className="rounded-xl border border-border/60 bg-muted/20 p-4 cursor-pointer transition-all hover:border-border hover:bg-muted/30 hover:scale-[1.01] select-none"
         >
           <div className="flex items-center justify-between text-muted-foreground mb-2">
-            <span className="text-xs font-medium">Info</span>
+            <span className="text-xs font-medium">{t("logs.info")}</span>
             <span className="text-muted-foreground/60">
               <IconInfo />
             </span>
@@ -158,7 +160,7 @@ export default function DashboardLogsWidget({ channelId }: DashboardLogsWidgetPr
           className="rounded-xl border border-border/60 bg-muted/20 p-4 cursor-pointer transition-all hover:border-border hover:bg-muted/30 hover:scale-[1.01] select-none"
         >
           <div className="flex items-center justify-between text-muted-foreground mb-2">
-            <span className="text-xs font-medium">Total Events</span>
+            <span className="text-xs font-medium">{t("logs.totalEvents")}</span>
             <span className="text-muted-foreground/60">
               <IconActivity />
             </span>

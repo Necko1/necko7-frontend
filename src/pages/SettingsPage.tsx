@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { broadcastersApi, permissionsApi } from "@/lib/apiClient";
 import type {
   UpdateBroadcasterSettingsBody,
@@ -93,6 +94,7 @@ function ToggleField({
 
 // ── General Tab ────────────────────────────────────────────────────────────
 function GeneralTab({ channelId }: { channelId: string }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
 
   const { data: settings, isLoading } = useQuery({
@@ -137,30 +139,30 @@ function GeneralTab({ channelId }: { channelId: string }) {
 
   return (
     <div className="space-y-6">
-      <Section title="Bot Status" description="Enable or disable the bot for this channel and configure chat badges.">
+      <Section title={t("settings.general.botStatus")} description={t("settings.general.botStatusDesc")}>
         <div className="space-y-4">
           <ToggleField
             id="is_active"
-            label="Bot Active"
-            description="When disabled, the bot will not process any new redemptions."
+            label={t("settings.general.botActive")}
+            description={t("settings.general.botActiveDesc")}
             checked={form.is_active ?? true}
             onChange={(v) => set("is_active", v)}
           />
           <Separator />
           <ToggleField
             id="add_bot_badge"
-            label="Add Bot Badge to Chat Messages"
-            description="Send chat messages with the official Twitch Chat Bot badge (via App Access Token) instead of the standard user badge."
+            label={t("settings.general.botBadge")}
+            description={t("settings.general.botBadgeDesc")}
             checked={form.add_bot_badge ?? false}
             onChange={(v) => set("add_bot_badge", v)}
           />
         </div>
       </Section>
 
-      <Section title="Pricing" description="Control how market prices translate into Twitch channel point costs.">
+      <Section title={t("settings.general.pricing")} description={t("settings.general.pricingDesc")}>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="base_price_multiplier">Base Price Multiplier</Label>
+            <Label htmlFor="base_price_multiplier">{t("settings.general.baseMultiplier")}</Label>
             <Input
               id="base_price_multiplier"
               type="number"
@@ -169,11 +171,11 @@ function GeneralTab({ channelId }: { channelId: string }) {
               onChange={(e) => set("base_price_multiplier", Number(e.target.value))}
             />
             <p className="text-xs text-muted-foreground">
-              Points per 1 major currency unit (e.g. 200 = 200 pts per 1 RUB/USD)
+              {t("settings.general.baseMultiplierDesc")}
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="update_prices_period">Price Update Period (s)</Label>
+            <Label htmlFor="update_prices_period">{t("settings.general.updatePeriod")}</Label>
             <Input
               id="update_prices_period"
               type="number"
@@ -182,11 +184,11 @@ function GeneralTab({ channelId }: { channelId: string }) {
               onChange={(e) => set("update_prices_period", Number(e.target.value))}
             />
             <p className="text-xs text-muted-foreground">
-              How often market prices are refreshed
+              {t("settings.general.updatePeriodDesc")}
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="market_chance_to_transfer">Market Transfer Chance (%)</Label>
+            <Label htmlFor="market_chance_to_transfer">{t("settings.general.transferChance")}</Label>
             <Input
               id="market_chance_to_transfer"
               type="number"
@@ -199,47 +201,47 @@ function GeneralTab({ channelId }: { channelId: string }) {
         </div>
       </Section>
 
-      <Section title="Refund Behavior" description="Configure automatic actions when redemptions fail.">
+      <Section title={t("settings.general.refunds")} description={t("settings.general.refundsDesc")}>
         <div className="space-y-4">
           <ToggleField
             id="refund_on_buyer_fail"
-            label="Refund if buyer fails delivery"
-            description="Automatically refund channel points if the trade isn't accepted by the buyer."
+            label={t("settings.general.refundOnBuyerFail")}
+            description={t("settings.general.refundOnBuyerFailDesc")}
             checked={form.refund_on_buyer_fail ?? true}
             onChange={(v) => set("refund_on_buyer_fail", v)}
           />
           <Separator />
           <ToggleField
             id="refund_if_no_money"
-            label="Refund if insufficient market balance"
-            description="Automatically refund if there's not enough balance in the market account."
+            label={t("settings.general.refundIfNoMoney")}
+            description={t("settings.general.refundIfNoMoneyDesc")}
             checked={form.refund_if_no_money ?? false}
             onChange={(v) => set("refund_if_no_money", v)}
           />
           <Separator />
           <ToggleField
             id="pause_reward_if_no_money"
-            label="Pause reward if insufficient balance"
-            description="Pause the Twitch reward instead of failing when the balance runs out."
+            label={t("settings.general.pauseIfNoMoney")}
+            description={t("settings.general.pauseIfNoMoneyDesc")}
             checked={form.pause_reward_if_no_money ?? true}
             onChange={(v) => set("pause_reward_if_no_money", v)}
           />
         </div>
       </Section>
 
-      <Section title="Market API Key" description="Set the API key for the CS:GO market integration.">
+      <Section title={t("settings.general.marketApiKey")} description={t("settings.general.marketApiKeyDesc")}>
         <div className="space-y-2">
-          <Label htmlFor="market_api_key">Market API Key</Label>
+          <Label htmlFor="market_api_key">{t("settings.general.marketApiKey")}</Label>
           <Input
             id="market_api_key"
             type="password"
-            placeholder={settings?.market_api_key_set ? "••••••••••••••• (already set)" : "Paste your API key here"}
+            placeholder={settings?.market_api_key_set ? t("settings.general.marketKeyPlaceholderSet") : t("settings.general.marketKeyPlaceholderEmpty")}
             onChange={(e) => set("market_api_key", e.target.value || null)}
           />
           <p className="text-xs text-muted-foreground">
             {settings?.market_api_key_set
-              ? "✓ Market API key is currently configured"
-              : "⚠ No market API key set — auto-buy is disabled"}
+              ? t("settings.general.marketKeySet")
+              : t("settings.general.marketKeyNotSet")}
           </p>
         </div>
       </Section>
@@ -250,10 +252,10 @@ function GeneralTab({ channelId }: { channelId: string }) {
         disabled={updateMutation.isPending}
       >
         <IconSave />
-        {updateMutation.isPending ? "Saving…" : "Save Changes"}
+        {updateMutation.isPending ? t("common.saving") : t("settings.saveChanges")}
       </Button>
       {updateMutation.isSuccess && (
-        <p className="text-sm text-emerald-400">Settings saved successfully.</p>
+        <p className="text-sm text-emerald-400">{t("settings.general.savedSuccess")}</p>
       )}
     </div>
   );
@@ -294,8 +296,15 @@ const CATEGORY_META: Record<string, CategoryMeta> = {
   },
 };
 
-function getCategoryMeta(key: string): CategoryMeta {
-  if (CATEGORY_META[key]) return CATEGORY_META[key];
+function getCategoryMeta(key: string, t?: (k: string, opt?: any) => string): CategoryMeta {
+  const meta = CATEGORY_META[key];
+  if (meta) {
+    return {
+      id: key,
+      label: t ? t(`settings.messagesTab.categories.${key}`, { defaultValue: meta.label }) : meta.label,
+      description: t ? t(`settings.messagesTab.categories.${key}Desc`, { defaultValue: meta.description }) : meta.description,
+    };
+  }
   const label = key
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -310,6 +319,7 @@ function formatMessageKey(key: string): string {
 
 // ── Chat Messages Tab ──────────────────────────────────────────────────────
 function ChatMessagesTab({ channelId }: { channelId: string }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -486,15 +496,15 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
   if (!data) return null;
 
-  const currentCatMeta = getCategoryMeta(activeCategory);
+  const currentCatMeta = getCategoryMeta(activeCategory, t);
   const currentCatCustomCount = getCustomCount(activeCategory);
 
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm text-muted-foreground">
-          Customize the bot's Twitch chat announcements and responses. Click placeholder badges to insert variables like{" "}
-          <code className="px-1 py-0.5 rounded bg-muted text-xs font-mono">{"{buyer}"}</code> into the message template.
+          {t("settings.messagesTab.intro")}{" "}
+          <code className="px-1 py-0.5 rounded bg-muted text-xs font-mono">{"{buyer}"}</code>.
         </p>
       </div>
 
@@ -502,7 +512,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         <div className="flex flex-wrap gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/60">
           {categories.map((catKey) => {
-            const meta = getCategoryMeta(catKey);
+            const meta = getCategoryMeta(catKey, t);
             const isActive = activeCategory === catKey;
             const customCount = getCustomCount(catKey);
 
@@ -543,7 +553,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
           </div>
           <Input
             type="text"
-            placeholder="Search templates…"
+            placeholder={t("settings.messagesTab.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 pr-7 h-9 text-xs"
@@ -567,11 +577,11 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
             {currentCatMeta.label}
             {currentCatCustomCount > 0 ? (
               <Badge variant="secondary" className="text-[11px] font-normal font-mono">
-                {currentCatCustomCount} customized
+                {currentCatCustomCount} {t("settings.messagesTab.customized")}
               </Badge>
             ) : (
               <span className="text-xs text-muted-foreground font-normal">
-                (all using defaults)
+                {t("settings.messagesTab.allDefaults")}
               </span>
             )}
           </h3>
@@ -589,7 +599,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
             title="Reset all modified messages in this category back to defaults"
           >
             <IconRotateCcw />
-            Reset Category to Defaults
+            {t("settings.messagesTab.resetCategory")}
           </Button>
         )}
       </div>
@@ -598,14 +608,14 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
       {filteredMessages.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center space-y-3">
           <p className="text-sm text-muted-foreground">
-            No message templates found matching &ldquo;{searchQuery}&rdquo; in {currentCatMeta.label}.
+            {t("settings.messagesTab.noTemplatesMatch", { query: searchQuery, category: currentCatMeta.label })}
           </p>
           {otherCategoryMatches.length > 0 && (
             <div className="text-xs text-muted-foreground space-y-1">
-              <p>Found matches in other categories:</p>
+              <p>{t("settings.messagesTab.matchesInOther")}</p>
               <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                 {otherCategoryMatches.map(({ cat, count }) => {
-                  const meta = getCategoryMeta(cat);
+                  const meta = getCategoryMeta(cat, t);
                   return (
                     <Button
                       key={cat}
@@ -629,7 +639,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
             className="text-xs h-7"
             onClick={() => setSearchQuery("")}
           >
-            Clear Search
+            {t("settings.messagesTab.clearSearch")}
           </Button>
         </div>
       ) : (
@@ -658,7 +668,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
                       </code>
                       {isCustomized ? (
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-500 border-amber-500/30 bg-amber-500/10">
-                          Customized
+                          {t("settings.messagesTab.customized")}
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground/70 border-border/60">
@@ -672,7 +682,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
                   {placeholders.length > 0 && (
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[11px] text-muted-foreground font-medium mr-0.5 select-none">
-                        Insert:
+                        {t("settings.messagesTab.insert")}
                       </span>
                       {placeholders.map((p) => (
                         <button
@@ -703,7 +713,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
 
                 <div className="flex items-center justify-between gap-2 pt-0.5 flex-wrap text-xs">
                   <p className="text-muted-foreground text-xs leading-normal flex-1 min-w-[200px]">
-                    <span className="font-medium text-foreground/80">Default:</span>{" "}
+                    <span className="font-medium text-foreground/80">{t("settings.messagesTab.defaultText")}</span>{" "}
                     <span className="italic select-all">{defaultText}</span>
                   </p>
                   {isCustomized && (
@@ -713,7 +723,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
                       onClick={() => handleResetMessage(activeCategory, msgKey)}
                     >
                       <IconRotateCcw />
-                      Reset to default
+                      {t("settings.messagesTab.resetToDefault")}
                     </button>
                   )}
                 </div>
@@ -731,16 +741,16 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
           disabled={updateMutation.isPending}
         >
           <IconSave />
-          {updateMutation.isPending ? "Saving…" : "Save Messages"}
+          {updateMutation.isPending ? t("common.saving") : t("settings.messagesTab.saveBtn")}
         </Button>
         {updateMutation.isSuccess && (
           <p className="text-sm text-emerald-400 flex items-center gap-1.5 font-medium">
-            <IconCheck /> Messages saved successfully.
+            <IconCheck /> {t("settings.messagesTab.savedSuccess")}
           </p>
         )}
         {updateMutation.isError && (
           <p className="text-sm text-destructive font-medium">
-            Failed to save messages. Please try again.
+            {t("settings.messagesTab.saveFailed")}
           </p>
         )}
       </div>
@@ -750,6 +760,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
 
 // ── Permissions Tab ────────────────────────────────────────────────────────
 function PermissionsTab({ channelId }: { channelId: string }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [newLogin, setNewLogin] = useState("");
 
@@ -775,10 +786,10 @@ function PermissionsTab({ channelId }: { channelId: string }) {
   return (
     <div className="space-y-6">
       {/* Grant new permission */}
-      <Section title="Grant Editor Access" description="The user must have logged into necko7 at least once.">
+      <Section title={t("settings.permissionsTab.grantTitle")} description={t("settings.permissionsTab.grantDesc")}>
         <div className="flex gap-2">
           <Input
-            placeholder="Twitch username"
+            placeholder={t("settings.permissionsTab.usernamePlaceholder")}
             value={newLogin}
             onChange={(e) => setNewLogin(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && newLogin && grantMutation.mutate(newLogin)}
@@ -789,18 +800,18 @@ function PermissionsTab({ channelId }: { channelId: string }) {
             disabled={grantMutation.isPending || !newLogin}
           >
             <IconPlus />
-            Grant Access
+            {t("settings.permissionsTab.grantBtn")}
           </Button>
         </div>
         {grantMutation.isError && (
           <p className="text-sm text-destructive">
-            Failed to grant access — user may not exist in the system.
+            {t("settings.permissionsTab.grantFailed")}
           </p>
         )}
       </Section>
 
       {/* Current permissions */}
-      <Section title="Current Editors">
+      <Section title={t("settings.permissionsTab.currentTitle")}>
         {isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -809,7 +820,7 @@ function PermissionsTab({ channelId }: { channelId: string }) {
           </div>
         ) : permissions.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
-            No editors have been granted access yet.
+            {t("settings.permissionsTab.noEditors")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -831,7 +842,7 @@ function PermissionsTab({ channelId }: { channelId: string }) {
                   "text-xs capitalize",
                   perm.role.toUpperCase() === "OWNER" ? "border-primary/40 text-primary" : "border-border text-muted-foreground"
                 )}>
-                  {perm.role.toUpperCase() === "OWNER" ? "Owner" : perm.role.toUpperCase() === "EDITOR" ? "Editor" : perm.role}
+                  {perm.role.toUpperCase() === "OWNER" ? t("settings.permissionsTab.ownerRole") : perm.role.toUpperCase() === "EDITOR" ? t("settings.permissionsTab.editorRole") : perm.role}
                 </Badge>
                 {perm.role.toUpperCase() !== "OWNER" && (
                   <Button
@@ -839,7 +850,7 @@ function PermissionsTab({ channelId }: { channelId: string }) {
                     variant="ghost"
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     onClick={() => {
-                      if (confirm(`Revoke access from @${perm.user_login}?`)) {
+                      if (confirm(t("settings.permissionsTab.revokeConfirm", { login: perm.user_login }))) {
                         revokeMutation.mutate(perm.user_id);
                       }
                     }}
@@ -859,6 +870,7 @@ function PermissionsTab({ channelId }: { channelId: string }) {
 
 // ── Public Catalog Tab (v0.6.0) ────────────────────────────────────────────
 function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; channelLogin?: string }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [copied, setCopied] = useState(false);
 
@@ -939,10 +951,10 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-foreground">
-              Public Rewards Showcase URL
+              {t("settings.catalogTab.bannerTitle")}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Share this link with your Twitch viewers so they can browse skin rewards anytime.
+              {t("settings.catalogTab.bannerDesc")}
             </p>
           </div>
 
@@ -955,7 +967,7 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
               className="text-xs h-8 gap-1.5"
             >
               {copied ? <IconCheck /> : null}
-              <span>{copied ? "Copied!" : "Copy Link"}</span>
+              <span>{copied ? t("settings.catalogTab.copied") : t("settings.catalogTab.copyLink")}</span>
             </Button>
             <Button
               type="button"
@@ -963,7 +975,7 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
               onClick={() => window.open(`/c/${activeLogin}`, "_blank")}
               className="text-xs h-8"
             >
-              Open Showcase ↗
+              {t("settings.catalogTab.openShowcase")}
             </Button>
           </div>
         </div>
@@ -974,39 +986,39 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
       </div>
 
       {/* Master Enable/Disable */}
-      <Section title="Master Switch" description="Toggle public rewards catalog on or off.">
+      <Section title={t("settings.catalogTab.masterTitle")} description={t("settings.catalogTab.masterDesc")}>
         <ToggleField
           id="public_enabled"
-          label="Enable Public Rewards Catalog"
-          description="When turned off, visitors to your public link will see a message that the catalog is currently disabled."
+          label={t("settings.catalogTab.enableShowcase")}
+          description={t("settings.catalogTab.enableShowcaseDesc")}
           checked={config.enabled ?? true}
           onChange={(v) => setFlag("enabled", v)}
         />
       </Section>
 
       {/* Pricing & Economy */}
-      <Section title="Pricing & Market Visibility" description="Choose which pricing details are visible to public visitors.">
+      <Section title={t("settings.catalogTab.pricingTitle")} description={t("settings.catalogTab.pricingDesc")}>
         <div className="space-y-4">
           <ToggleField
             id="show_cost_points"
-            label="Show Channel Points Cost"
-            description="Display the Twitch channel points cost required to redeem each reward."
+            label={t("settings.catalogTab.showCostPoints")}
+            description={t("settings.catalogTab.showCostPointsDesc")}
             checked={config.show_cost_points ?? true}
             onChange={(v) => setFlag("show_cost_points", v)}
           />
           <Separator />
           <ToggleField
             id="show_market_price"
-            label="Show Estimated Market Price"
-            description="Display real-time CS market item prices in your store currency (RUB/USD)."
+            label={t("settings.catalogTab.showMarketPrice")}
+            description={t("settings.catalogTab.showMarketPriceDesc")}
             checked={config.show_market_price ?? true}
             onChange={(v) => setFlag("show_market_price", v)}
           />
           <Separator />
           <ToggleField
             id="show_price_deviation"
-            label="Show Permissible Price Deviation"
-            description="Show allowable market price deviation percentage (±%)."
+            label={t("settings.catalogTab.showPriceDeviation")}
+            description={t("settings.catalogTab.showPriceDeviationDesc")}
             checked={config.show_price_deviation ?? true}
             onChange={(v) => setFlag("show_price_deviation", v)}
           />
@@ -1014,28 +1026,28 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
       </Section>
 
       {/* Skin Pools */}
-      <Section title="Skin Pool Visibility" description="Configure what information is shown for POOL reward types.">
+      <Section title={t("settings.catalogTab.poolTitle")} description={t("settings.catalogTab.poolDesc")}>
         <div className="space-y-4">
           <ToggleField
             id="show_pool_items"
-            label="Show Pool Item Names and Icons"
-            description="List all skins contained inside the randomized pool."
+            label={t("settings.catalogTab.showPoolItems")}
+            description={t("settings.catalogTab.showPoolItemsDesc")}
             checked={config.show_pool_items ?? true}
             onChange={(v) => setFlag("show_pool_items", v)}
           />
           <Separator />
           <ToggleField
             id="show_pool_chances"
-            label="Show Drop Chance Percentages"
-            description="Show calculated percentage chance (e.g. 15.5%) for each skin in the pool."
+            label={t("settings.catalogTab.showPoolChances")}
+            description={t("settings.catalogTab.showPoolChancesDesc")}
             checked={config.show_pool_chances ?? true}
             onChange={(v) => setFlag("show_pool_chances", v)}
           />
           <Separator />
           <ToggleField
             id="show_pool_item_prices"
-            label="Show Individual Pool Skin Prices"
-            description="Display the current market price for each separate skin inside the pool."
+            label={t("settings.catalogTab.showPoolItemPrices")}
+            description={t("settings.catalogTab.showPoolItemPricesDesc")}
             checked={config.show_pool_item_prices ?? true}
             onChange={(v) => setFlag("show_pool_item_prices", v)}
           />
@@ -1043,36 +1055,36 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
       </Section>
 
       {/* Reward Info & Status */}
-      <Section title="Reward Information & Status" description="Control descriptions, pause status, and filter rules.">
+      <Section title={t("settings.catalogTab.rewardInfoTitle")} description={t("settings.catalogTab.rewardInfoDesc")}>
         <div className="space-y-4">
           <ToggleField
             id="show_description"
-            label="Show Reward Descriptions"
-            description="Display the custom description text configured for each reward."
+            label={t("settings.catalogTab.showDescription")}
+            description={t("settings.catalogTab.showDescriptionDesc")}
             checked={config.show_description ?? true}
             onChange={(v) => setFlag("show_description", v)}
           />
           <Separator />
           <ToggleField
             id="show_paused_rewards"
-            label="Show Paused Rewards"
-            description="Keep paused rewards visible in the public showcase (with a 'Paused' tag)."
+            label={t("settings.catalogTab.showPausedRewards")}
+            description={t("settings.catalogTab.showPausedRewardsDesc")}
             checked={config.show_paused_rewards ?? true}
             onChange={(v) => setFlag("show_paused_rewards", v)}
           />
           <Separator />
           <ToggleField
             id="show_pause_reason"
-            label="Show Pause Reason"
-            description="Show why a reward is paused (e.g., market balance ran out or price exceeded limit)."
+            label={t("settings.catalogTab.showPauseReason")}
+            description={t("settings.catalogTab.showPauseReasonDesc")}
             checked={config.show_pause_reason ?? true}
             onChange={(v) => setFlag("show_pause_reason", v)}
           />
           <Separator />
           <ToggleField
             id="show_filter_details"
-            label="Show Filter Auto-Pick Details"
-            description="Show price range (min/max) and name filter criteria for FILTER reward types."
+            label={t("settings.catalogTab.showFilterDetails")}
+            description={t("settings.catalogTab.showFilterDetailsDesc")}
             checked={config.show_filter_details ?? true}
             onChange={(v) => setFlag("show_filter_details", v)}
           />
@@ -1080,28 +1092,28 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
       </Section>
 
       {/* Limits & Cooldowns */}
-      <Section title="Limits & Cooldowns" description="Control visibility of redemption rate limits and chat activity requirements.">
+      <Section title={t("settings.catalogTab.limitsTitle")} description={t("settings.catalogTab.limitsDesc")}>
         <div className="space-y-4">
           <ToggleField
             id="show_cooldown_and_limits"
-            label="Show Twitch Cooldowns and Stream Limits"
-            description="Show per-stream redemption limits and global cooldown timers."
+            label={t("settings.catalogTab.showCooldownAndLimits")}
+            description={t("settings.catalogTab.showCooldownAndLimitsDesc")}
             checked={config.show_cooldown_and_limits ?? true}
             onChange={(v) => setFlag("show_cooldown_and_limits", v)}
           />
           <Separator />
           <ToggleField
             id="show_purchase_limits"
-            label="Show User & Global Purchase Limits"
-            description="Display windowed purchase limits (e.g. max 1 reward per 24 hours)."
+            label={t("settings.catalogTab.showPurchaseLimits")}
+            description={t("settings.catalogTab.showPurchaseLimitsDesc")}
             checked={config.show_purchase_limits ?? true}
             onChange={(v) => setFlag("show_purchase_limits", v)}
           />
           <Separator />
           <ToggleField
             id="show_chat_requirements"
-            label="Show Chat Activity Requirements"
-            description="Display the required chat messages count and time window needed to redeem."
+            label={t("settings.catalogTab.showChatRequirements")}
+            description={t("settings.catalogTab.showChatRequirementsDesc")}
             checked={config.show_chat_requirements ?? true}
             onChange={(v) => setFlag("show_chat_requirements", v)}
           />
@@ -1116,11 +1128,11 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
           disabled={updateMutation.isPending}
         >
           <IconSave />
-          {updateMutation.isPending ? "Saving…" : "Save Public Settings"}
+          {updateMutation.isPending ? t("common.saving") : t("settings.catalogTab.saveBtn")}
         </Button>
         {updateMutation.isSuccess && (
           <p className="text-sm text-emerald-400 flex items-center gap-1.5 font-medium">
-            <IconCheck /> Public showcase settings saved successfully.
+            <IconCheck /> {t("settings.catalogTab.savedSuccess")}
           </p>
         )}
       </div>
@@ -1130,6 +1142,7 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
 
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const { channelId } = useParams<{ channelId: string }>();
 
   const { data: settings } = useQuery({
@@ -1142,7 +1155,7 @@ export default function SettingsPage() {
   if (!channelId) {
     return (
       <div className="p-8 text-center text-muted-foreground">
-        No channel selected.
+        {t("settings.noChannel")}
       </div>
     );
   }
@@ -1159,20 +1172,20 @@ export default function SettingsPage() {
         ) : null}
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {settings?.display_name ? `${settings.display_name} Settings` : "Channel Settings"}
+            {settings?.display_name ? t("settings.titleWithChannel", { name: settings.display_name }) : t("settings.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {settings?.channel_login ? `@${settings.channel_login} · ` : ""}Configure bot behavior, pricing, messages, and access control.
+            {settings?.channel_login ? `@${settings.channel_login} · ` : ""}{t("settings.headerSubtitle")}
           </p>
         </div>
       </div>
 
       <Tabs defaultValue="general">
         <TabsList className="mb-6">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="messages">Chat Messages</TabsTrigger>
-          <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          <TabsTrigger value="public">Public Catalog</TabsTrigger>
+          <TabsTrigger value="general">{t("settings.tabs.general")}</TabsTrigger>
+          <TabsTrigger value="messages">{t("settings.tabs.chatMessages")}</TabsTrigger>
+          <TabsTrigger value="permissions">{t("settings.tabs.permissions")}</TabsTrigger>
+          <TabsTrigger value="public">{t("settings.tabs.showcase")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -1191,3 +1204,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+

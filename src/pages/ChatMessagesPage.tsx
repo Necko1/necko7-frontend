@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import { chatApi } from "@/lib/apiClient";
 import type { ChatMessage } from "@/types/api";
@@ -47,23 +48,9 @@ const IconMessageSquare = () => (
   </svg>
 );
 
-// ── Date grouping helper ───────────────────────────────────────────────────
-function formatDateDivider(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-  if (isToday(date)) return "Today";
-  if (isYesterday(date)) return "Yesterday";
-  return format(date, "dd MMMM yyyy");
-}
-
-function getDateKey(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-  return format(date, "yyyy-MM-dd");
-}
-
 // ── Stream Chat Message Row ────────────────────────────────────────────────
 function ChannelMessageRow({ msg }: { msg: ChatMessage }) {
+  const { t } = useTranslation();
   const date = new Date(msg.sent_at);
   const timeStr = !isNaN(date.getTime()) ? format(date, "HH:mm:ss") : "–";
   const hue = [...msg.chatter_user_login].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
@@ -71,7 +58,7 @@ function ChannelMessageRow({ msg }: { msg: ChatMessage }) {
   return (
     <div
       className="group flex items-start gap-3 py-1.5 px-3 rounded-lg hover:bg-muted/40 transition-colors text-sm leading-relaxed"
-      title={`${msg.char_count} characters · sent at ${timeStr}`}
+      title={`${msg.char_count} ${t("chat.characters")} · ${timeStr}`}
     >
       {/* Timestamp */}
       <span className="text-xs text-muted-foreground/60 tabular-nums shrink-0 pt-0.5 select-none font-mono">
@@ -94,13 +81,14 @@ function ChannelMessageRow({ msg }: { msg: ChatMessage }) {
 
       {/* Tooltip badge for character count on hover */}
       <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-muted-foreground/60 tabular-nums shrink-0 pt-0.5 select-none font-mono">
-        {msg.char_count} chars
+        {msg.char_count} {t("chat.chars")}
       </span>
     </div>
   );
 }
 
 export default function ChatMessagesPage() {
+  const { t } = useTranslation();
   const { selectedBroadcasterId, getSelectedBroadcaster } = useAppStore();
   const channelId = selectedBroadcasterId ?? "";
   const broadcaster = getSelectedBroadcaster();
@@ -121,25 +109,32 @@ export default function ChatMessagesPage() {
   const handleSearchChange = (val: string) => {
     setSearch(val);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => setDebouncedSearch(val), 400);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(val);
+      setOffset(0);
+    }, 400);
   };
 
   // Debounced chatter filter
   const handleChatterChange = (val: string) => {
     setChatterFilter(val);
     if (chatterTimerRef.current) clearTimeout(chatterTimerRef.current);
-    chatterTimerRef.current = setTimeout(() => setDebouncedChatter(val.trim()), 400);
+    chatterTimerRef.current = setTimeout(() => {
+      const clean = val.replace(/^@/, "").trim();
+      setDebouncedChatter(clean);
+      setOffset(0);
+    }, 400);
   };
 
-  // Reset when filters change
+  // Reset offset and list when filters change
   useEffect(() => {
     setOffset(0);
     setAllMessages([]);
-  }, [channelId, timeWindow, debouncedSearch, debouncedChatter, refreshKey]);
+  }, [channelId, timeWindow, debouncedSearch, debouncedChatter]);
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
-      "channelMessages",
+      "chat-messages",
       channelId,
       timeWindow,
       debouncedSearch,
@@ -150,15 +145,15 @@ export default function ChatMessagesPage() {
     queryFn: () =>
       chatApi
         .getChannelMessages(channelId, {
-          time_window_hours: timeWindow,
           search: debouncedSearch || null,
           chatter_login: debouncedChatter || null,
+          time_window_hours: timeWindow,
           offset,
           limit: PAGE_SIZE,
         })
         .then((r) => r.data),
     enabled: !!channelId,
-    staleTime: 20_000,
+    staleTime: 15_000,
     placeholderData: (prev) => prev,
   });
 
@@ -166,9 +161,7 @@ export default function ChatMessagesPage() {
   useEffect(() => {
     if (!data) return;
     setAllMessages((prev) => {
-      if (offset === 0) {
-        return data.items;
-      }
+      if (offset === 0) return data.items;
       const existingIds = new Set(prev.map((m) => m.id));
       const fresh = data.items.filter((m) => !existingIds.has(m.id));
       return [...prev, ...fresh];
@@ -176,34 +169,53 @@ export default function ChatMessagesPage() {
   }, [data, offset]);
 
   const displayMessages = allMessages.length > 0 ? allMessages : data?.items ?? [];
-  const hasMore = data ? allMessages.length < data.total : false;
+  const hasMore = data ? displayMessages.length < data.total : false;
 
   const loadMore = () => {
     if (!isFetching) setOffset((o) => o + PAGE_SIZE);
   };
 
-  // Group messages chronologically by date
-  const groupedMessages = useMemo(() => {
-    const msgs = allMessages.length > 0 ? allMessages : data?.items ?? [];
-    const groups: { dateKey: string; label: string; messages: ChatMessage[] }[] = [];
-    const map = new Map<string, { label: string; messages: ChatMessage[] }>();
+  const formatDateDivider = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    if (isToday(date)) return t("common.today");
+    if (isYesterday(date)) return t("common.yesterday");
+    return format(date, "dd MMMM yyyy");
+  };
 
-    for (const msg of msgs) {
+  const getDateKey = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return format(date, "yyyy-MM-dd");
+  };
+
+  // Group messages by date
+  const groupedMessages = useMemo(() => {
+    const groups: { dateKey: string; label: string; messages: ChatMessage[] }[] = [];
+    let currentKey = "";
+    let currentGroup: { dateKey: string; label: string; messages: ChatMessage[] } | null = null;
+
+    for (const msg of displayMessages) {
       const key = getDateKey(msg.sent_at);
-      if (!map.has(key)) {
-        const item = { label: formatDateDivider(msg.sent_at), messages: [] };
-        map.set(key, item);
-        groups.push({ dateKey: key, ...item });
+      if (key !== currentKey) {
+        currentKey = key;
+        currentGroup = {
+          dateKey: key,
+          label: formatDateDivider(msg.sent_at),
+          messages: [],
+        };
+        groups.push(currentGroup);
       }
-      map.get(key)!.messages.push(msg);
+      currentGroup?.messages.push(msg);
     }
+
     return groups;
-  }, [allMessages, data?.items]);
+  }, [displayMessages, t]);
 
   if (!channelId) {
     return (
       <div className="p-8 flex items-center justify-center min-h-96">
-        <p className="text-muted-foreground">Select a broadcaster channel first.</p>
+        <p className="text-muted-foreground">{t("dashboard.selectChannel")}</p>
       </div>
     );
   }
@@ -215,16 +227,16 @@ export default function ChatMessagesPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-foreground tracking-tight">
-              Chat Stream
+              {t("chat.chatMessagesTitle")}
             </h1>
             {data && (
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                {data.total.toLocaleString()} msgs
+                {data.total.toLocaleString()} {t("chat.messages")}
               </span>
             )}
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {broadcaster?.channel_login ?? "–"} · Live chat history and message search
+            {broadcaster?.channel_login ?? "–"} · {t("chat.chatMessagesSubtitle")}
           </p>
         </div>
 
@@ -236,7 +248,7 @@ export default function ChatMessagesPage() {
           className="self-start md:self-auto flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-card text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors disabled:opacity-50"
         >
           <IconRefresh spinning={isFetching} />
-          Refresh
+          {t("common.refresh")}
         </button>
       </div>
 
@@ -248,7 +260,7 @@ export default function ChatMessagesPage() {
             <IconSearch />
           </span>
           <Input
-            placeholder="Search message text…"
+            placeholder={t("chat.filterMessages")}
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9 bg-card rounded-xl text-sm"
@@ -261,7 +273,7 @@ export default function ChatMessagesPage() {
             <IconUser />
           </span>
           <Input
-            placeholder="Filter by @username…"
+            placeholder={t("chat.filterChatters")}
             value={chatterFilter}
             onChange={(e) => handleChatterChange(e.target.value)}
             className="pl-9 bg-card rounded-xl text-sm"
@@ -282,7 +294,7 @@ export default function ChatMessagesPage() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {tw.label}
+              {tw.value === null ? t("logs.presetAll") : tw.label}
             </button>
           ))}
         </div>
@@ -305,12 +317,7 @@ export default function ChatMessagesPage() {
             <div className="w-12 h-12 rounded-2xl bg-muted/40 flex items-center justify-center text-muted-foreground">
               <IconMessageSquare />
             </div>
-            <p className="text-sm font-medium text-foreground">No chat messages found</p>
-            <p className="text-xs max-w-sm">
-              {debouncedSearch || debouncedChatter
-                ? "Try adjusting your search criteria or time window."
-                : "No messages have been recorded for this channel in this time period."}
-            </p>
+            <p className="text-sm font-medium text-foreground">{t("chat.noMessagesFound")}</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -346,9 +353,14 @@ export default function ChatMessagesPage() {
               disabled={isFetching}
               className="px-6 py-2 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all disabled:opacity-50"
             >
-              {isFetching
-                ? "Loading…"
-                : `Load older messages (${data!.total - displayMessages.length} remaining)`}
+              {isFetching ? (
+                <span className="flex items-center gap-2">
+                  <IconRefresh spinning />
+                  {t("common.loading")}
+                </span>
+              ) : (
+                t("common.loadMore")
+              )}
             </button>
           </div>
         )}
@@ -356,3 +368,4 @@ export default function ChatMessagesPage() {
     </div>
   );
 }
+

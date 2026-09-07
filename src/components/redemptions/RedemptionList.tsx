@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { redemptionsApi } from "@/lib/apiClient";
 import type { RedemptionResponse, RedemptionStatus } from "@/types/api";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +90,7 @@ function RedemptionRow({
   channelId: string;
   compact?: boolean;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [tradeCopied, setTradeCopied] = useState(false);
   const qc = useQueryClient();
@@ -116,6 +118,28 @@ function RedemptionRow({
     redemption.status === "PENDING" ||
     redemption.status === "Pending";
 
+  const getStatusLabel = (status: RedemptionStatus) => {
+    switch (status) {
+      case "PENDING":
+      case "Pending":
+        return t("redemptions.statuses.pending");
+      case "ORDER_CREATED":
+      case "OrderCreated":
+        return t("redemptions.statuses.orderCreated");
+      case "COMPLETED":
+      case "Completed":
+        return t("redemptions.statuses.completed");
+      case "FAILED_REFUND":
+      case "FailedRefund":
+        return t("redemptions.statuses.refunded");
+      case "FAILED_PENALTY":
+      case "FailedPenalty":
+        return t("redemptions.statuses.penalized");
+      default:
+        return status;
+    }
+  };
+
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/chat/users/${redemption.user_id}`);
@@ -137,11 +161,11 @@ function RedemptionRow({
         className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
       >
         <Badge className={cn("text-xs shrink-0 rounded-md px-2 py-0.5 font-medium border", STATUS_CLASSES[redemption.status] || "status-pending")}>
-          {STATUS_LABELS[redemption.status] || redemption.status}
+          {getStatusLabel(redemption.status)}
         </Badge>
         {redemption.retry_count > 0 && (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-500 bg-amber-500/10 font-normal shrink-0">
-            {redemption.retry_count} {redemption.retry_count === 1 ? "retry" : "retries"}
+            {redemption.retry_count} {redemption.retry_count === 1 ? t("redemptions.retryOne") : t("redemptions.retriesMany")}
           </Badge>
         )}
         {/* Clickable username */}
@@ -166,7 +190,7 @@ function RedemptionRow({
           </span>
         )}
         <span className={cn("text-xs tabular-nums text-primary font-medium shrink-0", compact ? "ml-auto" : "ml-auto sm:ml-0")}>
-          {redemption.twitch_points_cost.toLocaleString()} pts
+          {redemption.twitch_points_cost.toLocaleString()} {t("common.pts")}
         </span>
         <IconChevron open={open} />
       </button>
@@ -176,15 +200,15 @@ function RedemptionRow({
         <div className="border-t border-border bg-muted/10 px-4 py-4 space-y-4">
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <p className="text-muted-foreground mb-0.5">Redemption ID</p>
+              <p className="text-muted-foreground mb-0.5">{t("redemptions.redemptionId")}</p>
               <p className="font-mono text-foreground break-all">{redemption.twitch_redemption_id}</p>
             </div>
             <div>
-              <p className="text-muted-foreground mb-0.5">Reward ID</p>
+              <p className="text-muted-foreground mb-0.5">{t("redemptions.rewardId")}</p>
               <p className="font-mono text-foreground break-all">{redemption.twitch_reward_id}</p>
             </div>
             <div>
-              <p className="text-muted-foreground mb-0.5">User ID</p>
+              <p className="text-muted-foreground mb-0.5">{t("redemptions.userId")}</p>
               <div className="flex items-center gap-2">
                 <p className="text-foreground">{redemption.user_id}</p>
                 <button
@@ -193,16 +217,16 @@ function RedemptionRow({
                   className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
                 >
                   <IconUser />
-                  View Profile
+                  {t("redemptions.viewProfile")}
                 </button>
               </div>
             </div>
             <div>
-              <p className="text-muted-foreground mb-0.5">Retry Count</p>
+              <p className="text-muted-foreground mb-0.5">{t("redemptions.retryCount")}</p>
               <p className="text-foreground tabular-nums">{redemption.retry_count}</p>
             </div>
             <div>
-              <p className="text-muted-foreground mb-0.5">Market Paid</p>
+              <p className="text-muted-foreground mb-0.5">{t("redemptions.marketPaid")}</p>
               <p className="text-foreground tabular-nums">
                 {redemption.market_paid_price != null
                   ? formatMinorCurrency(redemption.market_paid_price, redemption.currency)
@@ -210,12 +234,12 @@ function RedemptionRow({
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground mb-0.5">Points Cost</p>
-              <p className="text-foreground tabular-nums">{redemption.twitch_points_cost.toLocaleString()} pts</p>
+              <p className="text-muted-foreground mb-0.5">{t("redemptions.pointsCost")}</p>
+              <p className="text-foreground tabular-nums">{redemption.twitch_points_cost.toLocaleString()} {t("common.pts")}</p>
             </div>
             {redemption.market_item_name != null && (
               <div className="col-span-2">
-                <p className="text-muted-foreground mb-0.5">Market Item</p>
+                <p className="text-muted-foreground mb-0.5">{t("redemptions.marketItem")}</p>
                 <a
                   href={`https://market.csgo.com/en/?search=${encodeURIComponent(redemption.market_item_name)}`}
                   target="_blank"
@@ -234,7 +258,7 @@ function RedemptionRow({
             {/* Trade link */}
             {redemption.user_trade_link && (
               <div className="col-span-2">
-                <p className="text-muted-foreground mb-1">Steam Trade Link</p>
+                <p className="text-muted-foreground mb-1">{t("redemptions.steamTradeLink")}</p>
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-mono text-[10px] text-foreground break-all truncate max-w-[240px]">
                     {redemption.user_trade_link}
@@ -250,7 +274,7 @@ function RedemptionRow({
                     )}
                   >
                     <IconCopy />
-                    {tradeCopied ? "Copied!" : "Copy"}
+                    {tradeCopied ? t("common.copied") : t("common.copy")}
                   </button>
                   <a
                     href={redemption.user_trade_link}
@@ -259,22 +283,22 @@ function RedemptionRow({
                     className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
                   >
                     <IconExternalLink />
-                    Open
+                    {t("common.open")}
                   </a>
                 </div>
               </div>
             )}
             <div>
-              <p className="text-muted-foreground mb-0.5">Created</p>
+              <p className="text-muted-foreground mb-0.5">{t("redemptions.created")}</p>
               <p className="text-foreground">{format(new Date(redemption.created_at), "dd MMM yyyy HH:mm:ss")}</p>
             </div>
             <div>
-              <p className="text-muted-foreground mb-0.5">Updated</p>
+              <p className="text-muted-foreground mb-0.5">{t("redemptions.updated")}</p>
               <p className="text-foreground">{format(new Date(redemption.updated_at), "dd MMM yyyy HH:mm:ss")}</p>
             </div>
             {redemption.fail_cause && (
               <div className="col-span-2">
-                <p className="text-muted-foreground mb-0.5">Fail Cause</p>
+                <p className="text-muted-foreground mb-0.5">{t("redemptions.failCause")}</p>
                 <p className="text-destructive">{redemption.fail_cause}</p>
                 {redemption.fail_description && (
                   <p className="text-muted-foreground text-xs mt-0.5">{redemption.fail_description}</p>
@@ -294,7 +318,7 @@ function RedemptionRow({
                   disabled={isLoading}
                 >
                   <IconRetry />
-                  Retry Market Order
+                  {t("redemptions.retryMarketOrder")}
                 </Button>
               )}
               {isPending && (
@@ -306,7 +330,7 @@ function RedemptionRow({
                   disabled={isLoading}
                 >
                   <IconRefund />
-                  Refund
+                  {t("redemptions.refund")}
                 </Button>
               )}
               {isPending && (
@@ -318,7 +342,7 @@ function RedemptionRow({
                   disabled={isLoading}
                 >
                   <IconPenalty />
-                  Penalize
+                  {t("redemptions.penalize")}
                 </Button>
               )}
             </div>
@@ -347,6 +371,7 @@ export default function RedemptionList({
   compact,
   pageSize = 10,
 }: RedemptionListProps) {
+  const { t } = useTranslation();
   const [page, setPage] = useState(0);
 
   const { data, isLoading } = useQuery({
@@ -380,7 +405,7 @@ export default function RedemptionList({
   if (!data || data.items.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-8">
-        No redemptions found.
+        {t("redemptions.noRedemptions")}
       </p>
     );
   }
@@ -405,10 +430,10 @@ export default function RedemptionList({
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
           >
-            Previous
+            {t("common.prev")}
           </Button>
           <span className="text-xs text-muted-foreground">
-            {page + 1} / {totalPages} · {data.total} total
+            {page + 1} / {totalPages} · {data.total} {t("common.total")}
           </span>
           <Button
             size="sm"
@@ -416,7 +441,7 @@ export default function RedemptionList({
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
           >
-            Next
+            {t("common.next")}
           </Button>
         </div>
       )}

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { authApi } from "@/lib/apiClient";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +71,8 @@ function AuthButton({ href, variant, icon, title, description }: AuthButtonProps
 }
 
 export default function LoginPage() {
+  const { t } = useTranslation();
+
   return (
     <div className="glass rounded-2xl p-8 glow-teal space-y-6">
       {/* Header */}
@@ -80,10 +83,10 @@ export default function LoginPage() {
           </div>
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Welcome to necko7
+          {t("auth.welcomeTitle")}
         </h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          CS:GO skin rewards bot for Twitch streamers
+          {t("auth.welcomeSubtitle")}
         </p>
       </div>
 
@@ -94,7 +97,7 @@ export default function LoginPage() {
         </div>
         <div className="relative flex justify-center">
           <span className="px-3 text-xs text-muted-foreground bg-[#201c18]">
-            Choose login type
+            {t("auth.chooseLoginType")}
           </span>
         </div>
       </div>
@@ -105,21 +108,21 @@ export default function LoginPage() {
           href={authApi.connectUrl()}
           variant="primary"
           icon={<IconBroadcast />}
-          title="Connect as Streamer"
-          description="Authorize bot & get full control over your channel"
+          title={t("auth.connectStreamerTitle")}
+          description={t("auth.connectStreamerDesc")}
         />
         <AuthButton
           href={authApi.loginUrl()}
           variant="secondary"
           icon={<IconUser />}
-          title="Login as User / Moderator"
-          description="Access channels you've been invited to"
+          title={t("auth.loginUserTitle")}
+          description={t("auth.loginUserDesc")}
         />
       </div>
 
       {/* Footer note */}
       <p className="text-center text-xs text-muted-foreground/60">
-        Session is tied to a Twitch OAuth token and expires after 7 days.
+        {t("auth.sessionNote")}
       </p>
     </div>
   );

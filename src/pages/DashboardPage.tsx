@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import { statsApi, broadcastersApi } from "@/lib/apiClient";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -88,6 +89,7 @@ const IconWallet = () => (
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function NoBroadcaster({ broadcasters }: { broadcasters: { channel_id: string }[] }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   if (broadcasters.length === 0) {
     return (
@@ -98,13 +100,13 @@ function NoBroadcaster({ broadcasters }: { broadcasters: { channel_id: string }[
           </svg>
         </div>
         <div>
-          <h2 className="text-xl font-semibold text-foreground">No channels available</h2>
+          <h2 className="text-xl font-semibold text-foreground">{t("dashboard.noChannels")}</h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-xs leading-relaxed">
-            Ask a streamer to grant you access to their channel, or connect your own channel as a streamer.
+            {t("dashboard.noChannelsDesc")}
           </p>
         </div>
         <Button onClick={() => navigate("/channels")} className="rounded-xl">
-          Connect or view channels
+          {t("dashboard.connectOrView")}
         </Button>
       </div>
     );
@@ -118,13 +120,13 @@ function NoBroadcaster({ broadcasters }: { broadcasters: { channel_id: string }[
         </svg>
       </div>
       <div>
-        <h2 className="text-xl font-semibold text-foreground">Select a channel</h2>
+        <h2 className="text-xl font-semibold text-foreground">{t("dashboard.selectChannel")}</h2>
         <p className="text-sm text-muted-foreground mt-2 max-w-xs">
-          Choose a broadcaster channel to view the dashboard.
+          {t("dashboard.selectChannelDesc")}
         </p>
       </div>
       <Button onClick={() => navigate("/channels")} className="rounded-xl">
-        Select channel
+        {t("dashboard.selectChannel")}
       </Button>
     </div>
   );
@@ -132,6 +134,7 @@ function NoBroadcaster({ broadcasters }: { broadcasters: { channel_id: string }[
 
 // ── Main Dashboard ─────────────────────────────────────────────────────────
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const { selectedBroadcasterId, broadcasters, getSelectedBroadcaster } = useAppStore();
   const [period, setPeriod] = useState<Period>("month");
   const broadcaster = getSelectedBroadcaster();
@@ -170,10 +173,10 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            Dashboard
+            {t("dashboard.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {broadcaster?.channel_login ?? "–"} · Statistics overview
+            {broadcaster?.channel_login ?? "–"} · {t("dashboard.overview")}
           </p>
         </div>
 
@@ -190,7 +193,7 @@ export default function DashboardPage() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {p.label}
+              {p.key === "week" ? t("dashboard.week") : p.key === "month" ? t("dashboard.month") : t("dashboard.year")}
             </button>
           ))}
         </div>
@@ -199,32 +202,32 @@ export default function DashboardPage() {
       {/* Stats grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
-          title="Total Redemptions"
+          title={t("dashboard.totalRedemptions")}
           value={stats?.total_redemptions ?? "–"}
-          subtitle={period === "week" ? "Last 7 days" : period === "month" ? "Last 30 days" : "Last year"}
+          subtitle={period === "week" ? t("dashboard.last7d") : period === "month" ? t("dashboard.last30d") : t("dashboard.lastYear")}
           icon={<IconTrendUp />}
           loading={statsLoading}
         />
         <StatCard
-          title="Completed"
+          title={t("dashboard.completed")}
           value={stats ? `${stats.completed} (${completionRate}%)` : "–"}
-          subtitle="Successful purchases"
+          subtitle={t("dashboard.successfulPurchases")}
           icon={<IconCheck />}
           loading={statsLoading}
           accentClass="border-emerald-500/10"
         />
         <StatCard
-          title="Failed"
+          title={t("dashboard.failed")}
           value={stats?.failed ?? "–"}
-          subtitle="Refunded or penalized"
+          subtitle={t("dashboard.refundedOrPenalized")}
           icon={<IconX />}
           loading={statsLoading}
           accentClass="border-red-500/10"
         />
         <StatCard
-          title="Points Earned"
+          title={t("dashboard.pointsEarned")}
           value={stats ? stats.total_points_earned.toLocaleString() : "–"}
-          subtitle="Twitch channel points"
+          subtitle={t("dashboard.channelPoints")}
           icon={<IconCoins />}
           loading={statsLoading}
         />
@@ -233,33 +236,33 @@ export default function DashboardPage() {
       {/* Second row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard
-          title="Total Spent on Market"
+          title={t("dashboard.totalSpent")}
           value={
             stats
               ? formatMinorCurrency(stats.total_spent, balance?.currency ?? "RUB")
               : "–"
           }
-          subtitle="From completed redemptions"
+          subtitle={t("dashboard.fromCompleted")}
           icon={<IconBag />}
           loading={statsLoading}
         />
         <StatCard
-          title="Market Balance"
+          title={t("dashboard.marketBalance")}
           value={
             balance
               ? formatMajorCurrency(balance.money, balance.currency)
-              : balanceLoading ? "–" : "N/A"
+              : balanceLoading ? "–" : t("common.na")
           }
           subtitle={
             balance
-              ? `Settlement: ${formatMajorCurrency(balance.money_settlement, balance.currency)}${(() => {
+              ? `${t("dashboard.settlement")}: ${formatMajorCurrency(balance.money_settlement, balance.currency)}${(() => {
                   try {
-                    return ` · Updated ${format(new Date(balance.updated_at), "HH:mm")}`;
+                    return ` · ${t("dashboard.updated")} ${format(new Date(balance.updated_at), "HH:mm")}`;
                   } catch {
                     return "";
                   }
                 })()}`
-              : "Market API key not configured"
+              : t("dashboard.marketKeyNotConfigured")
           }
           icon={<IconWallet />}
           loading={balanceLoading}
@@ -274,7 +277,7 @@ export default function DashboardPage() {
       <ChatDashboardWidget
         channelId={selectedBroadcasterId}
         showTopChatters={true}
-        title="Chat Activity & Analytics"
+        title={t("dashboard.chatAnalytics")}
       />
     </div>
   );

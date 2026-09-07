@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { authApi, usersApi } from "@/lib/apiClient";
 import type { AxiosError } from "axios";
 
@@ -27,6 +28,8 @@ const Step = ({ num, text }: { num: number; text: React.ReactNode }) => (
 );
 
 export default function InitBotPage() {
+  const { t } = useTranslation();
+
   // Check if the bot is already initialized
   const { data, error, isLoading } = useQuery({
     queryKey: ["me"],
@@ -80,23 +83,22 @@ export default function InitBotPage() {
         <div className="w-16 h-16 rounded-2xl bg-yellow-500/15 border border-yellow-500/30 flex items-center justify-center text-yellow-400">
           <IconAlertTriangle />
         </div>
-        <h1 className="text-2xl font-bold text-foreground">Bot not initialized</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t("auth.botNotInitialized")}</h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          The necko7 bot account hasn't been authorized yet. Nothing will work until it's set up.
+          {t("auth.botNotInitDesc")}
         </p>
       </div>
 
       {/* Setup instructions */}
       <div className="rounded-xl border border-border bg-background/40 p-5 space-y-4">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <span className="text-primary">📋</span> Before you begin
+          <span className="text-primary">📋</span> {t("auth.beforeBegin")}
         </h2>
         <div className="space-y-3">
           <Step
             num={1}
             text={
               <>
-                Go to{" "}
                 <a
                   href="https://dev.twitch.tv/console"
                   target="_blank"
@@ -105,7 +107,7 @@ export default function InitBotPage() {
                 >
                   dev.twitch.tv/console
                 </a>{" "}
-                and create a new application.
+                – {t("auth.step1")}
               </>
             }
           />
@@ -113,7 +115,7 @@ export default function InitBotPage() {
             num={2}
             text={
               <>
-                In the OAuth Redirect URLs field, add:{" "}
+                {t("auth.step2")}:{" "}
                 <code className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs font-mono">
                   https://your-backend.domain/api/v1/auth/callback
                 </code>
@@ -124,19 +126,19 @@ export default function InitBotPage() {
             num={3}
             text={
               <>
-                Copy your <strong className="text-foreground">Client ID</strong> and{" "}
-                <strong className="text-foreground">Client Secret</strong>, then fill them into the{" "}
-                <code className="px-1 py-0.5 rounded bg-white/10 text-xs font-mono">.env</code> file on the backend server.
+                {t("auth.step3")} (
+                <code className="px-1 py-0.5 rounded bg-white/10 text-xs font-mono">.env</code>
+                ).
               </>
             }
           />
           <Step
             num={4}
-            text="Restart the backend server to apply the new environment variables."
+            text={t("auth.step4")}
           />
           <Step
             num={5}
-            text="Click the button below while logged into the Twitch bot account to authorize it."
+            text={t("auth.step5")}
           />
         </div>
       </div>
@@ -148,11 +150,11 @@ export default function InitBotPage() {
           bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 active:translate-y-0"
       >
         <IconBot />
-        Authorize Bot Account on Twitch
+        {t("auth.authBotBtn")}
       </a>
 
       <p className="text-center text-xs text-muted-foreground/60">
-        This endpoint is only accessible once — before the bot is initialized.
+        {t("auth.onlyOnceNote")}
       </p>
       </div>
     </div>

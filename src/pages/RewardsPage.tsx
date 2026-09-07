@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import { rewardsApi } from "@/lib/apiClient";
 import type {
@@ -147,6 +148,7 @@ function SkinImage({
   className?: string;
   style?: React.CSSProperties;
 }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const url = getSkinImageUrl(marketItemName, size);
 
@@ -164,7 +166,7 @@ function SkinImage({
       {status === "error" && (
         <div className="flex flex-col items-center gap-1.5 text-muted-foreground/40">
           <IconImage />
-          <span className="text-[10px]">No preview</span>
+          <span className="text-[10px]">{t("rewards.card.noPreview", "No preview")}</span>
         </div>
       )}
       <img
@@ -196,6 +198,7 @@ function SkinIconDownloader({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -249,10 +252,10 @@ function SkinIconDownloader({
       setIsLoading(false);
     };
     img.onerror = () => {
-      setError("Failed to load skin image. The item name may not match the market exactly.");
+      setError(t("rewards.downloader.error", "Failed to load skin image. The item name may not match the market exactly."));
       setIsLoading(false);
     };
-  }, [open, marketItemName, buildCroppedCanvas]);
+  }, [open, marketItemName, buildCroppedCanvas, t]);
 
   const download = (targetSize: number) => {
     const dst = buildCroppedCanvas(targetSize);
@@ -270,9 +273,9 @@ function SkinIconDownloader({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-sm sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-base">Download Twitch Panel Icon</DialogTitle>
+          <DialogTitle className="text-base">{t("rewards.downloader.title", "Download Twitch Panel Icon")}</DialogTitle>
           <DialogDescription className="text-xs leading-relaxed">
-            Center-cropped to a perfect square. Download in the sizes accepted by Twitch reward panels.
+            {t("rewards.downloader.description", "Center-cropped to a perfect square. Download in the sizes accepted by Twitch reward panels.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -285,7 +288,7 @@ function SkinIconDownloader({
           >
             {isLoading && (
               <div className="absolute inset-0 animate-pulse bg-muted/60 flex items-center justify-center">
-                <span className="text-[10px] text-muted-foreground">Loading…</span>
+                <span className="text-[10px] text-muted-foreground">{t("rewards.downloader.loading", "Loading…")}</span>
               </div>
             )}
             {previewUrl && (
@@ -330,7 +333,7 @@ function SkinIconDownloader({
           </div>
 
           <p className="text-[10px] text-muted-foreground/60 text-center">
-            Images are cropped client-side in your browser. Nothing is uploaded.
+            {t("rewards.downloader.note", "Images are cropped client-side in your browser. Nothing is uploaded.")}
           </p>
         </div>
       </DialogContent>
@@ -370,6 +373,7 @@ function RewardCard({
   onRangeSelect: (id: string) => void;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const formattedPrice = formatMinorCurrency(reward.current_market_price, reward.currency);
   const type = reward.reward_type ?? "FIXED";
   const isManual = reward.pricing_mode === "MANUAL";
@@ -427,7 +431,7 @@ function RewardCard({
           />
           <div className="absolute top-2 left-2 rounded-lg bg-black/60 backdrop-blur-sm px-2 py-1 flex items-center gap-1.5 text-[10px] text-white/90 font-medium">
             <IconPool />
-            Pool · {reward.pool_items?.length ?? 0} skins
+            {t("rewards.card.poolSkins", { count: reward.pool_items?.length ?? 0 })}
           </div>
         </div>
       ) : type === "FILTER" ? (
@@ -496,38 +500,38 @@ function RewardCard({
               )}
               title={
                 reward.pause_reason === "NO_MONEY"
-                  ? "Paused automatically: insufficient balance on Market"
+                  ? t("rewards.card.pausedNoMoneyTip", "Paused automatically: insufficient balance on Market")
                   : reward.pause_reason === "PRICE_LIMIT"
-                  ? "Paused automatically: market price exceeded configured limits"
-                  : "Paused manually"
+                  ? t("rewards.card.pausedPriceLimitTip", "Paused automatically: market price exceeded configured limits")
+                  : t("rewards.card.pausedManual", "Paused manually")
               }
             >
               <IconPause />
               {reward.pause_reason === "NO_MONEY"
-                ? "Paused (No balance)"
+                ? t("rewards.card.pausedNoMoney", "Paused (No balance)")
                 : reward.pause_reason === "PRICE_LIMIT"
-                ? "Paused (Price limit)"
-                : "Paused"}
+                ? t("rewards.card.pausedPriceLimit", "Paused (Price limit)")
+                : t("rewards.card.pausedGeneral", "Paused")}
             </Badge>
           )}
           {reward.market_autobuy && (
             <Badge variant="outline" className="status-completed text-xs">
-              Auto-buy
+              {t("rewards.card.autobuy", "Auto-buy")}
             </Badge>
           )}
           {reward.is_deleted && (
             <Badge variant="outline" className="text-xs text-muted-foreground">
-              Deleted
+              {t("rewards.card.deleted", "Deleted")}
             </Badge>
           )}
           {isManual && (
             <Badge variant="outline" className="text-xs border-blue-500/30 text-blue-400 bg-blue-500/10">
-              Manual price
+              {t("rewards.card.manualPrice", "Manual price")}
             </Badge>
           )}
           {reward.is_public === false && (
-            <Badge variant="outline" className="text-xs border-border text-muted-foreground/80 bg-muted/40" title="Hidden from public rewards showcase">
-              Private
+            <Badge variant="outline" className="text-xs border-border text-muted-foreground/80 bg-muted/40" title={t("rewards.card.privateTip", "Hidden from public rewards showcase")}>
+              {t("rewards.card.private", "Private")}
             </Badge>
           )}
           {((reward.chat_min_messages ?? 0) > 0 || (reward.chat_min_characters ?? 0) > 0) && (
@@ -547,7 +551,7 @@ function RewardCard({
                 ...(reward.purchase_limits?.global ?? []).map((g) => `Global: max ${g.max_redemptions}${g.window_hours ? ` / ${g.window_hours}h` : " all-time"}`),
               ].join("; ")}
             >
-              Limits: {((reward.purchase_limits?.user?.length ?? 0) + (reward.purchase_limits?.global?.length ?? 0))} rule{((reward.purchase_limits?.user?.length ?? 0) + (reward.purchase_limits?.global?.length ?? 0)) !== 1 ? "s" : ""}
+              {t("rewards.card.limitsRules", { count: ((reward.purchase_limits?.user?.length ?? 0) + (reward.purchase_limits?.global?.length ?? 0)) })}
             </Badge>
           )}
         </div>
@@ -573,7 +577,7 @@ function RewardCard({
             </a>
           ) : type === "POOL" ? (
             <span className="text-xs text-muted-foreground">
-              {reward.pool_items?.length ?? 0} item{(reward.pool_items?.length ?? 0) !== 1 ? "s" : ""} in pool
+              {t("rewards.card.itemsInPool", { count: reward.pool_items?.length ?? 0 })}
             </span>
           ) : type === "FILTER" && reward.filter_config ? (
             <span className="text-xs text-muted-foreground">
@@ -581,7 +585,7 @@ function RewardCard({
                 ? `"${reward.filter_config.name_contains}"`
                 : reward.filter_config.name_prefix
                 ? `${reward.filter_config.name_prefix}…`
-                : "Dynamic filter"}
+                : t("rewards.card.dynamicFilter", "Dynamic filter")}
             </span>
           ) : null}
         </div>
@@ -589,13 +593,13 @@ function RewardCard({
         {/* Price info */}
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
-            <p className="text-xs text-muted-foreground">Market price</p>
+            <p className="text-xs text-muted-foreground">{t("rewards.card.marketPrice", "Market price")}</p>
             <p className="text-sm font-bold tabular-nums text-foreground">{formattedPrice}</p>
           </div>
           <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
             {isManual ? (
               <>
-                <p className="text-xs text-muted-foreground">Twitch Points</p>
+                <p className="text-xs text-muted-foreground">{t("rewards.card.twitchPoints", "Twitch Points")}</p>
                 <p className="text-sm font-bold tabular-nums text-foreground">
                   {reward.manual_twitch_points != null
                     ? reward.manual_twitch_points.toLocaleString()
@@ -604,7 +608,7 @@ function RewardCard({
               </>
             ) : (
               <>
-                <p className="text-xs text-muted-foreground">Markup</p>
+                <p className="text-xs text-muted-foreground">{t("rewards.card.markup", "Markup")}</p>
                 <p className="text-sm font-bold tabular-nums text-primary">
                   +{reward.twitch_price_markup_percentage}%
                   {reward.price_strategy && (
@@ -620,16 +624,19 @@ function RewardCard({
 
         {/* Footer meta */}
         <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-muted-foreground">
-          <span>CD: {reward.global_cooldown_seconds}s</span>
+          <span>{t("rewards.card.cd", { seconds: reward.global_cooldown_seconds })}</span>
           <span>·</span>
-          <span>Max/stream: {reward.max_redemptions_per_stream}</span>
+          <span>{t("rewards.card.maxStream", { count: reward.max_redemptions_per_stream })}</span>
           <span>·</span>
-          <span>Max/user/stream: {reward.max_redemptions_per_user_per_stream}</span>
+          <span>{t("rewards.card.maxUserStream", { count: reward.max_redemptions_per_user_per_stream })}</span>
           {(reward.min_market_price != null || reward.max_market_price != null) && (
             <>
               <span>·</span>
               <span className="text-amber-400/90" title="Market Price Safety Limits">
-                Limits: {reward.min_market_price != null ? formatMinorCurrency(reward.min_market_price, reward.currency) : "0"} – {reward.max_market_price != null ? formatMinorCurrency(reward.max_market_price, reward.currency) : "∞"}
+                {t("rewards.card.priceLimits", {
+                  min: reward.min_market_price != null ? formatMinorCurrency(reward.min_market_price, reward.currency) : "0",
+                  max: reward.max_market_price != null ? formatMinorCurrency(reward.max_market_price, reward.currency) : "∞",
+                })}
               </span>
             </>
           )}
@@ -647,6 +654,7 @@ function PoolItemsEditor({
   items: PoolItemConfig[];
   onChange: (items: PoolItemConfig[]) => void;
 }) {
+  const { t } = useTranslation();
   const chances = calcPoolChances(items);
 
   const update = (idx: number, patch: Partial<PoolItemConfig>) => {
@@ -685,7 +693,7 @@ function PoolItemsEditor({
               type="button"
               onClick={() => remove(idx)}
               className="shrink-0 text-muted-foreground/60 hover:text-destructive transition-colors"
-              title="Remove"
+              title={t("rewards.pool.removeSkin", "Remove")}
             >
               <IconClose />
             </button>
@@ -717,7 +725,7 @@ function PoolItemsEditor({
           {/* Weight + deviation */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Weight</Label>
+              <Label className="text-xs text-muted-foreground">{t("rewards.pool.weight", "Weight")}</Label>
               <Input
                 type="number"
                 min={0.01}
@@ -728,7 +736,7 @@ function PoolItemsEditor({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Max deviation %</Label>
+              <Label className="text-xs text-muted-foreground">{t("rewards.pool.maxDeviation", "Max deviation %")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -747,7 +755,7 @@ function PoolItemsEditor({
         onClick={add}
         className="w-full rounded-xl border border-dashed border-border py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
       >
-        <IconPlus /> Add skin to pool
+        <IconPlus /> {t("rewards.pool.addSkin", "Add skin to pool")}
       </button>
     </div>
   );
@@ -765,6 +773,7 @@ function FilterPreviewBlock({
   priceStrategy: PriceStrategy | null;
   markupPct: number;
 }) {
+  const { t } = useTranslation();
   const [preview, setPreview] = useState<PreviewFilterResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -806,14 +815,14 @@ function FilterPreviewBlock({
   return (
     <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-foreground">Filter Preview</p>
+        <p className="text-sm font-medium text-foreground">{t("rewards.filterPreview.title", "Filter Preview")}</p>
         <button
           type="button"
           onClick={run}
           disabled={isLoading}
           className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors disabled:opacity-50"
         >
-          <IconRefresh /> Refresh
+          <IconRefresh /> {t("rewards.filterPreview.refresh", "Refresh")}
         </button>
       </div>
 
@@ -837,7 +846,7 @@ function FilterPreviewBlock({
             <span className="text-2xl font-bold tabular-nums text-foreground">
               {preview.total_matching_items}
             </span>
-            <span className="text-sm text-muted-foreground">matching skins</span>
+            <span className="text-sm text-muted-foreground">{t("rewards.filterPreview.matchingSkins", "matching skins")}</span>
             {preview.estimated_twitch_points > 0 && (
               <Badge variant="outline" className="ml-auto text-xs status-completed">
                 ~{preview.estimated_twitch_points.toLocaleString()} pts
@@ -848,10 +857,10 @@ function FilterPreviewBlock({
           {/* Price stats */}
           <div className="grid grid-cols-4 gap-2 text-xs">
             {[
-              { label: "Min", val: preview.min_price },
-              { label: "Avg", val: preview.average_price },
-              { label: "Median", val: preview.median_price },
-              { label: "Max", val: preview.max_price },
+              { label: t("rewards.filterPreview.min", "Min"), val: preview.min_price },
+              { label: t("rewards.filterPreview.avg", "Avg"), val: preview.average_price },
+              { label: t("rewards.filterPreview.median", "Median"), val: preview.median_price },
+              { label: t("rewards.filterPreview.max", "Max"), val: preview.max_price },
             ].map(({ label, val }) => (
               <div key={label} className="rounded-lg bg-background/60 border border-border px-2 py-2 text-center">
                 <p className="text-muted-foreground mb-0.5">{label}</p>
@@ -863,7 +872,7 @@ function FilterPreviewBlock({
           {/* Calculated price */}
           {preview.calculated_market_price > 0 && (
             <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Calculated market price</span>
+              <span className="text-muted-foreground">{t("rewards.filterPreview.calculatedPrice", "Calculated market price")}</span>
               <span className="font-bold text-primary tabular-nums">
                 {fmt(preview.calculated_market_price, preview.currency)}
               </span>
@@ -875,10 +884,10 @@ function FilterPreviewBlock({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground font-medium">
-                  Sample skins ({preview.sample_items.length})
+                  {t("rewards.filterPreview.sampleSkins", { count: preview.sample_items.length })}
                 </p>
                 <span className="text-[10px] text-muted-foreground/60">
-                  Click to view on Market
+                  {t("rewards.filterPreview.clickToView", "Click to view on Market")}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2 max-h-80 overflow-y-auto p-0.5">
@@ -916,7 +925,7 @@ function FilterPreviewBlock({
                             className="text-[10px] text-muted-foreground/70"
                             title={`Volume: ${item.volume}`}
                           >
-                            {item.volume} pcs.
+                            {item.volume} {t("rewards.filterPreview.pcs", "pcs.")}
                           </span>
                         )}
                       </div>
@@ -931,7 +940,7 @@ function FilterPreviewBlock({
 
       {!preview && !isLoading && !error && (
         <p className="text-xs text-muted-foreground/60 text-center py-2">
-          Set min/max price to preview matching skins
+          {t("rewards.filterPreview.setPriceTip", "Set min/max price to preview matching skins")}
         </p>
       )}
     </div>
@@ -946,11 +955,12 @@ function PoolItemsDetail({
   items: PoolItemConfig[];
   currency: string;
 }) {
+  const { t } = useTranslation();
   const chances = calcPoolChances(items);
 
   return (
     <div className="space-y-2 min-w-0">
-      <p className="text-sm font-medium text-foreground mb-3">Pool Items ({items.length})</p>
+      <p className="text-sm font-medium text-foreground mb-3">{t("rewards.pool.itemsCount", { count: items.length })}</p>
       <div className="grid gap-2 min-w-0">
         {items.map((item, idx) => {
           const price = item.current_market_price;
@@ -995,7 +1005,7 @@ function PoolItemsDetail({
               </div>
               <div className="text-right shrink-0">
                 <p className="text-sm font-bold tabular-nums text-primary">{chances[idx].toFixed(1)}%</p>
-                <p className="text-[10px] text-muted-foreground">weight {item.weight}</p>
+                <p className="text-[10px] text-muted-foreground">{t("rewards.pool.weight", "weight")} {item.weight}</p>
               </div>
             </div>
           );
@@ -1013,46 +1023,51 @@ function StepTypeAndSkins({
   form: Partial<CreateRewardBody>;
   onChange: (patch: Partial<CreateRewardBody>) => void;
 }) {
+  const { t } = useTranslation();
   const type = form.reward_type ?? "FIXED";
 
   return (
     <div className="space-y-5">
       {/* Type selector */}
       <div className="space-y-2">
-        <Label>Reward Type</Label>
+        <Label>{t("rewards.steps.typeTitle", "Reward Type")}</Label>
         <div className="grid grid-cols-3 gap-3">
-          {(["FIXED", "POOL", "FILTER"] as RewardType[]).map((t) => (
+          {(["FIXED", "POOL", "FILTER"] as RewardType[]).map((tType) => (
             <button
-              key={t}
+              key={tType}
               type="button"
-              onClick={() => onChange({ reward_type: t })}
+              onClick={() => onChange({ reward_type: tType })}
               className={cn(
                 "flex flex-col items-center gap-2 rounded-xl border-2 py-4 px-3 transition-all text-sm font-medium",
-                type === t
+                type === tType
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-foreground"
               )}
             >
-              {t === "FIXED" ? <IconImage /> : t === "POOL" ? <IconPool /> : <IconFilter />}
+              {tType === "FIXED" ? <IconImage /> : tType === "POOL" ? <IconPool /> : <IconFilter />}
               <span className="text-xs">
-                {t === "FIXED" ? "Fixed Skin" : t === "POOL" ? "Skin Pool" : "Filter"}
+                {tType === "FIXED"
+                  ? t("rewards.pool.fixedSkin", "Fixed Skin")
+                  : tType === "POOL"
+                  ? t("rewards.pool.skinPool", "Skin Pool")
+                  : t("rewards.pool.filter", "Filter")}
               </span>
             </button>
           ))}
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
           {type === "FIXED"
-            ? "One specific skin. A fixed market item will be purchased when redeemed."
+            ? t("rewards.steps.fixedDesc", "One specific skin. A fixed market item will be purchased when redeemed.")
             : type === "POOL"
-            ? "A weighted pool of skins. A random skin is picked from the pool on each redemption."
-            : "A dynamic filter matching skins by price range and name. Any matching skin can be purchased."}
+            ? t("rewards.steps.poolDesc", "A weighted pool of skins. A random skin is picked from the pool on each redemption.")
+            : t("rewards.steps.filterDesc", "A dynamic filter matching skins by price range and name. Any matching skin can be purchased.")}
         </p>
       </div>
 
       {/* FIXED: item name */}
       {type === "FIXED" && (
         <div className="space-y-2">
-          <Label htmlFor="market_item_name">Market Item Name</Label>
+          <Label htmlFor="market_item_name">{t("rewards.steps.marketItemName", "Market Item Name")}</Label>
           <Input
             id="market_item_name"
             placeholder="AWP | Asiimov (Field-Tested)"
@@ -1074,7 +1089,7 @@ function StepTypeAndSkins({
       {/* POOL: items editor */}
       {type === "POOL" && (
         <div className="space-y-2">
-          <Label>Pool Items</Label>
+          <Label>{t("rewards.steps.poolItems", "Pool Items")}</Label>
           <PoolItemsEditor
             items={form.pool_items ?? []}
             onChange={(items) => onChange({ pool_items: items })}
@@ -1087,7 +1102,7 @@ function StepTypeAndSkins({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="filter_min">Min Price (in currency units)</Label>
+              <Label htmlFor="filter_min">{t("rewards.steps.minPriceCurrency", "Min Price (in currency units)")}</Label>
               <Input
                 id="filter_min"
                 type="number"
@@ -1106,7 +1121,7 @@ function StepTypeAndSkins({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="filter_max">Max Price (in currency units)</Label>
+              <Label htmlFor="filter_max">{t("rewards.steps.maxPriceCurrency", "Max Price (in currency units)")}</Label>
               <Input
                 id="filter_max"
                 type="number"
@@ -1126,7 +1141,7 @@ function StepTypeAndSkins({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="filter_contains">Name Contains (optional)</Label>
+            <Label htmlFor="filter_contains">{t("rewards.steps.nameContains", "Name Contains (optional)")}</Label>
             <Input
               id="filter_contains"
               placeholder="Asiimov"
@@ -1143,7 +1158,7 @@ function StepTypeAndSkins({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="filter_prefix">Name Prefix (optional)</Label>
+              <Label htmlFor="filter_prefix">{t("rewards.steps.namePrefix", "Name Prefix (optional)")}</Label>
               <Input
                 id="filter_prefix"
                 placeholder="AWP |"
@@ -1159,7 +1174,7 @@ function StepTypeAndSkins({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="filter_volume">Min Volume (optional)</Label>
+              <Label htmlFor="filter_volume">{t("rewards.steps.minVolume", "Min Volume (optional)")}</Label>
               <Input
                 id="filter_volume"
                 type="number"
@@ -1193,6 +1208,7 @@ function StepPricing({
   channelId: string;
   onChange: (patch: Partial<CreateRewardBody>) => void;
 }) {
+  const { t } = useTranslation();
   const mode = form.pricing_mode ?? "AUTO";
   const type = form.reward_type ?? "FIXED";
   const showStrategy = mode === "AUTO" && (type === "POOL" || type === "FILTER");
@@ -1201,7 +1217,7 @@ function StepPricing({
     <div className="space-y-5">
       {/* Mode selector */}
       <div className="space-y-2">
-        <Label>Pricing Mode</Label>
+        <Label>{t("rewards.pricing.pricingMode", "Pricing Mode")}</Label>
         <div className="grid grid-cols-2 gap-3">
           {(["AUTO", "MANUAL"] as PricingMode[]).map((m) => (
             <button
@@ -1216,14 +1232,18 @@ function StepPricing({
               )}
             >
               <span className="text-lg">{m === "AUTO" ? "📈" : "🔒"}</span>
-              <span className="text-xs">{m === "AUTO" ? "Auto (Market)" : "Manual (Fixed)"}</span>
+              <span className="text-xs">
+                {m === "AUTO"
+                  ? t("rewards.pricing.modeAuto", "Auto (Market)")
+                  : t("rewards.pricing.modeManual", "Manual (Fixed)")}
+              </span>
             </button>
           ))}
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
           {mode === "AUTO"
-            ? "Twitch Channel Points cost is calculated automatically based on current market price + markup."
-            : "Twitch Channel Points cost is fixed and won't change with market fluctuations."}
+            ? t("rewards.pricing.modeAutoDesc", "Twitch Channel Points cost is calculated automatically based on current market price + markup.")
+            : t("rewards.pricing.modeManualDesc", "Twitch Channel Points cost is fixed and won't change with market fluctuations.")}
         </p>
       </div>
 
@@ -1232,7 +1252,7 @@ function StepPricing({
           {/* Price strategy for POOL/FILTER */}
           {showStrategy && (
             <div className="space-y-2">
-              <Label>Price Strategy</Label>
+              <Label>{t("rewards.pricing.priceStrategy", "Price Strategy")}</Label>
               <div className="grid grid-cols-3 gap-2">
                 {(["AVERAGE", "MEDIAN", "MAX"] as PriceStrategy[]).map((s) => (
                   <button
@@ -1246,19 +1266,23 @@ function StepPricing({
                         : "border-border hover:border-primary/40 text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    {s === "AVERAGE" ? "Average" : s === "MEDIAN" ? "Median" : "Maximum"}
+                    {s === "AVERAGE"
+                      ? t("rewards.pricing.strategyAvg", "Average")
+                      : s === "MEDIAN"
+                      ? t("rewards.pricing.strategyMed", "Median")
+                      : t("rewards.pricing.strategyMax", "Maximum")}
                   </button>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                Strategy used to aggregate prices across pool items or filter results.
+                {t("rewards.pricing.strategyDesc", "Strategy used to aggregate prices across pool items or filter results.")}
               </p>
             </div>
           )}
 
           {/* Markup % */}
           <div className="space-y-2">
-            <Label htmlFor="markup_pct">Twitch Price Markup %</Label>
+            <Label htmlFor="markup_pct">{t("rewards.pricing.markupPercent", "Twitch Price Markup %")}</Label>
             <Input
               id="markup_pct"
               type="number"
@@ -1268,14 +1292,14 @@ function StepPricing({
               onChange={(e) => onChange({ twitch_price_markup_percentage: parseInt(e.target.value) || 0 })}
             />
             <p className="text-xs text-muted-foreground">
-              Percentage added on top of the market price to calculate Twitch Points cost.
+              {t("rewards.pricing.markupDesc", "Percentage added on top of the market price to calculate Twitch Points cost.")}
             </p>
           </div>
 
           {/* Deviation (only for FIXED) */}
           {type === "FIXED" && (
             <div className="space-y-2">
-              <Label htmlFor="deviation">Max Price Deviation %</Label>
+              <Label htmlFor="deviation">{t("rewards.pricing.deviationPercent", "Max Price Deviation %")}</Label>
               <Input
                 id="deviation"
                 type="number"
@@ -1285,7 +1309,7 @@ function StepPricing({
                 onChange={(e) => onChange({ permissible_market_price_deviation: parseInt(e.target.value) || 0 })}
               />
               <p className="text-xs text-muted-foreground">
-                Max allowed deviation from the stored market price before the purchase is rejected.
+                {t("rewards.pricing.deviationFixedDesc", "Max allowed deviation from the stored market price before the purchase is rejected.")}
               </p>
             </div>
           )}
@@ -1304,7 +1328,7 @@ function StepPricing({
 
       {mode === "MANUAL" && (
         <div className="space-y-2">
-          <Label htmlFor="manual_points">Fixed Twitch Channel Points</Label>
+          <Label htmlFor="manual_points">{t("rewards.pricing.fixedTwitchPoints", "Fixed Twitch Channel Points")}</Label>
           <Input
             id="manual_points"
             type="number"
@@ -1314,7 +1338,7 @@ function StepPricing({
             onChange={(e) => onChange({ manual_twitch_points: parseInt(e.target.value) || null })}
           />
           <p className="text-xs text-muted-foreground">
-            Channel Points cost viewers pay to redeem. This is fixed and won't follow market prices.
+            {t("rewards.pricing.fixedTwitchPointsDesc", "Channel Points cost viewers pay to redeem. This is fixed and won't follow market prices.")}
           </p>
           {/* For FILTER in MANUAL mode, still show preview without points estimate */}
           {type === "FILTER" && form.filter_config && (
@@ -1332,22 +1356,21 @@ function StepPricing({
       <div className="space-y-3 rounded-xl border border-border bg-card/60 p-4">
         <div className="space-y-1">
           <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
-            <span>🛡️</span> Market Price Safety Limits (Auto-pause)
+            <span>🛡️</span> {t("rewards.pricing.safetyLimits", "Market Price Safety Limits (Auto-pause)")}
           </Label>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Automatically pause this reward if market price drops below or rises above these limits.
-            Protects your Market balance against sudden price surges.
+            {t("rewards.pricing.safetyLimitsDesc", "Automatically pause this reward if market price drops below or rises above these limits. Protects your Market balance against sudden price surges.")}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="min_market_price" className="text-xs">Min Market Price</Label>
+            <Label htmlFor="min_market_price" className="text-xs">{t("rewards.pricing.minMarketPrice", "Min Market Price")}</Label>
             <Input
               id="min_market_price"
               type="number"
               min={0}
               step={0.01}
-              placeholder="No minimum"
+              placeholder={t("rewards.pricing.noMinimum", "No minimum")}
               value={
                 form.min_market_price != null
                   ? minorToMajor(form.min_market_price)
@@ -1363,16 +1386,16 @@ function StepPricing({
                 }
               }}
             />
-            <p className="text-[11px] text-muted-foreground">Auto-pauses if price drops below</p>
+            <p className="text-[11px] text-muted-foreground">{t("rewards.pricing.autoPausesIfDrops", "Auto-pauses if price drops below")}</p>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="max_market_price" className="text-xs">Max Market Price</Label>
+            <Label htmlFor="max_market_price" className="text-xs">{t("rewards.pricing.maxMarketPrice", "Max Market Price")}</Label>
             <Input
               id="max_market_price"
               type="number"
               min={0}
               step={0.01}
-              placeholder="No maximum"
+              placeholder={t("rewards.pricing.noMaximum", "No maximum")}
               value={
                 form.max_market_price != null
                   ? minorToMajor(form.max_market_price)
@@ -1388,7 +1411,7 @@ function StepPricing({
                 }
               }}
             />
-            <p className="text-[11px] text-muted-foreground">Auto-pauses if price rises above</p>
+            <p className="text-[11px] text-muted-foreground">{t("rewards.pricing.autoPausesIfRises", "Auto-pauses if price rises above")}</p>
           </div>
         </div>
       </div>
@@ -1406,10 +1429,11 @@ function StepTwitchSettings({
   onChange: (patch: Partial<CreateRewardBody>) => void;
   isEdit: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="twitch_title">Twitch Reward Title</Label>
+        <Label htmlFor="twitch_title">{t("rewards.twitchSettings.titleLabel", "Twitch Reward Title")}</Label>
         <Input
           id="twitch_title"
           placeholder="Get AWP Asiimov"
@@ -1419,7 +1443,7 @@ function StepTwitchSettings({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="twitch_description">Description</Label>
+        <Label htmlFor="twitch_description">{t("rewards.twitchSettings.promptLabel", "Description")}</Label>
         <Textarea
           id="twitch_description"
           placeholder="Redeem to get this skin delivered to your Steam account."
@@ -1430,7 +1454,7 @@ function StepTwitchSettings({
       </div>
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="global_cooldown_seconds">Cooldown (s)</Label>
+          <Label htmlFor="global_cooldown_seconds">{t("rewards.twitchSettings.cooldownLabel", "Cooldown (s)")}</Label>
           <Input
             id="global_cooldown_seconds"
             type="number"
@@ -1440,7 +1464,7 @@ function StepTwitchSettings({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="max_per_stream">Max / Stream</Label>
+          <Label htmlFor="max_per_stream">{t("rewards.twitchSettings.maxStreamLabel", "Max / Stream")}</Label>
           <Input
             id="max_per_stream"
             type="number"
@@ -1450,7 +1474,7 @@ function StepTwitchSettings({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="max_per_user">Max / User</Label>
+          <Label htmlFor="max_per_user">{t("rewards.twitchSettings.maxUserLabel", "Max / User")}</Label>
           <Input
             id="max_per_user"
             type="number"
@@ -1468,7 +1492,7 @@ function StepTwitchSettings({
             onChange={(e) => onChange({ market_autobuy: e.target.checked })}
             className="rounded accent-primary"
           />
-          <span className="text-sm">Auto-buy from market</span>
+          <span className="text-sm">{t("rewards.twitchSettings.autobuy", "Auto-buy from market")}</span>
         </label>
         {!isEdit && (
           <label className="flex items-center gap-2 cursor-pointer">
@@ -1478,7 +1502,7 @@ function StepTwitchSettings({
               onChange={(e) => onChange({ is_paused: e.target.checked })}
               className="rounded accent-primary"
             />
-            <span className="text-sm">Create as paused</span>
+            <span className="text-sm">{t("rewards.twitchSettings.createAsPaused", "Create as paused")}</span>
           </label>
         )}
         <label className="flex items-center gap-2 cursor-pointer">
@@ -1488,7 +1512,7 @@ function StepTwitchSettings({
             onChange={(e) => onChange({ is_public: e.target.checked })}
             className="rounded accent-primary"
           />
-          <span className="text-sm">Show in public catalog</span>
+          <span className="text-sm">{t("rewards.twitchSettings.isPublic", "Show in public catalog")}</span>
         </label>
       </div>
     </div>
@@ -1503,6 +1527,7 @@ function StepChatRequirements({
   form: Partial<CreateRewardBody>;
   onChange: (patch: Partial<CreateRewardBody>) => void;
 }) {
+  const { t } = useTranslation();
   const hasRequirements = !!(
     (form.chat_min_messages && form.chat_min_messages > 0) ||
     (form.chat_min_characters && form.chat_min_characters > 0)
@@ -1513,16 +1538,16 @@ function StepChatRequirements({
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-xs flex items-start gap-2.5">
         <span className="text-base leading-none">💬</span>
         <div className="space-y-0.5">
-          <p className="font-semibold text-foreground">Twitch Chat Activity Requirements</p>
+          <p className="font-semibold text-foreground">{t("rewards.chatReq.bannerTitle", "Twitch Chat Activity Requirements")}</p>
           <p className="text-muted-foreground leading-relaxed">
-            Limit redemptions to active stream viewers. Leave message and character counts empty or 0 if you don&apos;t want to enforce any chat requirements for this reward.
+            {t("rewards.chatReq.bannerDesc", "Limit redemptions to active stream viewers. Leave message and character counts empty or 0 if you don't want to enforce any chat requirements for this reward.")}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="chat_min_messages">Minimum Messages</Label>
+          <Label htmlFor="chat_min_messages">{t("rewards.chatReq.minMessages", "Minimum Messages")}</Label>
           <Input
             id="chat_min_messages"
             type="number"
@@ -1536,12 +1561,12 @@ function StepChatRequirements({
             }}
           />
           <p className="text-[11px] text-muted-foreground">
-            Minimum number of chat messages sent by the viewer.
+            {t("rewards.chatReq.minMessagesDesc", "Minimum number of chat messages sent by the viewer.")}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="chat_min_characters">Minimum Characters</Label>
+          <Label htmlFor="chat_min_characters">{t("rewards.chatReq.minCharacters", "Minimum Characters")}</Label>
           <Input
             id="chat_min_characters"
             type="number"
@@ -1555,14 +1580,14 @@ function StepChatRequirements({
             }}
           />
           <p className="text-[11px] text-muted-foreground">
-            Minimum total length of chat messages in characters.
+            {t("rewards.chatReq.minCharactersDesc", "Minimum total length of chat messages in characters.")}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="chat_time_window_hours">Time Window (hours)</Label>
+          <Label htmlFor="chat_time_window_hours">{t("rewards.chatReq.timeWindow", "Time Window (hours)")}</Label>
           <Input
             id="chat_time_window_hours"
             type="number"
@@ -1576,12 +1601,12 @@ function StepChatRequirements({
             }}
           />
           <p className="text-[11px] text-muted-foreground">
-            Count chat activity within the last N hours. Empty = all-time activity.
+            {t("rewards.chatReq.timeWindowDesc", "Count chat activity within the last N hours. Empty = all-time activity.")}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label>Requirement Logic</Label>
+          <Label>{t("rewards.chatReq.logicOperator", "Requirement Logic")}</Label>
           <div className="flex items-center gap-2 pt-0.5">
             <button
               type="button"
@@ -1593,7 +1618,7 @@ function StepChatRequirements({
                   : "border-border bg-card hover:bg-muted/50 text-muted-foreground"
               )}
             >
-              AND (Both)
+              {t("rewards.chatReq.logicBoth", "AND (Both)")}
             </button>
             <button
               type="button"
@@ -1605,13 +1630,13 @@ function StepChatRequirements({
                   : "border-border bg-card hover:bg-muted/50 text-muted-foreground"
               )}
             >
-              OR (Either)
+              {t("rewards.chatReq.logicEither", "OR (Either)")}
             </button>
           </div>
           <p className="text-[11px] text-muted-foreground">
             {(form.chat_logical_operator ?? "AND") === "AND"
-              ? "Viewer must meet BOTH messages and characters requirements."
-              : "Viewer can meet EITHER messages OR characters requirement."}
+              ? t("rewards.chatReq.logicBothDesc", "Viewer must meet BOTH messages and characters requirements.")
+              : t("rewards.chatReq.logicEitherDesc", "Viewer can meet EITHER messages OR characters requirement.")}
           </p>
         </div>
       </div>
@@ -1626,10 +1651,10 @@ function StepChatRequirements({
           />
           <div className="text-xs space-y-0.5">
             <span className="font-medium text-foreground block">
-              Auto-refund Channel Points if requirement fails
+              {t("rewards.chatReq.refundIfFailed", "Auto-refund Channel Points if requirement fails")}
             </span>
             <span className="text-muted-foreground block leading-normal">
-              If enabled, points are immediately returned to the viewer if their chat activity doesn&apos;t meet the requirement.
+              {t("rewards.chatReq.refundIfFailedDesc", "If enabled, points are immediately returned to the viewer if their chat activity doesn't meet the requirement.")}
             </span>
           </div>
         </label>
@@ -1637,13 +1662,15 @@ function StepChatRequirements({
 
       {hasRequirements && (
         <div className="rounded-lg bg-muted/40 border border-border/80 px-3.5 py-2.5 text-xs flex items-center gap-2">
-          <span className="text-primary font-bold">Rule Preview:</span>
+          <span className="text-primary font-bold">{t("rewards.chatReq.rulePreview", "Rule Preview:")}</span>
           <span className="text-foreground">
-            Viewer needs{" "}
-            {(form.chat_min_messages ?? 0) > 0 ? <strong>{form.chat_min_messages} messages</strong> : null}
+            {t("rewards.chatReq.viewerNeeds", "Viewer needs")}{" "}
+            {(form.chat_min_messages ?? 0) > 0 ? <strong>{form.chat_min_messages} {t("chatUser.messages", "messages")}</strong> : null}
             {(form.chat_min_messages ?? 0) > 0 && (form.chat_min_characters ?? 0) > 0 ? ` ${form.chat_logical_operator ?? "AND"} ` : null}
-            {(form.chat_min_characters ?? 0) > 0 ? <strong>{form.chat_min_characters} characters</strong> : null}
-            {(form.chat_time_window_hours ?? 0) > 0 ? ` in the last ${form.chat_time_window_hours} hours` : " of all-time activity"}
+            {(form.chat_min_characters ?? 0) > 0 ? <strong>{form.chat_min_characters} {t("chatUser.characters", "characters")}</strong> : null}
+            {(form.chat_time_window_hours ?? 0) > 0
+              ? ` ${t("rewards.chatReq.inTheLast", { hours: form.chat_time_window_hours })}`
+              : ` ${t("rewards.chatReq.ofAllTime", "of all-time activity")}`}
             .
           </span>
         </div>
@@ -1662,6 +1689,7 @@ function StepPurchaseLimits({
   onChange: (patch: Partial<CreateRewardBody>) => void;
   isEdit?: boolean;
 }) {
+  const { t } = useTranslation();
   const limits: RewardPurchaseLimitsConfig = form.purchase_limits ?? {};
   const userRules: PurchaseLimitRule[] = limits.user ?? [];
   const globalRules: PurchaseLimitRule[] = limits.global ?? [];
@@ -1731,9 +1759,9 @@ function StepPurchaseLimits({
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-xs flex items-start gap-2.5">
         <span className="text-base leading-none">⏳</span>
         <div className="space-y-0.5">
-          <p className="font-semibold text-foreground">Custom Purchase Limits</p>
+          <p className="font-semibold text-foreground">{t("rewards.limitsStep.bannerTitle", "Custom Purchase Limits")}</p>
           <p className="text-muted-foreground leading-relaxed">
-            Restrict how often viewers or the entire channel can redeem this reward within rolling time windows (e.g. 24 hours, 7 days) or across all time.
+            {t("rewards.limitsStep.bannerDesc", "Restrict how often viewers or the entire channel can redeem this reward within rolling time windows (e.g. 24 hours, 7 days) or across all time.")}
           </p>
         </div>
       </div>
@@ -1743,10 +1771,10 @@ function StepPurchaseLimits({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <span>👤</span> Per-User Limits
+              <span>👤</span> {t("rewards.limitsStep.userLimitsTitle", "Per-User Limits")}
             </h4>
             <p className="text-[11px] text-muted-foreground">
-              Maximum redemptions allowed for each individual viewer
+              {t("rewards.limitsStep.perUserDesc", "Maximum redemptions allowed for each individual viewer")}
             </p>
           </div>
           {/* Quick preset buttons */}
@@ -1777,7 +1805,7 @@ function StepPurchaseLimits({
 
         {userRules.length === 0 ? (
           <p className="text-xs text-muted-foreground/80 py-2 italic">
-            No per-user limits configured. Viewers can redeem subject only to Twitch settings.
+            {t("rewards.limitsStep.noUserLimits", "No per-user limits configured. Viewers can redeem subject only to Twitch settings.")}
           </p>
         ) : (
           <div className="space-y-2 pt-1">
@@ -1787,7 +1815,7 @@ function StepPurchaseLimits({
                 className="flex flex-wrap items-center gap-2.5 p-2.5 rounded-lg border border-border/70 bg-muted/20 text-xs"
               >
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-muted-foreground shrink-0 font-medium">Max</span>
+                  <span className="text-muted-foreground shrink-0 font-medium">{t("rewards.limitsStep.maxLabel", "Max")}</span>
                   <Input
                     type="number"
                     min={1}
@@ -1800,12 +1828,12 @@ function StepPurchaseLimits({
                     className="w-18 h-8 text-xs bg-card"
                   />
                   <span className="text-muted-foreground shrink-0">
-                    redemption{rule.max_redemptions > 1 ? "s" : ""}
+                    {rule.max_redemptions > 1 ? t("rewards.limitsStep.redemptionPlural", "redemptions") : t("rewards.limitsStep.redemptionSingle", "redemption")}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-muted-foreground shrink-0 font-medium">Window:</span>
+                  <span className="text-muted-foreground shrink-0 font-medium">{t("rewards.limitsStep.windowLabel", "Window:")}</span>
                   <select
                     value={
                       rule.window_hours == null
@@ -1830,11 +1858,11 @@ function StepPurchaseLimits({
                     }}
                     className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus:outline-none"
                   >
-                    <option value="24">24 hours (1 day)</option>
-                    <option value="168">168 hours (7 days)</option>
-                    <option value="720">720 hours (30 days)</option>
-                    <option value="all-time">All time (forever)</option>
-                    <option value="custom">Custom hours</option>
+                    <option value="24">{t("rewards.limitsStep.opt24h", "24 hours (1 day)")}</option>
+                    <option value="168">{t("rewards.limitsStep.opt168h", "168 hours (7 days)")}</option>
+                    <option value="720">{t("rewards.limitsStep.opt720h", "720 hours (30 days)")}</option>
+                    <option value="all-time">{t("rewards.limitsStep.optAllTime", "All time (forever)")}</option>
+                    <option value="custom">{t("rewards.limitsStep.optCustom", "Custom hours")}</option>
                   </select>
                 </div>
 
@@ -1852,7 +1880,7 @@ function StepPurchaseLimits({
                         }
                         className="w-18 h-8 text-xs bg-card"
                       />
-                      <span className="text-muted-foreground text-[11px]">hours</span>
+                      <span className="text-muted-foreground text-[11px]">{t("rewards.limitsStep.hours", "hours")}</span>
                     </div>
                   )}
 
@@ -1860,7 +1888,7 @@ function StepPurchaseLimits({
                   type="button"
                   onClick={() => removeUserRule(idx)}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto shrink-0"
-                  title="Remove rule"
+                  title={t("rewards.pool.removeSkin", "Remove")}
                 >
                   ✕
                 </button>
@@ -1874,7 +1902,7 @@ function StepPurchaseLimits({
           onClick={() => addUserRule(1, 24)}
           className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1 pt-1"
         >
-          + Add custom user limit rule
+          {t("rewards.limitsStep.addUserRule", "+ Add custom user limit rule")}
         </button>
       </div>
 
@@ -1883,10 +1911,10 @@ function StepPurchaseLimits({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <span>🌐</span> Global Channel Limits
+              <span>🌐</span> {t("rewards.limitsStep.globalLimitsTitle", "Global Channel Limits")}
             </h4>
             <p className="text-[11px] text-muted-foreground">
-              Maximum total redemptions across all viewers on the channel
+              {t("rewards.limitsStep.globalDesc", "Maximum total redemptions across all viewers on the channel")}
             </p>
           </div>
           {/* Quick preset buttons */}
@@ -1917,7 +1945,7 @@ function StepPurchaseLimits({
 
         {globalRules.length === 0 ? (
           <p className="text-xs text-muted-foreground/80 py-2 italic">
-            No global limits configured. Total redemptions are subject only to Twitch stream limits.
+            {t("rewards.limitsStep.noGlobalLimits", "No global limits configured. Total redemptions are subject only to Twitch stream limits.")}
           </p>
         ) : (
           <div className="space-y-2 pt-1">
@@ -1927,7 +1955,7 @@ function StepPurchaseLimits({
                 className="flex flex-wrap items-center gap-2.5 p-2.5 rounded-lg border border-border/70 bg-muted/20 text-xs"
               >
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-muted-foreground shrink-0 font-medium">Max</span>
+                  <span className="text-muted-foreground shrink-0 font-medium">{t("rewards.limitsStep.maxLabel", "Max")}</span>
                   <Input
                     type="number"
                     min={1}
@@ -1940,12 +1968,12 @@ function StepPurchaseLimits({
                     className="w-18 h-8 text-xs bg-card"
                   />
                   <span className="text-muted-foreground shrink-0">
-                    redemption{rule.max_redemptions > 1 ? "s" : ""}
+                    {rule.max_redemptions > 1 ? t("rewards.limitsStep.redemptionPlural", "redemptions") : t("rewards.limitsStep.redemptionSingle", "redemption")}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-muted-foreground shrink-0 font-medium">Window:</span>
+                  <span className="text-muted-foreground shrink-0 font-medium">{t("rewards.limitsStep.windowLabel", "Window:")}</span>
                   <select
                     value={
                       rule.window_hours == null
@@ -1970,11 +1998,11 @@ function StepPurchaseLimits({
                     }}
                     className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus:outline-none"
                   >
-                    <option value="24">24 hours (1 day)</option>
-                    <option value="168">168 hours (7 days)</option>
-                    <option value="720">720 hours (30 days)</option>
-                    <option value="all-time">All time (forever)</option>
-                    <option value="custom">Custom hours</option>
+                    <option value="24">{t("rewards.limitsStep.opt24h", "24 hours (1 day)")}</option>
+                    <option value="168">{t("rewards.limitsStep.opt168h", "168 hours (7 days)")}</option>
+                    <option value="720">{t("rewards.limitsStep.opt720h", "720 hours (30 days)")}</option>
+                    <option value="all-time">{t("rewards.limitsStep.optAllTime", "All time (forever)")}</option>
+                    <option value="custom">{t("rewards.limitsStep.optCustom", "Custom hours")}</option>
                   </select>
                 </div>
 
@@ -1992,7 +2020,7 @@ function StepPurchaseLimits({
                         }
                         className="w-18 h-8 text-xs bg-card"
                       />
-                      <span className="text-muted-foreground text-[11px]">hours</span>
+                      <span className="text-muted-foreground text-[11px]">{t("rewards.limitsStep.hours", "hours")}</span>
                     </div>
                   )}
 
@@ -2000,7 +2028,7 @@ function StepPurchaseLimits({
                   type="button"
                   onClick={() => removeGlobalRule(idx)}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto shrink-0"
-                  title="Remove rule"
+                  title={t("rewards.pool.removeSkin", "Remove")}
                 >
                   ✕
                 </button>
@@ -2014,7 +2042,7 @@ function StepPurchaseLimits({
           onClick={() => addGlobalRule(10, 24)}
           className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1 pt-1"
         >
-          + Add custom global limit rule
+          {t("rewards.limitsStep.addGlobalRule", "+ Add custom global limit rule")}
         </button>
       </div>
     </div>
@@ -2096,7 +2124,32 @@ function RewardWizard({
   loading: boolean;
   isEdit: boolean;
 }) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<StepIndex>(0);
+
+  const stepInfo = [
+    {
+      title: t("rewards.wizard.steps.type.title", "Type & Skin"),
+      subtitle: t("rewards.wizard.steps.type.subtitle", "Select reward type and CS skin item"),
+    },
+    {
+      title: t("rewards.wizard.steps.pricing.title", "Pricing"),
+      subtitle: t("rewards.wizard.steps.pricing.subtitle", "Configure market pricing strategy and markup"),
+    },
+    {
+      title: t("rewards.wizard.steps.twitch.title", "Twitch Settings"),
+      subtitle: t("rewards.wizard.steps.twitch.subtitle", "Title, cooldowns and stream limits"),
+    },
+    {
+      title: t("rewards.wizard.steps.chat.title", "Chat Requirements"),
+      subtitle: t("rewards.wizard.steps.chat.subtitle", "Require viewer chat activity before redemption"),
+    },
+    {
+      title: t("rewards.wizard.steps.limits.title", "Purchase Limits"),
+      subtitle: t("rewards.wizard.steps.limits.subtitle", "Custom rolling window and all-time limits"),
+    },
+  ];
+
   const [form, setForm] = useState<Partial<CreateRewardBody>>({
     reward_type: "FIXED",
     pricing_mode: "AUTO",
@@ -2219,7 +2272,7 @@ function RewardWizard({
                       ? "border-2 border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary cursor-pointer"
                       : "border border-border bg-card/60 text-muted-foreground/40 cursor-not-allowed"
                   )}
-                  title={`Step ${idx + 1}: ${s.title}`}
+                  title={t("rewards.wizard.stepOf", { current: idx + 1, total: STEPS.length })}
                 >
                   {s.icon}
                   {/* Step number badge */}
@@ -2253,14 +2306,14 @@ function RewardWizard({
         <div className="flex items-baseline justify-between pt-0.5 px-0.5">
           <div>
             <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">
-              Step {step + 1} of {STEPS.length}
+              {t("rewards.wizard.stepOf", { current: step + 1, total: STEPS.length })}
             </span>
             <h3 className="text-sm font-bold text-foreground leading-tight">
-              {STEPS[step].title}
+              {stepInfo[step].title}
             </h3>
           </div>
           <p className="text-xs text-muted-foreground hidden sm:block">
-            {STEPS[step].subtitle}
+            {stepInfo[step].subtitle}
           </p>
         </div>
       </div>
@@ -2285,7 +2338,7 @@ function RewardWizard({
           onClick={() => setStep((s) => (s > 0 ? (s - 1) as StepIndex : s))}
           disabled={step === 0}
         >
-          Back
+          {t("rewards.backStep", "Back")}
         </Button>
         <div className="flex items-center gap-2">
           {isEdit ? (
@@ -2298,7 +2351,7 @@ function RewardWizard({
                   onClick={() => setStep((s) => (s < 4 ? (s + 1) as StepIndex : s))}
                   disabled={!canNext()}
                 >
-                  Next →
+                  {t("rewards.nextStep", "Next →")}
                 </Button>
               )}
               <Button
@@ -2307,7 +2360,7 @@ function RewardWizard({
                 onClick={handleSubmit}
                 disabled={loading || !canNext()}
               >
-                {loading ? "Saving…" : "Save Changes"}
+                {loading ? t("rewards.saving", "Saving…") : t("rewards.saveChanges", "Save Changes")}
               </Button>
             </>
           ) : step < 4 ? (
@@ -2317,7 +2370,7 @@ function RewardWizard({
               onClick={() => setStep((s) => (s < 4 ? (s + 1) as StepIndex : s))}
               disabled={!canNext()}
             >
-              Next →
+              {t("rewards.nextStep", "Next →")}
             </Button>
           ) : (
             <Button
@@ -2325,7 +2378,7 @@ function RewardWizard({
               onClick={handleSubmit}
               disabled={loading || !canNext()}
             >
-              {loading ? "Saving…" : "Create Reward"}
+              {loading ? t("rewards.saving", "Saving…") : t("rewards.createReward", "Create Reward")}
             </Button>
           )}
         </div>
@@ -2346,6 +2399,7 @@ function RewardEditDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
 
   const updateMutation = useMutation({
@@ -2401,7 +2455,7 @@ function RewardEditDialog({
                 </Badge>
                 {reward.pricing_mode === "MANUAL" && (
                   <Badge variant="outline" className="text-xs border-blue-500/30 text-blue-400">
-                    Manual price
+                    {t("rewards.card.manualPrice", "Manual price")}
                   </Badge>
                 )}
               </div>
@@ -2419,10 +2473,10 @@ function RewardEditDialog({
                 >
                   <IconPause />
                   {reward.pause_reason === "NO_MONEY"
-                    ? "Paused (No balance)"
+                    ? t("rewards.card.pausedNoMoney", "Paused (No balance)")
                     : reward.pause_reason === "PRICE_LIMIT"
-                    ? "Paused (Price limit)"
-                    : "Paused"}
+                    ? t("rewards.card.pausedPriceLimit", "Paused (Price limit)")
+                    : t("rewards.card.pausedGeneral", "Paused")}
                 </Badge>
               )}
             </div>
@@ -2439,7 +2493,7 @@ function RewardEditDialog({
                   <IconExternalLink className="shrink-0" />
                 </a>
               ) : type === "POOL" ? (
-                <span>{reward.pool_items?.length ?? 0} skins in pool</span>
+                <span>{t("rewards.card.itemsInPool", { count: reward.pool_items?.length ?? 0 })}</span>
               ) : type === "FILTER" && reward.filter_config ? (
                 <span>Filter: {reward.filter_config.min_price.toFixed(2)} – {reward.filter_config.max_price.toFixed(2)} {reward.currency}</span>
               ) : null}
@@ -2464,7 +2518,7 @@ function RewardEditDialog({
               disabled={updatePriceMutation.isPending}
             >
               <IconRefresh />
-              Update Price
+              {t("rewards.updatePrice", "Update Price")}
             </Button>
             <Button
               size="sm"
@@ -2476,19 +2530,19 @@ function RewardEditDialog({
               disabled={updateMutation.isPending}
             >
               {reward.is_paused ? <IconPlay /> : <IconPause />}
-              {reward.is_paused ? "Unpause" : "Pause"}
+              {reward.is_paused ? t("rewards.unpauseReward", "Unpause") : t("rewards.pauseReward", "Pause")}
             </Button>
             <Button
               size="sm"
               variant="destructive"
               className="gap-1.5 text-xs"
               onClick={() => {
-                if (confirm(`Delete "${reward.twitch_title}"?`)) deleteMutation.mutate();
+                if (confirm(t("rewards.deleteConfirmSingle", { title: reward.twitch_title }))) deleteMutation.mutate();
               }}
               disabled={deleteMutation.isPending}
             >
               <IconTrash />
-              Delete
+              {t("rewards.deleteReward", "Delete")}
             </Button>
             {iconDownloadSkin && (
               <Button
@@ -2498,7 +2552,7 @@ function RewardEditDialog({
                 onClick={() => setShowIconDownloader(true)}
               >
                 <IconDownload />
-                Download Icon
+                {t("rewards.downloadIcon", "Download Icon")}
               </Button>
             )}
           </div>
@@ -2507,9 +2561,9 @@ function RewardEditDialog({
 
           <Tabs defaultValue="overview" className="w-full min-w-0">
             <TabsList className="w-full justify-start">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="edit">Edit Reward</TabsTrigger>
-              <TabsTrigger value="redemptions">Recent Redemptions</TabsTrigger>
+              <TabsTrigger value="overview">{t("rewards.tabs.overview", "Overview")}</TabsTrigger>
+              <TabsTrigger value="edit">{t("rewards.tabs.edit", "Edit Reward")}</TabsTrigger>
+              <TabsTrigger value="redemptions">{t("rewards.tabs.redemptions", "Recent Redemptions")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-5 min-w-0">
@@ -2518,34 +2572,34 @@ function RewardEditDialog({
                 <div className="space-y-2 rounded-xl border border-violet-500/30 bg-violet-500/5 p-3.5">
                   <div className="flex items-center gap-2">
                     <span className="text-base">💬</span>
-                    <p className="text-xs font-semibold text-violet-300">Chat Activity Requirements</p>
+                    <p className="text-xs font-semibold text-violet-300">{t("rewards.chatReq.title", "Chat Activity Requirements")}</p>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                     <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
-                      <p className="text-muted-foreground mb-0.5">Min Messages</p>
+                      <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.minMessages", "Min Messages")}</p>
                       <p className="font-medium text-foreground">
-                        {(reward.chat_min_messages ?? 0) > 0 ? reward.chat_min_messages : "None"}
+                        {(reward.chat_min_messages ?? 0) > 0 ? reward.chat_min_messages : t("rewards.chatReq.none", "None")}
                       </p>
                     </div>
                     <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
-                      <p className="text-muted-foreground mb-0.5">Min Characters</p>
+                      <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.minCharacters", "Min Characters")}</p>
                       <p className="font-medium text-foreground">
-                        {(reward.chat_min_characters ?? 0) > 0 ? reward.chat_min_characters : "None"}
+                        {(reward.chat_min_characters ?? 0) > 0 ? reward.chat_min_characters : t("rewards.chatReq.none", "None")}
                       </p>
                     </div>
                     <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
-                      <p className="text-muted-foreground mb-0.5">Logic Operator</p>
+                      <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.logicOperator", "Logic Operator")}</p>
                       <p className="font-medium text-foreground">{reward.chat_logical_operator ?? "AND"}</p>
                     </div>
                     <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
-                      <p className="text-muted-foreground mb-0.5">Time Window</p>
+                      <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.timeWindow", "Time Window")}</p>
                       <p className="font-medium text-foreground">
-                        {(reward.chat_time_window_hours ?? 0) > 0 ? `${reward.chat_time_window_hours}h` : "All time"}
+                        {(reward.chat_time_window_hours ?? 0) > 0 ? `${reward.chat_time_window_hours}h` : t("rewards.chatReq.allTime", "All time")}
                       </p>
                     </div>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Auto-refund points if requirement fails: <strong className="text-foreground">{reward.refund_if_chat_req_failed !== false ? "Yes" : "No"}</strong>
+                    {t("rewards.chatReq.refundIfFailed", "Auto-refund Channel Points if requirement fails")}: <strong className="text-foreground">{reward.refund_if_chat_req_failed !== false ? t("rewards.chatReq.yes", "Yes") : t("rewards.chatReq.no", "No")}</strong>
                   </p>
                 </div>
               )}
@@ -2555,17 +2609,17 @@ function RewardEditDialog({
                 <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5">
                   <div className="flex items-center gap-2">
                     <span className="text-base">⏳</span>
-                    <p className="text-xs font-semibold text-amber-300">Custom Purchase Limits</p>
+                    <p className="text-xs font-semibold text-amber-300">{t("rewards.limitsStep.bannerTitle", "Custom Purchase Limits")}</p>
                   </div>
                   <div className="space-y-2 text-xs">
                     {(reward.purchase_limits?.user?.length ?? 0) > 0 && (
                       <div>
-                        <p className="text-muted-foreground font-medium mb-1">Per-User Limits:</p>
+                        <p className="text-muted-foreground font-medium mb-1">{t("rewards.limitsStep.userLimitsTitle", "Per-User Limits")}:</p>
                         <div className="flex flex-wrap gap-2">
                           {reward.purchase_limits!.user!.map((u, i) => (
                             <span key={i} className="px-2.5 py-1 rounded-lg bg-background/60 border border-border">
-                              Max <strong>{u.max_redemptions}</strong> redemption{u.max_redemptions > 1 ? "s" : ""}
-                              {u.window_hours ? ` every ${u.window_hours}h` : " all-time"}
+                              {t("rewards.limitsStep.maxLabel", "Max")} <strong>{u.max_redemptions}</strong> {u.max_redemptions > 1 ? t("rewards.limitsStep.redemptionPlural", "redemptions") : t("rewards.limitsStep.redemptionSingle", "redemption")}
+                              {u.window_hours ? ` ${t("rewards.limitsStep.everyHoursRule", { hours: u.window_hours })}` : ` ${t("rewards.limitsStep.allTimeRule", "all-time")}`}
                             </span>
                           ))}
                         </div>
@@ -2573,12 +2627,12 @@ function RewardEditDialog({
                     )}
                     {(reward.purchase_limits?.global?.length ?? 0) > 0 && (
                       <div>
-                        <p className="text-muted-foreground font-medium mb-1">Global Channel Limits:</p>
+                        <p className="text-muted-foreground font-medium mb-1">{t("rewards.limitsStep.globalLimitsTitle", "Global Channel Limits")}:</p>
                         <div className="flex flex-wrap gap-2">
                           {reward.purchase_limits!.global!.map((g, i) => (
                             <span key={i} className="px-2.5 py-1 rounded-lg bg-background/60 border border-border">
-                              Max <strong>{g.max_redemptions}</strong> redemption{g.max_redemptions > 1 ? "s" : ""}
-                              {g.window_hours ? ` every ${g.window_hours}h` : " all-time"}
+                              {t("rewards.limitsStep.maxLabel", "Max")} <strong>{g.max_redemptions}</strong> {g.max_redemptions > 1 ? t("rewards.limitsStep.redemptionPlural", "redemptions") : t("rewards.limitsStep.redemptionSingle", "redemption")}
+                              {g.window_hours ? ` ${t("rewards.limitsStep.everyHoursRule", { hours: g.window_hours })}` : ` ${t("rewards.limitsStep.allTimeRule", "all-time")}`}
                             </span>
                           ))}
                         </div>
@@ -2593,9 +2647,9 @@ function RewardEditDialog({
                 <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3.5 text-xs text-orange-200 flex items-start gap-2.5">
                   <span className="text-base leading-none">⚠️</span>
                   <div className="space-y-1">
-                    <p className="font-semibold text-orange-300">Auto-paused by Market Price Limit</p>
+                    <p className="font-semibold text-orange-300">{t("rewards.editDialog.autoPausedByPriceLimit", "Auto-paused by Market Price Limit")}</p>
                     <p className="text-orange-200/90 leading-relaxed">
-                      Current market price is <strong>{formatMinorCurrency(reward.current_market_price, reward.currency)}</strong>, which is outside your configured safety limits
+                      {t("rewards.editDialog.autoPausedByPriceLimitDesc", { current: formatMinorCurrency(reward.current_market_price, reward.currency) })}
                       {reward.min_market_price != null && ` (Min: ${formatMinorCurrency(reward.min_market_price, reward.currency)})`}
                       {reward.max_market_price != null && ` (Max: ${formatMinorCurrency(reward.max_market_price, reward.currency)})`}.
                     </p>
@@ -2611,14 +2665,14 @@ function RewardEditDialog({
               {/* FILTER: filter config summary + live preview */}
               {type === "FILTER" && reward.filter_config ? (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium">Filter Configuration</p>
+                  <p className="text-sm font-medium">{t("rewards.editDialog.filterConfig", "Filter Configuration")}</p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {[
-                      { label: "Min Price", val: `${reward.filter_config.min_price.toFixed(2)} ${reward.currency}` },
-                      { label: "Max Price", val: `${reward.filter_config.max_price.toFixed(2)} ${reward.currency}` },
-                      { label: "Name Contains", val: reward.filter_config.name_contains ?? "–" },
-                      { label: "Name Prefix", val: reward.filter_config.name_prefix ?? "–" },
-                      { label: "Min Volume", val: reward.filter_config.min_volume?.toString() ?? "–" },
+                      { label: t("rewards.steps.minPriceCurrency", "Min Price"), val: `${reward.filter_config.min_price.toFixed(2)} ${reward.currency}` },
+                      { label: t("rewards.steps.maxPriceCurrency", "Max Price"), val: `${reward.filter_config.max_price.toFixed(2)} ${reward.currency}` },
+                      { label: t("rewards.steps.nameContains", "Name Contains"), val: reward.filter_config.name_contains ?? "–" },
+                      { label: t("rewards.steps.namePrefix", "Name Prefix"), val: reward.filter_config.name_prefix ?? "–" },
+                      { label: t("rewards.steps.minVolume", "Min Volume"), val: reward.filter_config.min_volume?.toString() ?? "–" },
                     ].map(({ label, val }) => (
                       <div key={label} className="rounded-lg bg-background/60 border border-border px-3 py-2">
                         <p className="text-muted-foreground mb-0.5">{label}</p>
@@ -2648,10 +2702,10 @@ function RewardEditDialog({
                   <div className="flex-1 space-y-2 text-sm">
                     <p className="font-medium">{reward.market_item_name}</p>
                     <p className="text-muted-foreground text-xs">
-                      Market price: {formatMinorCurrency(reward.current_market_price, reward.currency)}
+                      {t("rewards.card.marketPrice", "Market price")}: {formatMinorCurrency(reward.current_market_price, reward.currency)}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      Max deviation: {reward.permissible_market_price_deviation}%
+                      {t("rewards.pricing.deviationPercent", "Max deviation")}: {reward.permissible_market_price_deviation}%
                     </p>
                     <a
                       href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
@@ -2659,7 +2713,7 @@ function RewardEditDialog({
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                     >
-                      View on Market <IconExternalLink />
+                      {t("rewards.editDialog.viewOnMarket", "View on Market")} <IconExternalLink />
                     </a>
                   </div>
                 </div>
@@ -2668,16 +2722,16 @@ function RewardEditDialog({
               {/* General info grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                 {[
-                  { label: "Cooldown", val: `${reward.global_cooldown_seconds}s` },
-                  { label: "Max / Stream", val: String(reward.max_redemptions_per_stream) },
-                  { label: "Max / User", val: String(reward.max_redemptions_per_user_per_stream) },
-                  { label: "Auto-buy", val: reward.market_autobuy ? "Yes" : "No" },
-                  { label: "Pricing", val: reward.pricing_mode === "MANUAL" ? "Manual" : "Auto" },
+                  { label: t("rewards.twitchSettings.cooldownLabel", "Cooldown"), val: `${reward.global_cooldown_seconds}s` },
+                  { label: t("rewards.twitchSettings.maxStreamLabel", "Max / Stream"), val: String(reward.max_redemptions_per_stream) },
+                  { label: t("rewards.twitchSettings.maxUserLabel", "Max / User"), val: String(reward.max_redemptions_per_user_per_stream) },
+                  { label: t("rewards.card.autobuy", "Auto-buy"), val: reward.market_autobuy ? t("rewards.chatReq.yes", "Yes") : t("rewards.chatReq.no", "No") },
+                  { label: t("rewards.pricing.pricingMode", "Pricing"), val: reward.pricing_mode === "MANUAL" ? t("rewards.pricing.modeManual", "Manual") : t("rewards.pricing.modeAuto", "Auto") },
                   reward.pricing_mode === "MANUAL"
-                    ? { label: "Twitch Points", val: reward.manual_twitch_points != null ? `${reward.manual_twitch_points.toLocaleString()} pts` : "–" }
-                    : { label: "Markup", val: `+${reward.twitch_price_markup_percentage}%` },
-                  { label: "Min Price Limit", val: reward.min_market_price != null ? formatMinorCurrency(reward.min_market_price, reward.currency) : "None" },
-                  { label: "Max Price Limit", val: reward.max_market_price != null ? formatMinorCurrency(reward.max_market_price, reward.currency) : "None" },
+                    ? { label: t("rewards.card.twitchPoints", "Twitch Points"), val: reward.manual_twitch_points != null ? `${reward.manual_twitch_points.toLocaleString()} pts` : "–" }
+                    : { label: t("rewards.card.markup", "Markup"), val: `+${reward.twitch_price_markup_percentage}%` },
+                  { label: t("rewards.pricing.minMarketPrice", "Min Price Limit"), val: reward.min_market_price != null ? formatMinorCurrency(reward.min_market_price, reward.currency) : t("rewards.chatReq.none", "None") },
+                  { label: t("rewards.pricing.maxMarketPrice", "Max Price Limit"), val: reward.max_market_price != null ? formatMinorCurrency(reward.max_market_price, reward.currency) : t("rewards.chatReq.none", "None") },
                 ].map(({ label, val }) => (
                   <div key={label} className="rounded-lg bg-background/60 border border-border px-3 py-2">
                     <p className="text-muted-foreground mb-0.5">{label}</p>
@@ -2755,6 +2809,7 @@ function CreateRewardModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const createMutation = useMutation({
     mutationFn: (body: CreateRewardBody) => rewardsApi.create(channelId, body),
@@ -2768,9 +2823,9 @@ function CreateRewardModal({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-xl sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle>Create New Reward</DialogTitle>
+          <DialogTitle>{t("rewards.wizard.createTitle", "Create New Reward")}</DialogTitle>
           <DialogDescription>
-            Choose the type of skin reward and configure pricing for your channel.
+            {t("rewards.wizard.createDesc", "Choose the type of skin reward and configure pricing for your channel.")}
           </DialogDescription>
         </DialogHeader>
         <div className="mt-2">
@@ -2813,12 +2868,13 @@ function BulkActionBar({
   onClear: () => void;
   loading: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 px-4 rounded-2xl border border-border/80 bg-card/90 backdrop-blur-xl shadow-2xl shadow-black/50 ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-5 duration-200 max-w-[95vw] overflow-x-auto">
       <div className="flex items-center gap-2 pr-1">
         <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
         <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-          {count} <span className="text-muted-foreground font-normal">selected</span>
+          {count} <span className="text-muted-foreground font-normal">{t("rewards.bulk.selected", "selected")}</span>
         </span>
       </div>
 
@@ -2833,7 +2889,7 @@ function BulkActionBar({
         title="Select all matching rewards"
       >
         <IconCheckAll />
-        <span>{allFilteredSelected ? "All selected" : "Select all"}</span>
+        <span>{allFilteredSelected ? t("rewards.bulk.allSelected", "All selected") : t("rewards.bulk.selectAll", "Select all")}</span>
       </Button>
 
       <Button
@@ -2844,7 +2900,7 @@ function BulkActionBar({
         disabled={loading}
       >
         <IconPause />
-        <span>Pause all</span>
+        <span>{t("rewards.bulk.pauseAll", "Pause all")}</span>
       </Button>
 
       <Button
@@ -2855,7 +2911,7 @@ function BulkActionBar({
         disabled={loading}
       >
         <IconPlay />
-        <span>Unpause all</span>
+        <span>{t("rewards.bulk.unpauseAll", "Unpause all")}</span>
       </Button>
 
       <Button
@@ -2866,7 +2922,7 @@ function BulkActionBar({
         disabled={loading}
       >
         <IconTrash />
-        <span>Delete all</span>
+        <span>{t("rewards.bulk.deleteAll", "Delete all")}</span>
       </Button>
 
       <Separator orientation="vertical" className="h-5 mx-1" />
@@ -2879,7 +2935,7 @@ function BulkActionBar({
         title="Clear selection (Esc)"
       >
         <IconClose />
-        <span>Clear</span>
+        <span>{t("rewards.bulk.clear", "Clear")}</span>
         <kbd className="hidden sm:inline-block ml-0.5 px-1.5 py-0.5 text-[10px] font-mono bg-muted/60 text-muted-foreground rounded border border-border">
           Esc
         </kbd>
@@ -2890,6 +2946,7 @@ function BulkActionBar({
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function RewardsPage() {
+  const { t } = useTranslation();
   const { selectedBroadcasterId } = useAppStore();
   const channelId = selectedBroadcasterId ?? "";
   const qc = useQueryClient();
@@ -3085,7 +3142,7 @@ export default function RewardsPage() {
   if (!channelId) {
     return (
       <div className="p-8 flex items-center justify-center min-h-96">
-        <p className="text-muted-foreground">Select a broadcaster channel first.</p>
+        <p className="text-muted-foreground">{t("rewards.selectChannelFirst", "Select a broadcaster channel first.")}</p>
       </div>
     );
   }
@@ -3095,15 +3152,15 @@ export default function RewardsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Rewards</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("rewards.title", "Rewards")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {filtered.length} reward{filtered.length !== 1 ? "s" : ""}
-            {search && ` matching "${search}"`}
+            {t("rewards.countRewards", { count: filtered.length })}
+            {search && ` ${t("rewards.matchingSearch", { query: search })}`}
           </p>
         </div>
         <Button className="gap-2" onClick={() => setShowCreate(true)}>
           <IconPlus />
-          New Reward
+          {t("rewards.newReward", "New Reward")}
         </Button>
       </div>
 
@@ -3115,7 +3172,7 @@ export default function RewardsPage() {
           </span>
           <Input
             className="pl-9"
-            placeholder="Search by title, skin, description…"
+            placeholder={t("rewards.searchPlaceholder", "Search by title, skin, description…")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -3137,7 +3194,7 @@ export default function RewardsPage() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {f}
+              {f === "all" ? t("rewards.status.all", "all") : f === "active" ? t("rewards.status.active", "active") : t("rewards.status.paused", "paused")}
             </button>
           ))}
         </div>
@@ -3146,10 +3203,10 @@ export default function RewardsPage() {
         {filterPaused === "paused" && (
           <div className="flex items-center gap-1 rounded-xl border border-orange-500/30 bg-card p-1">
             {([
-              { key: "all", label: "All reasons" },
-              { key: "MANUAL", label: "Manual" },
-              { key: "NO_MONEY", label: "No balance" },
-              { key: "PRICE_LIMIT", label: "Price limit" },
+              { key: "all", label: t("rewards.pauseReasonFilter.all", "All reasons") },
+              { key: "MANUAL", label: t("rewards.pauseReasonFilter.manual", "Manual") },
+              { key: "NO_MONEY", label: t("rewards.pauseReasonFilter.noMoney", "No balance") },
+              { key: "PRICE_LIMIT", label: t("rewards.pauseReasonFilter.priceLimit", "Price limit") },
             ] as const).map(({ key, label }) => (
               <button
                 key={key}
@@ -3180,7 +3237,7 @@ export default function RewardsPage() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {f === "all" ? "All types" : f.charAt(0) + f.slice(1).toLowerCase()}
+              {f === "all" ? t("rewards.types.all", "All types") : f === "FIXED" ? t("rewards.types.fixed", "Fixed") : f === "POOL" ? t("rewards.types.pool", "Pool") : t("rewards.types.filter", "Filter")}
             </button>
           ))}
         </div>
@@ -3192,7 +3249,7 @@ export default function RewardsPage() {
             onChange={(e) => setShowDeleted(e.target.checked)}
             className="rounded accent-primary"
           />
-          Show deleted
+          {t("rewards.showDeleted", "Show deleted")}
         </label>
       </div>
 
@@ -3205,9 +3262,9 @@ export default function RewardsPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-64 text-center space-y-3">
-          <p className="text-muted-foreground">No rewards found</p>
+          <p className="text-muted-foreground">{t("rewards.noRewards", "No rewards found")}</p>
           <Button variant="outline" onClick={() => { setSearch(""); setFilterPaused("all"); setFilterType("all"); }}>
-            Clear filters
+            {t("rewards.clearFilters", "Clear filters")}
           </Button>
         </div>
       ) : (
@@ -3238,7 +3295,7 @@ export default function RewardsPage() {
           onPause={() => batchMutation.mutate("pause")}
           onUnpause={() => batchMutation.mutate("unpause")}
           onDelete={() => {
-            if (confirm(`Delete ${selectedIds.size} rewards?`)) batchMutation.mutate("delete");
+            if (confirm(t("rewards.deleteConfirmBatch", { count: selectedIds.size }))) batchMutation.mutate("delete");
           }}
           onClear={handleClearSelection}
           loading={batchMutation.isPending}

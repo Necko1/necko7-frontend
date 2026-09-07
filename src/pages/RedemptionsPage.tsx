@@ -1,18 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/utils";
 import RedemptionList from "@/components/redemptions/RedemptionList";
 import type { RedemptionStatus } from "@/types/api";
-
-const STATUS_OPTIONS: { value: RedemptionStatus | ""; label: string }[] = [
-  { value: "", label: "All" },
-  { value: "PENDING", label: "Pending" },
-  { value: "ORDER_CREATED", label: "Order Created" },
-  { value: "COMPLETED", label: "Completed" },
-  { value: "FAILED_REFUND", label: "Refunded" },
-  { value: "FAILED_PENALTY", label: "Penalized" },
-];
 
 const PAGE_SIZES = [10, 25, 50];
 
@@ -29,9 +21,19 @@ const IconX = () => (
 );
 
 export default function RedemptionsPage() {
+  const { t } = useTranslation();
   const { selectedBroadcasterId } = useAppStore();
   const channelId = selectedBroadcasterId ?? "";
   const location = useLocation();
+
+  const statusOptions = useMemo<{ value: RedemptionStatus | ""; label: string }[]>(() => [
+    { value: "", label: t("redemptions.statuses.all") },
+    { value: "PENDING", label: t("redemptions.statuses.pending") },
+    { value: "ORDER_CREATED", label: t("redemptions.statuses.orderCreated") },
+    { value: "COMPLETED", label: t("redemptions.statuses.completed") },
+    { value: "FAILED_REFUND", label: t("redemptions.statuses.refunded") },
+    { value: "FAILED_PENALTY", label: t("redemptions.statuses.penalized") },
+  ], [t]);
 
   // Read optional ?userId= from URL
   const queryParams = new URLSearchParams(location.search);
@@ -47,7 +49,7 @@ export default function RedemptionsPage() {
   if (!channelId) {
     return (
       <div className="p-8 flex items-center justify-center min-h-96">
-        <p className="text-muted-foreground">Select a broadcaster channel first.</p>
+        <p className="text-muted-foreground">{t("dashboard.selectChannel")}</p>
       </div>
     );
   }
@@ -56,9 +58,9 @@ export default function RedemptionsPage() {
     <div className="p-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Redemptions</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t("redemptions.title")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Browse and manage all channel point redemptions
+          {t("redemptions.subtitle")}
         </p>
       </div>
 
@@ -67,7 +69,7 @@ export default function RedemptionsPage() {
         <div className="flex flex-wrap items-center gap-3">
           {/* Status filter */}
           <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1 flex-wrap">
-            {STATUS_OPTIONS.map((opt) => (
+            {statusOptions.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => setStatusFilter(opt.value as RedemptionStatus | "")}
@@ -85,7 +87,7 @@ export default function RedemptionsPage() {
 
           {/* Page size */}
           <div className="flex items-center gap-2 ml-auto">
-            <span className="text-xs text-muted-foreground">Per page:</span>
+            <span className="text-xs text-muted-foreground">{t("common.perPage")}</span>
             <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-0.5">
               {PAGE_SIZES.map((s) => (
                 <button
@@ -113,7 +115,7 @@ export default function RedemptionsPage() {
             </div>
             <input
               type="text"
-              placeholder="Filter by User ID…"
+              placeholder={t("redemptions.filterUserId")}
               value={userIdInput}
               onChange={(e) => setUserIdInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyUserFilter()}
@@ -125,7 +127,7 @@ export default function RedemptionsPage() {
             onClick={applyUserFilter}
             className="h-9 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
           >
-            Filter
+            {t("redemptions.filter")}
           </button>
           {userIdFilter && (
             <button
@@ -134,12 +136,12 @@ export default function RedemptionsPage() {
               className="h-9 px-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors flex items-center gap-1 text-xs"
             >
               <IconX />
-              Clear
+              {t("redemptions.clear")}
             </button>
           )}
           {userIdFilter && (
             <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded-md border border-primary/20">
-              Filtering: {userIdFilter}
+              {t("redemptions.filtering")} {userIdFilter}
             </span>
           )}
         </div>

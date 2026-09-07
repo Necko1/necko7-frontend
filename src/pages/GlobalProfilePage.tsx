@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { viewerApi } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -42,21 +43,22 @@ const IconExternal = ({ className }: { className?: string } = {}) => (
   </svg>
 );
 
-function getStatusBadge(status: RedemptionStatus) {
+function getStatusBadge(status: RedemptionStatus, t: (key: any, def?: any) => any) {
   const norm = status.toUpperCase();
   if (norm === "COMPLETED") {
-    return <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[10px]">Completed</Badge>;
+    return <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[10px]">{t("redemptions.statusCompleted", "Completed")}</Badge>;
   }
   if (norm === "PENDING" || norm === "ORDER_CREATED") {
-    return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30 text-[10px]">Pending</Badge>;
+    return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30 text-[10px]">{t("redemptions.statusPending", "Pending")}</Badge>;
   }
   if (norm.includes("FAILED")) {
-    return <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px]">Failed</Badge>;
+    return <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px]">{t("redemptions.statusFailed", "Failed")}</Badge>;
   }
   return <Badge variant="secondary" className="text-[10px]">{status}</Badge>;
 }
 
 export default function GlobalProfilePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { currentUser } = useAppStore();
 
@@ -120,7 +122,7 @@ export default function GlobalProfilePage() {
             onClick={() => navigate("/channels")}
             className="text-xs h-9 gap-1.5"
           >
-            <span>Switch Channels</span>
+            <span>{t("profile.switchChannels", "Switch Channels")}</span>
           </Button>
         </div>
       </div>
@@ -135,19 +137,19 @@ export default function GlobalProfilePage() {
                 <IconChat />
               </div>
               <h3 className="text-sm font-bold text-foreground">
-                Cross-Stream Chat Activity
+                {t("profile.crossStreamChat", "Cross-Stream Chat Activity")}
               </h3>
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="p-3.5 rounded-xl bg-secondary/30 border border-border/50">
-                <span className="text-xs text-muted-foreground block">Total Messages</span>
+                <span className="text-xs text-muted-foreground block">{t("profile.totalMessages", "Total Messages")}</span>
                 <span className="text-2xl font-black text-foreground font-mono">
                   {globalProfile.total_chat_messages.toLocaleString()}
                 </span>
               </div>
               <div className="p-3.5 rounded-xl bg-secondary/30 border border-border/50">
-                <span className="text-xs text-muted-foreground block">Total Characters</span>
+                <span className="text-xs text-muted-foreground block">{t("profile.totalCharacters", "Total Characters")}</span>
                 <span className="text-2xl font-black text-foreground font-mono">
                   {globalProfile.total_chat_characters.toLocaleString()}
                 </span>
@@ -163,29 +165,29 @@ export default function GlobalProfilePage() {
                   <IconGift />
                 </div>
                 <h3 className="text-sm font-bold text-foreground">
-                  Global Rewards Summary
+                  {t("profile.globalRewardsSummary", "Global Rewards Summary")}
                 </h3>
               </div>
               <span className="text-xs font-mono text-purple-400 font-semibold">
-                {globalProfile.redemption_stats.total_points_spent.toLocaleString()} pts spent
+                {t("profile.pointsSpent", { points: globalProfile.redemption_stats.total_points_spent.toLocaleString() })}
               </span>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5 pt-1 text-center">
               <div className="p-2.5 rounded-xl bg-secondary/30 border border-border/50">
-                <span className="text-[11px] text-muted-foreground block">Total</span>
+                <span className="text-[11px] text-muted-foreground block">{t("profile.total", "Total")}</span>
                 <span className="text-xl font-black text-foreground font-mono">
                   {globalProfile.redemption_stats.total_redemptions}
                 </span>
               </div>
               <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 block">Completed</span>
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 block">{t("profile.completed", "Completed")}</span>
                 <span className="text-xl font-black text-emerald-500 font-mono">
                   {globalProfile.redemption_stats.completed}
                 </span>
               </div>
               <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/20">
-                <span className="text-[11px] text-destructive block">Failed</span>
+                <span className="text-[11px] text-destructive block">{t("profile.failed", "Failed")}</span>
                 <span className="text-xl font-black text-destructive font-mono">
                   {globalProfile.redemption_stats.failed}
                 </span>
@@ -193,8 +195,8 @@ export default function GlobalProfilePage() {
             </div>
 
             <div className="text-[11px] text-muted-foreground flex items-center justify-between pt-1 border-t border-border/40">
-              <span>Pending orders: {globalProfile.redemption_stats.pending}</span>
-              <span>Total skin value: ~{formatMinorCurrency(globalProfile.redemption_stats.total_market_value, globalRedemptions[0]?.currency ?? "RUB")}</span>
+              <span>{t("profile.pendingOrders", { count: globalProfile.redemption_stats.pending })}</span>
+              <span>{t("profile.totalSkinValue", { value: `~${formatMinorCurrency(globalProfile.redemption_stats.total_market_value, globalRedemptions[0]?.currency ?? "RUB")}` })}</span>
             </div>
           </div>
         </div>
@@ -205,13 +207,13 @@ export default function GlobalProfilePage() {
         <div className="flex items-center gap-2">
           <IconBroadcast />
           <h3 className="text-sm font-bold text-foreground">
-            Channels with Your Activity ({globalProfile?.channels.length ?? 0})
+            {t("profile.activeChannelsCount", { count: globalProfile?.channels.length ?? 0 })}
           </h3>
         </div>
 
         {(!globalProfile?.channels || globalProfile.channels.length === 0) ? (
           <p className="text-xs text-muted-foreground text-center py-6">
-            No channel activity recorded yet.
+            {t("profile.noChannelsActivity", "No channel activity recorded yet.")}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
@@ -232,7 +234,7 @@ export default function GlobalProfilePage() {
                       {ch.display_name || ch.channel_login}
                     </p>
                     <p className="text-[10px] text-muted-foreground">
-                      {ch.redemptions_count} rewards • {ch.messages_count} msgs
+                      {t("profile.rewardsCount", { count: ch.redemptions_count })} • {t("profile.msgsCount", { count: ch.messages_count })}
                     </p>
                   </div>
                 </div>
@@ -241,7 +243,7 @@ export default function GlobalProfilePage() {
                   <Link
                     to={`/c/${ch.channel_login}`}
                     className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent text-xs"
-                    title="View Showcase"
+                    title={t("profile.viewShowcase", "View Showcase")}
                   >
                     <IconExternal />
                   </Link>
@@ -249,7 +251,7 @@ export default function GlobalProfilePage() {
                     to={`/c/${ch.channel_login}/profile`}
                     className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                   >
-                    Stats
+                    {t("profile.statsBtn", "Stats")}
                   </Link>
                 </div>
               </div>
@@ -261,7 +263,7 @@ export default function GlobalProfilePage() {
       {/* ── Global Redemptions Feed ── */}
       <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
         <h3 className="text-sm font-bold text-foreground">
-          All Redemptions (Across All Channels)
+          {t("profile.allRedemptionsGlobal", "All Redemptions (Across All Channels)")}
         </h3>
 
         {isRedemptionsLoading ? (
@@ -272,7 +274,7 @@ export default function GlobalProfilePage() {
           </div>
         ) : globalRedemptions.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-8">
-            No redemptions recorded yet.
+            {t("profile.noRedemptionsGlobal", "No redemptions recorded yet.")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -307,14 +309,14 @@ export default function GlobalProfilePage() {
                       </Link>
                     </div>
                     <p className="text-[11px] text-muted-foreground truncate">
-                      {redemption.market_item_name || "Custom item"}
+                      {redemption.market_item_name || t("profile.customItem", "Custom item")}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4 text-xs">
                   <span className="font-mono text-purple-400 font-semibold">
-                    {redemption.twitch_points_cost.toLocaleString()} pts
+                    {redemption.twitch_points_cost.toLocaleString()} {t("common.pts", "pts")}
                   </span>
 
                   {redemption.market_paid_price != null && (
@@ -323,7 +325,7 @@ export default function GlobalProfilePage() {
                     </span>
                   )}
 
-                  {getStatusBadge(redemption.status)}
+                  {getStatusBadge(redemption.status, t)}
 
                   <span className="text-[11px] text-muted-foreground font-mono">
                     {new Date(redemption.created_at).toLocaleDateString()}
@@ -332,7 +334,7 @@ export default function GlobalProfilePage() {
 
                 {redemption.fail_cause && (
                   <div className="w-full text-[11px] text-destructive bg-destructive/5 p-2 rounded-lg border border-destructive/20">
-                    Failure reason: {redemption.fail_description || redemption.fail_cause}
+                    {t("profile.failReason", { reason: redemption.fail_description || redemption.fail_cause })}
                   </div>
                 )}
               </div>
@@ -347,9 +349,9 @@ export default function GlobalProfilePage() {
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 className="h-8 text-xs"
               >
-                Previous
+                {t("common.prev", "Previous")}
               </Button>
-              <span className="text-muted-foreground font-mono">Page {page + 1}</span>
+              <span className="text-muted-foreground font-mono">{t("common.page", "Page")} {page + 1}</span>
               <Button
                 variant="outline"
                 size="sm"
@@ -357,7 +359,7 @@ export default function GlobalProfilePage() {
                 onClick={() => setPage((p) => p + 1)}
                 className="h-8 text-xs"
               >
-                Next
+                {t("common.next", "Next")}
               </Button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import { chatApi } from "@/lib/apiClient";
 import type { ChatMessage, RedemptionResponse } from "@/types/api";
@@ -16,7 +17,7 @@ const PAGE_SIZE = 50;
 const REDEMPTION_PAGE_SIZE = 9;
 
 // ── Time window options ────────────────────────────────────────────────────────
-const TIME_WINDOWS: { label: string; value: number | null }[] = [
+const TIME_WINDOWS: { labelKey?: string; label: string; value: number | null }[] = [
   { label: "All time", value: null },
   { label: "24h", value: 24 },
   { label: "7d", value: 168 },
@@ -25,16 +26,16 @@ const TIME_WINDOWS: { label: string; value: number | null }[] = [
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Pending",
-  ORDER_CREATED: "Order Created",
-  COMPLETED: "Completed",
-  FAILED_REFUND: "Refunded",
-  FAILED_PENALTY: "Penalized",
-  Pending: "Pending",
-  OrderCreated: "Order Created",
-  Completed: "Completed",
-  FailedRefund: "Refunded",
-  FailedPenalty: "Penalized",
+  PENDING: "redemptions.statuses.pending",
+  ORDER_CREATED: "redemptions.statuses.orderCreated",
+  COMPLETED: "redemptions.statuses.completed",
+  FAILED_REFUND: "redemptions.statuses.refunded",
+  FAILED_PENALTY: "redemptions.statuses.penalized",
+  Pending: "redemptions.statuses.pending",
+  OrderCreated: "redemptions.statuses.orderCreated",
+  Completed: "redemptions.statuses.completed",
+  FailedRefund: "redemptions.statuses.refunded",
+  FailedPenalty: "redemptions.statuses.penalized",
 };
 
 const STATUS_CLASSES: Record<string, string> = {
@@ -94,6 +95,7 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 
 // ── Copy button ───────────────────────────────────────────────────────────────
 function CopyButton({ text }: { text: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const copy = useCallback(() => {
     navigator.clipboard.writeText(text).then(() => {
@@ -113,17 +115,17 @@ function CopyButton({ text }: { text: string }) {
       )}
     >
       <IconCopy />
-      {copied ? "Copied!" : "Copy"}
+      {copied ? t("common.copied") : t("common.copy")}
     </button>
   );
 }
 
 // ── Date grouping helpers ────────────────────────────────────────────────────
-function formatDateDivider(dateStr: string): string {
+function formatDateDivider(dateStr: string, t: (key: string) => string): string {
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return dateStr;
-  if (isToday(date)) return "Today";
-  if (isYesterday(date)) return "Yesterday";
+  if (isToday(date)) return t("common.today");
+  if (isYesterday(date)) return t("common.yesterday");
   return format(date, "dd MMMM yyyy");
 }
 
@@ -135,13 +137,14 @@ function getDateKey(dateStr: string): string {
 
 // ── Stream Chat Message Row ──────────────────────────────────────────────────
 function UserMessageRow({ msg }: { msg: ChatMessage }) {
+  const { t } = useTranslation();
   const date = new Date(msg.sent_at);
   const timeStr = !isNaN(date.getTime()) ? format(date, "HH:mm:ss") : "–";
 
   return (
     <div
       className="group flex items-start gap-3 py-1.5 px-3 rounded-lg hover:bg-muted/40 transition-colors text-sm leading-relaxed"
-      title={`${msg.char_count} chars · sent at ${timeStr}`}
+      title={`${msg.char_count} ${t("common.chars")} · ${timeStr}`}
     >
       <span className="text-xs text-muted-foreground/60 tabular-nums shrink-0 pt-0.5 select-none font-mono">
         {timeStr}
@@ -150,7 +153,7 @@ function UserMessageRow({ msg }: { msg: ChatMessage }) {
         {msg.message_text}
       </p>
       <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-muted-foreground/60 tabular-nums shrink-0 pt-0.5 select-none font-mono">
-        {msg.char_count} chars
+        {msg.char_count} {t("common.chars")}
       </span>
     </div>
   );
@@ -158,6 +161,10 @@ function UserMessageRow({ msg }: { msg: ChatMessage }) {
 
 // ── Redemption Card ───────────────────────────────────────────────────────────
 function RedemptionCard({ redemption }: { redemption: RedemptionResponse }) {
+  const { t } = useTranslation();
+  const statusKey = STATUS_LABELS[redemption.status];
+  const statusLabel = statusKey ? t(statusKey) : redemption.status;
+
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col hover:border-primary/30 transition-all group">
       {/* Skin image */}
@@ -175,7 +182,7 @@ function RedemptionCard({ redemption }: { redemption: RedemptionResponse }) {
               STATUS_CLASSES[redemption.status] || "status-pending"
             )}
           >
-            {STATUS_LABELS[redemption.status] || redemption.status}
+            {statusLabel}
           </Badge>
         </div>
       </div>
@@ -186,15 +193,15 @@ function RedemptionCard({ redemption }: { redemption: RedemptionResponse }) {
           <p className="text-xs font-semibold text-foreground leading-snug line-clamp-2">
             {redemption.market_item_name ?? "Twitch Reward"}
           </p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
             <IconCalendar />
-            {" "}{format(new Date(redemption.created_at), "dd MMM yyyy HH:mm")}
+            <span>{format(new Date(redemption.created_at), "dd MMM yyyy HH:mm")}</span>
           </p>
         </div>
 
         <div className="flex items-center justify-between text-xs">
           <span className="font-medium text-primary tabular-nums">
-            {redemption.twitch_points_cost.toLocaleString()} pts
+            {redemption.twitch_points_cost.toLocaleString()} {t("common.pts")}
           </span>
           {redemption.market_paid_price != null && (
             <span className="text-muted-foreground tabular-nums">
@@ -214,7 +221,7 @@ function RedemptionCard({ redemption }: { redemption: RedemptionResponse }) {
               className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
             >
               <IconExternalLink />
-              Trade link
+              {t("chatUser.tradeLink")}
             </a>
           </div>
         )}
@@ -225,6 +232,7 @@ function RedemptionCard({ redemption }: { redemption: RedemptionResponse }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ChatUserPage() {
+  const { t } = useTranslation();
   const { userId } = useParams<{ userId: string }>();
   const targetUserId = userId ?? "";
   const navigate = useNavigate();
@@ -368,19 +376,19 @@ export default function ChatUserPage() {
     for (const msg of msgs) {
       const key = getDateKey(msg.sent_at);
       if (!map.has(key)) {
-        const item = { label: formatDateDivider(msg.sent_at), messages: [] };
+        const item = { label: formatDateDivider(msg.sent_at, t), messages: [] };
         map.set(key, item);
         groups.push({ dateKey: key, ...item });
       }
       map.get(key)!.messages.push(msg);
     }
     return groups;
-  }, [allMessages, messagesData?.items]);
+  }, [allMessages, messagesData?.items, t]);
 
   if (!channelId || !userId) {
     return (
       <div className="p-8 flex items-center justify-center min-h-96">
-        <p className="text-muted-foreground">Select a broadcaster channel first.</p>
+        <p className="text-muted-foreground">{t("dashboard.selectChannelDesc")}</p>
       </div>
     );
   }
@@ -394,7 +402,7 @@ export default function ChatUserPage() {
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <IconArrowLeft />
-        Back to Leaderboard
+        {t("chatUser.backToLeaderboard")}
       </button>
 
       {/* Profile header */}
@@ -456,12 +464,12 @@ export default function ChatUserPage() {
                 {summary?.first_seen_at && (
                   <span className="flex items-center gap-1">
                     <IconCalendar />
-                    First seen {format(new Date(summary.first_seen_at), "dd MMM yyyy")}
+                    {t("chatUser.firstSeen")} {format(new Date(summary.first_seen_at), "dd MMM yyyy")}
                   </span>
                 )}
                 {summary?.last_seen_at && (
                   <span>
-                    Last active{" "}
+                    {t("chatUser.lastSeen")}{" "}
                     {formatDistanceToNow(new Date(summary.last_seen_at), { addSuffix: true })}
                   </span>
                 )}
@@ -476,13 +484,13 @@ export default function ChatUserPage() {
               <p className="text-lg font-bold text-foreground tabular-nums">
                 {summary.total_messages.toLocaleString()}
               </p>
-              <p className="text-xs text-muted-foreground">total msgs</p>
+              <p className="text-xs text-muted-foreground">{t("chatUser.totalMessages")}</p>
             </div>
             <div className="text-right">
               <p className="text-lg font-bold text-foreground tabular-nums">
                 {summary.total_chars.toLocaleString()}
               </p>
-              <p className="text-xs text-muted-foreground">total chars</p>
+              <p className="text-xs text-muted-foreground">{t("chatUser.totalChars")}</p>
             </div>
           </div>
         )}
@@ -490,7 +498,7 @@ export default function ChatUserPage() {
 
       {/* Period selector */}
       <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground font-medium">Period:</span>
+        <span className="text-sm text-muted-foreground font-medium">{t("chatUser.period")}</span>
         <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1">
           {TIME_WINDOWS.map((tw) => (
             <button
@@ -504,7 +512,7 @@ export default function ChatUserPage() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {tw.label}
+              {tw.value === null ? t("chatUser.allTime") : tw.label}
             </button>
           ))}
         </div>
@@ -513,19 +521,19 @@ export default function ChatUserPage() {
       {/* Period stat cards */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard
-          label="Messages"
+          label={t("chat.messages")}
           value={statsLoading ? "—" : (periodStats?.message_count ?? 0)}
-          sub={timeWindow ? `Last ${TIME_WINDOWS.find((t) => t.value === timeWindow)?.label}` : "All time"}
+          sub={timeWindow ? t("chatUser.lastPeriod", { label: TIME_WINDOWS.find((t) => t.value === timeWindow)?.label }) : t("chatUser.allTime")}
         />
         <StatCard
-          label="Characters"
+          label={t("chat.characters")}
           value={statsLoading ? "—" : (periodStats?.char_count ?? 0)}
-          sub={timeWindow ? `Last ${TIME_WINDOWS.find((t) => t.value === timeWindow)?.label}` : "All time"}
+          sub={timeWindow ? t("chatUser.lastPeriod", { label: TIME_WINDOWS.find((t) => t.value === timeWindow)?.label }) : t("chatUser.allTime")}
         />
         <StatCard
-          label="Avg chars / msg"
+          label={t("chat.avgChars")}
           value={statsLoading ? "—" : avgCharsPerMsg}
-          sub="in selected period"
+          sub={t("chatUser.inSelectedPeriod")}
         />
       </div>
 
@@ -535,10 +543,10 @@ export default function ChatUserPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">
-              Message History
+              {t("chatUser.messageHistory")}
               {messagesData && (
                 <span className="ml-1.5 text-xs text-muted-foreground font-normal">
-                  ({messagesData.total.toLocaleString()} total)
+                  ({messagesData.total.toLocaleString()} {t("common.total")})
                 </span>
               )}
             </h2>
@@ -553,7 +561,7 @@ export default function ChatUserPage() {
               <IconSearch />
             </span>
             <Input
-              placeholder="Search user messages…"
+              placeholder={t("chatUser.searchPlaceholder")}
               value={msgSearch}
               onChange={(e) => handleMsgSearchChange(e.target.value)}
               className="pl-9 h-9 bg-card rounded-xl text-xs"
@@ -574,8 +582,8 @@ export default function ChatUserPage() {
             ) : displayMessages.length === 0 ? (
               <div className="py-10 text-center text-muted-foreground text-xs">
                 {debouncedMsgSearch
-                  ? "No messages matching your search query."
-                  : "No messages in this period."}
+                  ? t("chatUser.noMessagesSearch")
+                  : t("chatUser.noMessagesPeriod")}
               </div>
             ) : (
               <div className="space-y-5">
@@ -610,8 +618,8 @@ export default function ChatUserPage() {
                 className="w-full py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all disabled:opacity-50 mt-2"
               >
                 {msgsFetching
-                  ? "Loading…"
-                  : `Load more (${messagesData!.total - displayMessages.length} remaining)`}
+                  ? t("common.loading")
+                  : t("chatUser.loadMoreRemaining", { count: messagesData!.total - displayMessages.length })}
               </button>
             )}
           </div>
@@ -621,10 +629,10 @@ export default function ChatUserPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">
-              Redemptions
+              {t("redemptions.title")}
               {redemptionsData && (
                 <span className="ml-1.5 text-xs text-muted-foreground font-normal">
-                  ({redemptionsData.total.toLocaleString()} total)
+                  ({redemptionsData.total.toLocaleString()} {t("common.total")})
                 </span>
               )}
             </h2>
@@ -651,14 +659,14 @@ export default function ChatUserPage() {
               className="w-full py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all disabled:opacity-50"
             >
               {redsFetching
-                ? "Loading…"
-                : `Load more (${redemptionsData!.total - displayRedemptions.length} remaining)`}
+                ? t("common.loading")
+                : t("chatUser.loadMoreRemaining", { count: redemptionsData!.total - displayRedemptions.length })}
             </button>
           )}
 
           {!redsFetching && displayRedemptions.length === 0 && (
             <div className="py-10 text-center text-muted-foreground text-sm">
-              No redemptions yet.
+              {t("chatUser.noRedemptions")}
             </div>
           )}
         </div>
@@ -666,3 +674,4 @@ export default function ChatUserPage() {
     </div>
   );
 }
+

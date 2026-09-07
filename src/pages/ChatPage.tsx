@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import { chatApi } from "@/lib/apiClient";
 import type { LeaderboardUserItem } from "@/types/api";
@@ -111,6 +112,7 @@ function LeaderboardRow({
   primaryLabel: string;
   secondaryLabel: string;
 }) {
+  const { t } = useTranslation();
   const topClass =
     rank === 1
       ? "bg-yellow-500/5 hover:bg-yellow-500/10 border-yellow-500/15"
@@ -138,7 +140,7 @@ function LeaderboardRow({
           <span className="text-muted-foreground/70">{secondaryLabel}:</span>{" "}
           {item[secondaryField].toLocaleString()}
           {" · "}
-          <span className="text-muted-foreground/70">Last:</span>{" "}
+          <span className="text-muted-foreground/70">{t("chat.lastActive")}:</span>{" "}
           {format(new Date(item.last_seen_at), "dd MMM HH:mm")}
         </p>
       </div>
@@ -177,6 +179,7 @@ function LeaderboardColumn({
   search: string;
   isFetching: boolean;
 }) {
+  const { t } = useTranslation();
   const [offset, setOffset] = useState(0);
   const [allItems, setAllItems] = useState<LeaderboardUserItem[]>([]);
 
@@ -234,7 +237,7 @@ function LeaderboardColumn({
         <div>
           <h2 className="text-sm font-semibold text-foreground">{title}</h2>
           {data && (
-            <p className="text-xs text-muted-foreground">{data.total.toLocaleString()} chatters</p>
+            <p className="text-xs text-muted-foreground">{data.total.toLocaleString()} {t("chat.user")}</p>
           )}
         </div>
         {(isFetching || colFetching) && (
@@ -269,15 +272,14 @@ function LeaderboardColumn({
           disabled={colFetching}
           className="w-full py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all disabled:opacity-50"
         >
-          {colFetching ? "Loading…" : `Load more (${data!.total - displayItems.length} remaining)`}
+          {colFetching ? t("common.loading") : `${t("common.next")} (${data!.total - displayItems.length})`}
         </button>
       )}
 
       {displayItems.length === 0 && !isLoading && (
         <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
           <IconMessageSquare />
-          <p className="mt-2 text-sm">No chatters found</p>
-          {search && <p className="text-xs mt-1">Try adjusting your search</p>}
+          <p className="mt-2 text-sm">{t("chat.noChattersFound")}</p>
         </div>
       )}
     </div>
@@ -286,6 +288,7 @@ function LeaderboardColumn({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ChatPage() {
+  const { t } = useTranslation();
   const { selectedBroadcasterId } = useAppStore();
   const channelId = selectedBroadcasterId ?? "";
 
@@ -306,7 +309,7 @@ export default function ChatPage() {
   if (!channelId) {
     return (
       <div className="p-8 flex items-center justify-center min-h-96">
-        <p className="text-muted-foreground">Select a broadcaster channel first.</p>
+        <p className="text-muted-foreground">{t("dashboard.selectChannel")}</p>
       </div>
     );
   }
@@ -317,15 +320,15 @@ export default function ChatPage() {
       <ChatDashboardWidget
         channelId={channelId}
         showTopChatters={false}
-        title="Channel Activity & Timeline"
+        title={t("chat.timeline")}
       />
 
       {/* Leaderboard Header */}
       <div className="flex items-start justify-between gap-4 pt-4 border-t border-border">
         <div>
-          <h2 className="text-xl font-bold text-foreground">Chatter Leaderboard</h2>
+          <h2 className="text-xl font-bold text-foreground">{t("chat.leaderboardTitle")}</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Top chatters ranked by message count and character volume
+            {t("chat.leaderboardSubtitle")}
           </p>
         </div>
         <button
@@ -334,7 +337,7 @@ export default function ChatPage() {
           className="h-9 px-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors flex items-center gap-2 text-xs"
         >
           <IconRefresh spinning={false} />
-          Refresh
+          {t("common.refresh")}
         </button>
       </div>
 
@@ -347,7 +350,7 @@ export default function ChatPage() {
           </div>
           <input
             type="text"
-            placeholder="Search chatter…"
+            placeholder={t("chat.filterChatters")}
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full h-9 pl-9 pr-4 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
@@ -368,7 +371,7 @@ export default function ChatPage() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {tw.label}
+              {tw.value === null ? t("logs.presetAll") : tw.label}
             </button>
           ))}
         </div>
@@ -379,11 +382,11 @@ export default function ChatPage() {
         <LeaderboardColumn
           channelId={channelId}
           sortBy="messages"
-          title="Top by Messages"
+          title={`${t("chat.topChatters")} (${t("chat.messages")})`}
           primaryField="message_count"
           secondaryField="char_count"
-          primaryLabel="messages"
-          secondaryLabel="chars"
+          primaryLabel={t("chat.messages")}
+          secondaryLabel={t("chat.chars")}
           timeWindowHours={timeWindow}
           search={debouncedSearch}
           isFetching={isFetchingGlobal}
@@ -391,11 +394,11 @@ export default function ChatPage() {
         <LeaderboardColumn
           channelId={channelId}
           sortBy="characters"
-          title="Top by Characters"
+          title={`${t("chat.topChatters")} (${t("chat.characters")})`}
           primaryField="char_count"
           secondaryField="message_count"
-          primaryLabel="characters"
-          secondaryLabel="msgs"
+          primaryLabel={t("chat.characters")}
+          secondaryLabel={t("chat.messages")}
           timeWindowHours={timeWindow}
           search={debouncedSearch}
           isFetching={isFetchingGlobal}

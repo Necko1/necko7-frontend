@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { publicApi, broadcastersApi, authApi } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import type { PublicRewardResponse, PublicPoolItem } from "@/types/api";
@@ -126,12 +127,15 @@ function formatCooldown(seconds: number): string {
   return `${mins}m ${rem}s`;
 }
 
-function renderChatRequirementText(req: {
-  min_messages?: number | null;
-  min_characters?: number | null;
-  time_window_hours?: number | null;
-  logical_operator?: string | null;
-}) {
+function renderChatRequirementText(
+  req: {
+    min_messages?: number | null;
+    min_characters?: number | null;
+    time_window_hours?: number | null;
+    logical_operator?: string | null;
+  },
+  t: (key: string, opts?: any) => string
+) {
   const minMsgs = req.min_messages ?? 0;
   const minChars = req.min_characters ?? 0;
   const op = (req.logical_operator ?? "AND").toUpperCase();
@@ -139,17 +143,17 @@ function renderChatRequirementText(req: {
 
   const isAllTime = !req.time_window_hours || req.time_window_hours === 0;
   const windowStr = isAllTime
-    ? "all-time"
-    : `in the last ${req.time_window_hours} hours`;
+    ? t("public.reqAllTime", "all-time")
+    : t("public.reqLastHours", { hours: req.time_window_hours, defaultValue: `in the last ${req.time_window_hours} hours` });
 
   if (minMsgs > 0 && minChars > 0) {
     return (
       <span>
-        Viewer must have sent at least{" "}
-        <strong className="font-semibold text-primary">{minMsgs.toLocaleString()} messages</strong>
-        <span className="font-bold text-amber-500 mx-1.5">{isOr ? "OR" : "AND"}</span>
-        <strong className="font-semibold text-primary">{minChars.toLocaleString()} characters</strong>{" "}
-        {windowStr} to redeem this reward.
+        {t("public.reqMustSend", "Viewer must have sent at least")}{" "}
+        <strong className="font-semibold text-primary">{t("public.reqMessages", { count: minMsgs, defaultValue: `${minMsgs.toLocaleString()} messages` })}</strong>
+        <span className="font-bold text-amber-500 mx-1.5">{isOr ? t("public.or", "OR") : t("public.and", "AND")}</span>
+        <strong className="font-semibold text-primary">{t("public.reqCharacters", { count: minChars, defaultValue: `${minChars.toLocaleString()} characters` })}</strong>{" "}
+        {windowStr} {t("public.reqToRedeem", "to redeem this reward.")}
       </span>
     );
   }
@@ -157,9 +161,9 @@ function renderChatRequirementText(req: {
   if (minMsgs > 0) {
     return (
       <span>
-        Viewer must have sent at least{" "}
-        <strong className="font-semibold text-primary">{minMsgs.toLocaleString()} messages</strong>{" "}
-        {windowStr} to redeem this reward.
+        {t("public.reqMustSend", "Viewer must have sent at least")}{" "}
+        <strong className="font-semibold text-primary">{t("public.reqMessages", { count: minMsgs, defaultValue: `${minMsgs.toLocaleString()} messages` })}</strong>{" "}
+        {windowStr} {t("public.reqToRedeem", "to redeem this reward.")}
       </span>
     );
   }
@@ -167,9 +171,9 @@ function renderChatRequirementText(req: {
   if (minChars > 0) {
     return (
       <span>
-        Viewer must have sent at least{" "}
-        <strong className="font-semibold text-primary">{minChars.toLocaleString()} characters</strong>{" "}
-        {windowStr} to redeem this reward.
+        {t("public.reqMustSend", "Viewer must have sent at least")}{" "}
+        <strong className="font-semibold text-primary">{t("public.reqCharacters", { count: minChars, defaultValue: `${minChars.toLocaleString()} characters` })}</strong>{" "}
+        {windowStr} {t("public.reqToRedeem", "to redeem this reward.")}
       </span>
     );
   }
@@ -178,6 +182,7 @@ function renderChatRequirementText(req: {
 }
 
 export default function PublicRewardsPage() {
+  const { t } = useTranslation();
   const { identifier, rewardId } = useParams<{ identifier: string; rewardId?: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -297,12 +302,12 @@ export default function PublicRewardsPage() {
         <div className="w-16 h-16 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
           <IconLock />
         </div>
-        <h2 className="text-xl font-bold text-foreground">Channel Not Found</h2>
+        <h2 className="text-xl font-bold text-foreground">{t("profile.channelNotFound", "Channel Not Found")}</h2>
         <p className="text-sm text-muted-foreground">
-          We couldn't find a broadcaster matching &ldquo;{identifier}&rdquo;. Please check the link or search again.
+          {t("public.channelNotFoundDesc", "We couldn't find a broadcaster matching this address. Please check the link or search again.")}
         </p>
         <Button onClick={() => navigate("/channels")} variant="outline" className="text-xs">
-          Browse Channels
+          {t("profile.browseChannels", "Browse Channels")}
         </Button>
       </div>
     );
@@ -342,7 +347,7 @@ export default function PublicRewardsPage() {
                   className="inline-flex items-center gap-1.5 hover:text-purple-400 transition-colors font-medium"
                 >
                   <IconTwitch />
-                  <span>Twitch Channel</span>
+                  <span>Twitch</span>
                   <IconExternal />
                 </a>
               </div>
@@ -361,7 +366,7 @@ export default function PublicRewardsPage() {
                   className="gap-2 text-xs h-9 border-border/80 hover:border-primary/40"
                 >
                   <IconUser />
-                  <span>My Channel Stats</span>
+                  <span>{t("public.myChannelStats", "My Channel Stats")}</span>
                 </Button>
 
                 {/* Pin / Unpin button */}
@@ -372,10 +377,10 @@ export default function PublicRewardsPage() {
                     onClick={() => unpinMutation.mutate()}
                     disabled={unpinMutation.isPending}
                     className="gap-2 text-xs h-9 text-muted-foreground hover:text-destructive hover:border-destructive/30"
-                    title="Remove from my channels list"
+                    title={t("public.unpin", "Unpin")}
                   >
                     <IconPinOff />
-                    <span>Unpin</span>
+                    <span>{t("public.unpin", "Unpin")}</span>
                   </Button>
                 ) : (
                   <Button
@@ -385,7 +390,7 @@ export default function PublicRewardsPage() {
                     className="gap-2 text-xs h-9"
                   >
                     <IconPin />
-                    <span>Pin to My Channels</span>
+                    <span>{t("public.pin", "Pin to My Channels")}</span>
                   </Button>
                 )}
               </>
@@ -399,7 +404,7 @@ export default function PublicRewardsPage() {
                 className="gap-2 text-xs h-9 bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
               >
                 <IconTwitch />
-                <span>Log in with Twitch</span>
+                <span>{t("profile.signInWithTwitch", "Log in with Twitch")}</span>
               </Button>
             )}
 
@@ -408,7 +413,7 @@ export default function PublicRewardsPage() {
               size="icon"
               onClick={handleCopyLink}
               className="h-9 w-9 text-muted-foreground hover:text-foreground"
-              title="Copy link to this showcase"
+              title={t("public.copyLinkShowcase", "Copy link to this showcase")}
             >
               {copied ? <IconCheck className="text-emerald-400" /> : <IconShare />}
             </Button>
@@ -423,10 +428,10 @@ export default function PublicRewardsPage() {
             <IconLock />
           </div>
           <h2 className="text-xl font-bold text-foreground">
-            Public Rewards Catalog is Disabled
+            {t("public.catalogDisabledTitle", "Public Rewards Catalog is Disabled")}
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            @{broadcasterInfo.display_name || broadcasterInfo.channel_login} has disabled their public rewards showcase. Rewards can still be redeemed directly on the Twitch stream using channel points.
+            {t("public.catalogDisabledDesc", { channel: broadcasterInfo.display_name || broadcasterInfo.channel_login })}
           </p>
           <a
             href={`https://twitch.tv/${broadcasterInfo.channel_login}`}
@@ -435,7 +440,7 @@ export default function PublicRewardsPage() {
             className="inline-flex items-center gap-2 text-xs font-semibold text-purple-400 hover:underline"
           >
             <IconTwitch />
-            <span>Open Twitch Stream</span>
+            <span>{t("public.openTwitchStream", "Open Twitch Stream")}</span>
             <IconExternal />
           </a>
         </div>
@@ -454,10 +459,10 @@ export default function PublicRewardsPage() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/60 overflow-x-auto">
               {[
-                { id: "ALL", label: "All Rewards" },
-                { id: "FIXED", label: "Fixed" },
-                { id: "POOL", label: "Skin Pool" },
-                { id: "FILTER", label: "Filter" },
+                { id: "ALL", label: t("public.allRewards", "All Rewards") },
+                { id: "FIXED", label: t("public.typeFixed", "Fixed") },
+                { id: "POOL", label: t("public.typePool", "Skin Pool") },
+                { id: "FILTER", label: t("public.typeFilter", "Filter") },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -481,7 +486,7 @@ export default function PublicRewardsPage() {
               </span>
               <Input
                 type="search"
-                placeholder="Search skins or rewards…"
+                placeholder={t("public.searchPlaceholder", "Search skins or rewards…")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 h-9 text-xs bg-card"
@@ -499,10 +504,10 @@ export default function PublicRewardsPage() {
           ) : filteredRewards.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border p-12 text-center space-y-2">
               <p className="text-base font-semibold text-foreground">
-                No rewards available
+                {t("public.noRewardsAvailable", "No rewards available")}
               </p>
               <p className="text-xs text-muted-foreground">
-                {search ? "No rewards match your search criteria." : "This streamer hasn't published any rewards yet."}
+                {search ? t("public.noRewardsMatch", "No rewards match your search criteria.") : t("public.noRewardsPublished", "This streamer hasn't published any rewards yet.")}
               </p>
             </div>
           ) : (
@@ -530,6 +535,7 @@ function RewardCard({
   reward: PublicRewardResponse;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const isPool = reward.reward_type === "POOL";
   const isFilter = reward.reward_type === "FILTER";
   const isFixed = reward.reward_type === "FIXED";
@@ -548,7 +554,7 @@ function RewardCard({
           reward.currency
         )
       : isPool && reward.pool_items?.[0]?.current_market_price != null
-      ? `from ${reward.currency ?? ""} ${reward.pool_items[0].current_market_price.toFixed(2)}`
+      ? `${t("public.priceFrom", "from")} ${reward.currency ?? ""} ${reward.pool_items[0].current_market_price.toFixed(2)}`
       : null;
 
   return (
@@ -583,7 +589,7 @@ function RewardCard({
           {reward.is_paused && (
             <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 backdrop-blur-md border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>Paused{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
+              <span>{t("public.paused", "Paused")}{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
             </div>
           )}
         </div>
@@ -605,13 +611,13 @@ function RewardCard({
 
           <div className="absolute top-2.5 left-2.5 rounded-lg bg-black/60 backdrop-blur-md px-2.5 py-1 flex items-center gap-1.5 text-[10px] text-white/90 font-medium border border-white/10 shadow-sm">
             <IconPool />
-            <span>Pool · {reward.pool_items?.length ?? 0} skins</span>
+            <span>{t("public.poolSkinsCount", { count: reward.pool_items?.length ?? 0 })}</span>
           </div>
 
           {reward.is_paused && (
             <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 backdrop-blur-md border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>Paused{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
+              <span>{t("public.paused", "Paused")}{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
             </div>
           )}
         </div>
@@ -631,7 +637,7 @@ function RewardCard({
           {reward.is_paused && (
             <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 backdrop-blur-md border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>Paused{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
+              <span>{t("public.paused", "Paused")}{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
             </div>
           )}
         </div>
@@ -650,12 +656,12 @@ function RewardCard({
                 reward.reward_type === "FILTER" && "bg-teal-500/10 text-teal-500 border-teal-500/20"
               )}
             >
-              {reward.reward_type === "FIXED" ? "Fixed" : reward.reward_type === "POOL" ? `Skin Pool (${reward.pool_items?.length ?? 0})` : "Filter"}
+              {reward.reward_type === "FIXED" ? t("public.typeFixed", "Fixed") : reward.reward_type === "POOL" ? `${t("public.typePool", "Skin Pool")} (${reward.pool_items?.length ?? 0})` : t("public.typeFilter", "Filter")}
             </Badge>
 
             {hasLimits && (
               <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-500 bg-amber-500/10">
-                Limits
+                {t("public.limits", "Limits")}
               </Badge>
             )}
           </div>
@@ -681,9 +687,9 @@ function RewardCard({
                 <IconExternalLink />
               </a>
             ) : reward.reward_type === "POOL" ? (
-              <span>{reward.pool_items?.length ?? 0} skins in drop pool</span>
+              <span>{t("public.skinsInDropPool", { count: reward.pool_items?.length ?? 0 })}</span>
             ) : reward.reward_type === "FILTER" ? (
-              <span>{reward.filter_details?.name_contains ? `Contains "${reward.filter_details.name_contains}"` : "Automatic market filter"}</span>
+              <span>{reward.filter_details?.name_contains ? t("public.containsText", { text: reward.filter_details.name_contains }) : t("public.autoMarketFilter", "Automatic market filter")}</span>
             ) : null}
           </div>
         </div>
@@ -691,18 +697,18 @@ function RewardCard({
         {/* Price & points footer */}
         <div className="pt-2 border-t border-border/50 flex items-center justify-between text-xs gap-2">
           <div>
-            <span className="text-[10px] text-muted-foreground block font-medium">Channel Points</span>
+            <span className="text-[10px] text-muted-foreground block font-medium">{t("public.channelPoints", "Channel Points")}</span>
             {reward.cost_points != null ? (
               <span className="font-mono font-bold text-purple-400 text-xs">
-                {reward.cost_points.toLocaleString()} pts
+                {reward.cost_points.toLocaleString()} {t("common.pts", "pts")}
               </span>
             ) : (
-              <span className="text-[10px] text-muted-foreground italic">Points hidden</span>
+              <span className="text-[10px] text-muted-foreground italic">{t("public.pointsHidden", "Points hidden")}</span>
             )}
           </div>
 
           <div className="text-right">
-            <span className="text-[10px] text-muted-foreground block font-medium">Market Est.</span>
+            <span className="text-[10px] text-muted-foreground block font-medium">{t("public.marketEst", "Market Est.")}</span>
             {formattedCardPrice ? (
               <span className="font-mono font-semibold text-foreground/90 text-xs">
                 {formattedCardPrice}
@@ -729,6 +735,7 @@ function RewardDetailExpandedView({
   onCopyLink: () => void;
   copied: boolean;
 }) {
+  const { t } = useTranslation();
   const isPool = reward.reward_type === "POOL";
   const isFilter = reward.reward_type === "FILTER";
   const isFixed = reward.reward_type === "FIXED";
@@ -743,7 +750,7 @@ function RewardDetailExpandedView({
     (reward.purchase_limits?.user?.length ?? 0) > 0;
 
   const chatReqText = reward.chat_requirements
-    ? renderChatRequirementText(reward.chat_requirements)
+    ? renderChatRequirementText(reward.chat_requirements, t)
     : null;
 
   return (
@@ -757,7 +764,7 @@ function RewardDetailExpandedView({
           className="gap-2 text-xs text-muted-foreground hover:text-foreground"
         >
           <IconArrowLeft />
-          <span>Back to all rewards</span>
+          <span>{t("public.backToAll", "Back to all rewards")}</span>
         </Button>
 
         <div className="flex items-center gap-2">
@@ -768,7 +775,7 @@ function RewardDetailExpandedView({
             className="gap-1.5 text-xs"
           >
             {copied ? <IconCheck className="text-emerald-400" /> : <IconShare />}
-            <span>{copied ? "Link Copied" : "Share Reward"}</span>
+            <span>{copied ? t("public.linkCopied", "Link Copied") : t("public.shareReward", "Share Reward")}</span>
           </Button>
         </div>
       </div>
@@ -787,12 +794,12 @@ function RewardDetailExpandedView({
                   isFilter && "bg-teal-500/10 text-teal-500 border-teal-500/20"
                 )}
               >
-                {isFixed ? "Fixed" : isPool ? `Skin Pool (${reward.pool_items?.length ?? 0} skins)` : "Filter"}
+                {isFixed ? t("public.typeFixed", "Fixed") : isPool ? `${t("public.typePool", "Skin Pool")} (${reward.pool_items?.length ?? 0})` : t("public.typeFilter", "Filter")}
               </Badge>
 
               {reward.is_paused && (
                 <Badge variant="outline" className="border-amber-500/30 text-amber-500 bg-amber-500/10 text-xs font-semibold">
-                  Paused {reward.pause_reason ? `(${reward.pause_reason})` : ""}
+                  {t("public.paused", "Paused")} {reward.pause_reason ? `(${reward.pause_reason})` : ""}
                 </Badge>
               )}
             </div>
@@ -810,13 +817,13 @@ function RewardDetailExpandedView({
 
           {/* Pricing Box - Note: Market Value NOT duplicated here */}
           <div className="flex flex-row md:flex-col items-baseline md:items-end justify-between w-full md:w-auto p-4 rounded-2xl bg-secondary/30 border border-border/60 shrink-0 gap-1">
-            <span className="text-xs text-muted-foreground font-medium">Channel Points Cost</span>
+            <span className="text-xs text-muted-foreground font-medium">{t("public.pointsCost", "Channel Points Cost")}</span>
             {reward.cost_points != null ? (
               <span className="text-2xl font-black text-purple-400 font-mono">
-                {reward.cost_points.toLocaleString()} pts
+                {reward.cost_points.toLocaleString()} {t("common.pts", "pts")}
               </span>
             ) : (
-              <span className="text-sm text-muted-foreground italic">Points cost hidden</span>
+              <span className="text-sm text-muted-foreground italic">{t("public.pointsCostHidden", "Points cost hidden")}</span>
             )}
           </div>
         </div>
@@ -834,7 +841,7 @@ function RewardDetailExpandedView({
               <SkinImage marketItemName={reward.market_item_name} size={300} />
             </a>
             <div className="space-y-2">
-              <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Item Drop</span>
+              <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">{t("public.itemDrop", "Item Drop")}</span>
               <div>
                 <a
                   href={getCsgoMarketUrl(reward.market_item_name)}
@@ -844,14 +851,14 @@ function RewardDetailExpandedView({
                   title={`View "${reward.market_item_name}" on CS:GO Market`}
                 >
                   <h3 className="text-xl font-bold text-foreground group-hover/link:text-primary transition-colors">
-                    {reward.market_item_name || "Unknown skin"}
+                    {reward.market_item_name || t("public.unknownSkin", "Unknown skin")}
                   </h3>
                   <IconExternalLink className="text-muted-foreground group-hover/link:text-primary" />
                 </a>
               </div>
               {reward.market_price != null && (
                 <p className="text-sm text-muted-foreground font-mono">
-                  Estimated Steam Market Price:{" "}
+                  {t("public.estimatedPrice", "Estimated Steam Market Price:")}{" "}
                   <span className="text-foreground font-bold font-mono">
                     {formatPriceWithDeviation(
                       reward.market_price,
@@ -870,24 +877,24 @@ function RewardDetailExpandedView({
           <div className="p-6 rounded-2xl border border-teal-500/20 bg-teal-500/5 space-y-3">
             <h3 className="text-sm font-bold text-teal-400 flex items-center gap-2">
               <IconSparkles />
-              <span>Filter Criteria</span>
+              <span>{t("public.filterCriteria", "Filter Criteria")}</span>
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div className="p-3 rounded-xl bg-card border border-border">
-                <span className="text-muted-foreground block mb-1">Price Range</span>
+                <span className="text-muted-foreground block mb-1">{t("public.priceRange", "Price Range")}</span>
                 <span className="font-mono font-bold text-foreground text-sm">
                   {reward.filter_details.min_price ?? 0} – {reward.filter_details.max_price ?? "∞"} {reward.currency ?? ""}
                 </span>
               </div>
               {reward.filter_details.name_contains && (
                 <div className="p-3 rounded-xl bg-card border border-border">
-                  <span className="text-muted-foreground block mb-1">Name Contains</span>
+                  <span className="text-muted-foreground block mb-1">{t("public.nameContains", "Name Contains")}</span>
                   <span className="font-semibold text-foreground">{reward.filter_details.name_contains}</span>
                 </div>
               )}
               {reward.filter_details.name_prefix && (
                 <div className="p-3 rounded-xl bg-card border border-border">
-                  <span className="text-muted-foreground block mb-1">Name Prefix</span>
+                  <span className="text-muted-foreground block mb-1">{t("public.namePrefix", "Name Prefix")}</span>
                   <span className="font-semibold text-foreground">{reward.filter_details.name_prefix}</span>
                 </div>
               )}
@@ -901,17 +908,17 @@ function RewardDetailExpandedView({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="text-base font-bold text-foreground">
-                  Pool Drop Items ({reward.pool_items?.length ?? 0})
+                  {t("public.poolDropItems", { count: reward.pool_items?.length ?? 0 })}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  When redeemed, one skin is randomly selected from this pool based on the drop chances below.
+                  {t("public.poolDropDesc", "When redeemed, one skin is randomly selected from this pool based on the drop chances below.")}
                 </p>
               </div>
             </div>
 
             {(!reward.pool_items || reward.pool_items.length === 0) ? (
               <p className="text-xs text-muted-foreground py-4 italic">
-                Items in this pool are currently hidden or not configured.
+                {t("public.poolItemsHidden", "Items in this pool are currently hidden or not configured.")}
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -932,7 +939,7 @@ function RewardDetailExpandedView({
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-violet-400" />
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Chat Activity Requirement
+                    {t("public.chatReqTitle", "Chat Activity Requirement")}
                   </h4>
                 </div>
                 <p className="text-xs text-foreground leading-relaxed">
@@ -947,25 +954,25 @@ function RewardDetailExpandedView({
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-purple-400" />
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Twitch Limits & Cooldown
+                    {t("public.twitchLimitsTitle", "Twitch Limits & Cooldown")}
                   </h4>
                 </div>
                 <div className="space-y-1.5 text-xs text-foreground">
                   {reward.max_redemptions_per_stream != null && (
                     <div className="flex items-center justify-between gap-2 py-0.5 border-b border-border/30">
-                      <span className="text-muted-foreground">Stream limit:</span>
-                      <span className="font-semibold text-foreground">max {reward.max_redemptions_per_stream} per stream</span>
+                      <span className="text-muted-foreground">{t("public.streamLimit", "Stream limit:")}</span>
+                      <span className="font-semibold text-foreground">{t("public.maxPerStream", { count: reward.max_redemptions_per_stream })}</span>
                     </div>
                   )}
                   {reward.max_redemptions_per_user_per_stream != null && (
                     <div className="flex items-center justify-between gap-2 py-0.5 border-b border-border/30">
-                      <span className="text-muted-foreground">User limit:</span>
-                      <span className="font-semibold text-foreground">max {reward.max_redemptions_per_user_per_stream} per user/stream</span>
+                      <span className="text-muted-foreground">{t("public.userLimit", "User limit:")}</span>
+                      <span className="font-semibold text-foreground">{t("public.maxPerUserStream", { count: reward.max_redemptions_per_user_per_stream })}</span>
                     </div>
                   )}
                   {reward.global_cooldown_seconds != null && reward.global_cooldown_seconds > 0 && (
                     <div className="flex items-center justify-between gap-2 py-0.5">
-                      <span className="text-muted-foreground">Cooldown:</span>
+                      <span className="text-muted-foreground">{t("public.cooldown", "Cooldown:")}</span>
                       <span className="font-semibold text-foreground">{formatCooldown(reward.global_cooldown_seconds)}</span>
                     </div>
                   )}
@@ -979,23 +986,23 @@ function RewardDetailExpandedView({
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-amber-400" />
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Bot Purchase Limits
+                    {t("public.botLimitsTitle", "Bot Purchase Limits")}
                   </h4>
                 </div>
                 <div className="space-y-1.5 text-xs text-foreground">
                   {reward.purchase_limits?.global?.map((rule, i) => (
                     <div key={`g-${i}`} className="flex items-center justify-between gap-2 py-0.5 border-b border-border/30">
-                      <span className="text-muted-foreground">Global limit (all viewers):</span>
+                      <span className="text-muted-foreground">{t("public.globalLimitLabel", "Global limit (all viewers):")}</span>
                       <span className="font-semibold text-foreground">
-                        max {rule.max_redemptions} {rule.window_hours ? `every ${rule.window_hours}h` : "all-time"}
+                        {rule.window_hours ? t("public.maxEveryHours", { count: rule.max_redemptions, hours: rule.window_hours }) : t("public.maxAllTime", { count: rule.max_redemptions })}
                       </span>
                     </div>
                   ))}
                   {reward.purchase_limits?.user?.map((rule, i) => (
                     <div key={`u-${i}`} className="flex items-center justify-between gap-2 py-0.5 border-b border-border/30 last:border-0">
-                      <span className="text-muted-foreground">Personal limit (per viewer):</span>
+                      <span className="text-muted-foreground">{t("public.personalLimitLabel", "Personal limit (per viewer):")}</span>
                       <span className="font-semibold text-foreground">
-                        max {rule.max_redemptions} {rule.window_hours ? `every ${rule.window_hours}h` : "all-time"}
+                        {rule.window_hours ? t("public.maxEveryHours", { count: rule.max_redemptions, hours: rule.window_hours }) : t("public.maxAllTime", { count: rule.max_redemptions })}
                       </span>
                     </div>
                   ))}

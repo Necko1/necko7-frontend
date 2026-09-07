@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import { logsApi } from "@/lib/apiClient";
 import type {
@@ -141,6 +142,7 @@ interface ConsoleLogItemProps {
 }
 
 function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const copyDetails = (e: React.MouseEvent) => {
@@ -213,7 +215,7 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
         {/* Expand indicator on hover */}
         {(hasDetails || hasSolution) && (
           <span className="text-[10px] text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 select-none">
-            {isExpanded ? "collapse" : "details"}
+            {isExpanded ? t("logs.collapseAll") : t("logs.expandAll")}
           </span>
         )}
       </div>
@@ -248,7 +250,7 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
                   className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-0.5 rounded border border-border bg-card hover:bg-muted/40 transition-colors"
                 >
                   {copied ? <IconCheck /> : <IconCopy />}
-                  {copied ? "Copied" : "Copy JSON"}
+                  {copied ? t("logs.copied") : t("logs.copyJson")}
                 </button>
               </div>
               <pre className="p-3 rounded-lg bg-black/40 border border-border/40 text-foreground/90 overflow-x-auto text-[11px] leading-relaxed">
@@ -265,7 +267,7 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
               onClick={copyDetails}
               className="hover:text-foreground transition-colors underline"
             >
-              Copy full record
+              {t("logs.copyJson")}
             </button>
           </div>
         </div>
@@ -276,6 +278,7 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
 
 // ── Main LogsPage ──────────────────────────────────────────────────────────
 export default function LogsPage() {
+  const { t } = useTranslation();
   const { selectedBroadcasterId } = useAppStore();
   const channelId = selectedBroadcasterId ?? "";
 
@@ -300,29 +303,19 @@ export default function LogsPage() {
   // Expanded log IDs set
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
-  // Keep levelFilter in sync if URL query changes
+  // Auto-refresh interval (null = off, or 5000 / 10000 / 30000 ms)
+  const [refreshInterval, setRefreshInterval] = useState<number | null>(null);
+
+  // Sync URL search params if changed externally
   useEffect(() => {
-    const qLevel = searchParams.get("level") as ChannelLogLevel | null;
-    if (qLevel && (qLevel === "ERROR" || qLevel === "WARN" || qLevel === "INFO" || qLevel === "DEBUG")) {
-      setLevelFilter(qLevel);
+    const lvl = (searchParams.get("level") as ChannelLogLevel) || "";
+    if (lvl !== levelFilter) {
+      setLevelFilter(lvl);
+      setPage(0);
     }
   }, [searchParams]);
 
-  // Apply preset
-  const applyPreset = (hours: number | null) => {
-    if (hours === null) {
-      setFromInput("");
-      setToInput("");
-      setPage(0);
-      return;
-    }
-    const current = new Date();
-    setFromInput(format(subHours(current, hours), "yyyy-MM-dd'T'HH:mm"));
-    setToInput("");
-    setPage(0);
-  };
-
-  // Convert inputs to ISO strings for API
+  // Convert from/to datetime strings to ISO string for backend query
   const fromIso = useMemo(() => {
     if (!fromInput) return null;
     const d = new Date(fromInput);
@@ -335,18 +328,18 @@ export default function LogsPage() {
     return isValid(d) ? d.toISOString() : null;
   }, [toInput]);
 
-  // Query logs list
-  const queryParams: ListChannelLogsQuery = useMemo(() => {
-    return {
+  const queryPayload: ListChannelLogsQuery = useMemo(
+    () => ({
       level: levelFilter || null,
       category: categoryFilter || null,
-      search: activeSearch.trim() || null,
+      search: activeSearch ? activeSearch.trim() : null,
       from: fromIso,
       to: toIso,
-      offset: page * pageSize,
       limit: pageSize,
-    };
-  }, [levelFilter, categoryFilter, activeSearch, fromIso, toIso, page, pageSize]);
+      offset: page * pageSize,
+    }),
+    [levelFilter, categoryFilter, activeSearch, fromIso, toIso, pageSize, page]
+  );
 
   const {
     data: logsData,
@@ -354,21 +347,33 @@ export default function LogsPage() {
     isFetching: logsFetching,
     refetch: refetchLogs,
   } = useQuery({
-    queryKey: ["channel-logs", channelId, queryParams],
-    queryFn: () => logsApi.list(channelId, queryParams).then((r) => r.data),
+    queryKey: ["channel-logs", channelId, queryPayload],
+    queryFn: () => logsApi.list(channelId, queryPayload).then((r) => r.data),
     enabled: !!channelId,
-    staleTime: 10_000,
+    placeholderData: (previousData) => previousData,
+    refetchInterval: refreshInterval ?? false,
   });
 
   const handleApplySearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setActiveSearch(searchInput);
+    setActiveSearch(searchInput.trim());
     setPage(0);
   };
 
   const handleClearSearch = () => {
     setSearchInput("");
     setActiveSearch("");
+    setPage(0);
+  };
+
+  const applyPreset = (hours: number | null) => {
+    if (hours === null) {
+      setFromInput("");
+      setToInput("");
+    } else {
+      setFromInput(format(subHours(new Date(), hours), "yyyy-MM-dd'T'HH:mm"));
+      setToInput("");
+    }
     setPage(0);
   };
 
@@ -398,7 +403,7 @@ export default function LogsPage() {
   if (!channelId) {
     return (
       <div className="p-8 flex items-center justify-center min-h-96">
-        <p className="text-muted-foreground">Select a broadcaster channel first.</p>
+        <p className="text-muted-foreground">{t("dashboard.selectChannel")}</p>
       </div>
     );
   }
@@ -426,9 +431,9 @@ export default function LogsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Channel Logs</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("logs.title")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            System events, audit records, and automated bot diagnostics
+            {t("logs.subtitle")}
           </p>
         </div>
 
@@ -441,7 +446,7 @@ export default function LogsPage() {
             className="gap-2"
           >
             <IconRefresh spinning={logsFetching} />
-            Refresh
+            {t("logs.refresh")}
           </Button>
         </div>
       </div>
@@ -453,7 +458,7 @@ export default function LogsPage() {
           {/* Level Filter */}
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider font-mono">
-              Level:
+              {t("logs.level")}:
             </span>
             <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/20 p-1 flex-wrap">
               {LEVELS.map((lvl) => (
@@ -473,7 +478,7 @@ export default function LogsPage() {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {lvl.label}
+                  {lvl.value ? lvl.label : t("common.all")}
                 </button>
               ))}
             </div>
@@ -484,7 +489,7 @@ export default function LogsPage() {
           {/* Category Filter */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider font-mono">
-              Category:
+              {t("logs.category")}:
             </span>
             <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/20 p-1 flex-wrap">
               {CATEGORIES.map((cat) => (
@@ -502,7 +507,7 @@ export default function LogsPage() {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {cat.label}
+                  {cat.value ? cat.label : t("common.all")}
                 </button>
               ))}
             </div>
@@ -512,7 +517,7 @@ export default function LogsPage() {
         {/* Line 2: Date & Time (Presets directly set from/to) */}
         <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-border/40">
           <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider font-mono">
-            Time Range:
+            {t("logs.timestamp")}:
           </span>
 
           {/* Presets */}
@@ -524,7 +529,7 @@ export default function LogsPage() {
                 onClick={() => applyPreset(p.hours)}
                 className="px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all select-none"
               >
-                {p.label}
+                {p.hours === 1 ? t("logs.preset1h") : p.hours === 6 ? t("logs.preset6h") : p.hours === 24 ? t("logs.preset24h") : p.hours === 168 ? t("logs.preset7d") : t("logs.presetAll")}
               </button>
             ))}
           </div>
@@ -565,7 +570,7 @@ export default function LogsPage() {
               className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
             >
               <IconX />
-              Clear Time
+              {t("common.clear")}
             </Button>
           )}
         </div>
@@ -580,14 +585,14 @@ export default function LogsPage() {
               </div>
               <input
                 type="text"
-                placeholder="Search within log messages, event types, or details…"
+                placeholder={t("logs.searchPlaceholder")}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full h-9 pl-9 pr-4 rounded-lg border border-border bg-muted/20 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
             <Button type="submit" size="sm" className="h-9 text-xs px-4">
-              Search
+              {t("common.search")}
             </Button>
             {activeSearch && (
               <Button
@@ -598,7 +603,7 @@ export default function LogsPage() {
                 className="h-9 px-2 text-xs text-muted-foreground gap-1"
               >
                 <IconX />
-                Clear
+                {t("common.clear")}
               </Button>
             )}
           </form>
@@ -612,7 +617,7 @@ export default function LogsPage() {
                 onClick={expandAll}
                 className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
               >
-                Expand all
+                {t("logs.expandAll")}
               </Button>
               <Button
                 variant="ghost"
@@ -620,12 +625,12 @@ export default function LogsPage() {
                 onClick={collapseAll}
                 className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
               >
-                Collapse all
+                {t("logs.collapseAll")}
               </Button>
             </div>
 
             <div className="flex items-center gap-1.5 border-l border-border pl-3">
-              <span className="text-xs text-muted-foreground">Rows:</span>
+              <span className="text-xs text-muted-foreground">{t("common.perPage")}</span>
               <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 p-0.5">
                 {PAGE_SIZES.map((s) => (
                   <button
@@ -656,7 +661,7 @@ export default function LogsPage() {
                 className="h-8 text-xs text-muted-foreground hover:text-rose-400 gap-1 border-l border-border pl-3 rounded-none"
               >
                 <IconX />
-                Reset filters
+                {t("common.clear")}
               </Button>
             )}
           </div>
@@ -680,10 +685,10 @@ export default function LogsPage() {
 
           <div className="flex items-center gap-3 text-muted-foreground/60 text-[11px]">
             {logsLoading ? (
-              <span>Reading stream…</span>
+              <span>{t("common.loading")}</span>
             ) : (
               <span>
-                {totalLogs.toLocaleString()} total record{totalLogs !== 1 ? "s" : ""}
+                {totalLogs.toLocaleString()} {t("common.total")}
               </span>
             )}
           </div>
@@ -704,13 +709,10 @@ export default function LogsPage() {
             </div>
           ) : !logsData?.items || logsData.items.length === 0 ? (
             <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-3 font-mono text-xs text-muted-foreground p-8">
-              <p className="text-sm font-medium text-foreground">No logs recorded for this criteria</p>
-              <p className="max-w-md">
-                Try loosening your filters, adjusting the time range, or waiting for new bot activity.
-              </p>
+              <p className="text-sm font-medium text-foreground">{t("logs.noLogsFound")}</p>
               {hasActiveFilters && (
                 <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2 text-xs">
-                  Reset all filters
+                  {t("common.clear")}
                 </Button>
               )}
             </div>
@@ -733,9 +735,9 @@ export default function LogsPage() {
       {totalLogs > 0 && (
         <div className="flex items-center justify-between flex-wrap gap-4 text-xs text-muted-foreground">
           <div>
-            Showing <span className="font-semibold text-foreground tabular-nums">{startRecord}</span>–
-            <span className="font-semibold text-foreground tabular-nums">{endRecord}</span> of{" "}
-            <span className="font-semibold text-foreground tabular-nums">{totalLogs.toLocaleString()}</span> logs
+            <span className="font-semibold text-foreground tabular-nums">{startRecord}</span>–
+            <span className="font-semibold text-foreground tabular-nums">{endRecord}</span> /{" "}
+            <span className="font-semibold text-foreground tabular-nums">{totalLogs.toLocaleString()}</span> {t("common.total")}
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -746,11 +748,11 @@ export default function LogsPage() {
               disabled={page === 0 || logsLoading}
               className="h-8 px-3 text-xs"
             >
-              Previous
+              {t("common.prev")}
             </Button>
 
             <span className="px-3 py-1 font-mono text-xs tabular-nums text-foreground">
-              Page {page + 1} / {Math.max(1, totalPages)}
+              {page + 1} / {Math.max(1, totalPages)}
             </span>
 
             <Button

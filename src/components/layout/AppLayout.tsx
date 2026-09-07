@@ -1,9 +1,11 @@
 import { useEffect, useMemo } from "react";
 import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 import {
   Tooltip,
@@ -107,6 +109,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export default function AppLayout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const {
@@ -204,19 +207,26 @@ export default function AppLayout() {
     if (isViewer && selectedBroadcaster) {
       return [
         {
-          label: "Rewards",
+          label: t("nav.rewards"),
           to: `/c/${selectedBroadcaster.channel_login}`,
           icon: <IconGift />,
         },
         {
-          label: "Profile",
+          label: t("nav.profile"),
           to: `/c/${selectedBroadcaster.channel_login}/profile`,
           icon: <IconUser />,
         },
       ];
     }
-    return NAV_ITEMS;
-  }, [isViewer, selectedBroadcaster]);
+    return [
+      { label: t("nav.dashboard"), to: "/dashboard", icon: <IconGrid /> },
+      { label: t("nav.rewards"), to: "/rewards", icon: <IconGift /> },
+      { label: t("nav.redemptions"), to: "/redemptions", icon: <IconList /> },
+      { label: t("nav.logs"), to: "/logs", icon: <IconTerminal /> },
+      { label: t("nav.leaderboard"), to: "/leaderboard", icon: <IconTrophy /> },
+      { label: t("nav.chat"), to: "/chat", icon: <IconChat /> },
+    ];
+  }, [isViewer, selectedBroadcaster, t]);
 
 
   // While checking auth — show full-screen loader
@@ -232,7 +242,7 @@ export default function AppLayout() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
           </svg>
-          <p className="text-sm">Verifying session…</p>
+          <p className="text-sm">{t("nav.verifyingSession")}</p>
         </div>
       </div>
     );
@@ -282,7 +292,7 @@ export default function AppLayout() {
                     {selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
                   </p>
                   <p className="text-xs text-muted-foreground capitalize">
-                    {isViewer ? "Viewer" : selectedBroadcaster.role}
+                    {isViewer ? t("channels.viewer") : selectedBroadcaster.role}
                   </p>
                 </div>
                 {!isViewer && (
@@ -295,7 +305,7 @@ export default function AppLayout() {
                     >
                       <IconSettings />
                     </TooltipTrigger>
-                    <TooltipContent>Channel settings</TooltipContent>
+                    <TooltipContent>{t("nav.channelSettings")}</TooltipContent>
                   </Tooltip>
                 )}
               </div>
@@ -308,7 +318,7 @@ export default function AppLayout() {
               >
                 <span className="flex items-center gap-2">
                   <IconSwap />
-                  Switch channel
+                  {t("nav.switchChannel")}
                 </span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground font-mono font-medium">
                   {broadcasters.length}
@@ -324,7 +334,7 @@ export default function AppLayout() {
             >
               <p className="text-xs font-medium text-primary flex items-center justify-center gap-1.5">
                 <IconPlus />
-                Select channel
+                {t("nav.selectChannel")}
               </p>
             </button>
           )}
@@ -355,6 +365,11 @@ export default function AppLayout() {
 
         <Separator className="bg-sidebar-border" />
 
+        {/* Language switcher directly above user profile */}
+        <div className="px-3 pt-2">
+          <LanguageSwitcher />
+        </div>
+
         {/* User profile at bottom */}
         <div className="p-3">
           <div
@@ -368,7 +383,7 @@ export default function AppLayout() {
                 ? "bg-sidebar-accent border border-primary/30 shadow-xs"
                 : "hover:bg-sidebar-accent/60"
             )}
-            title="Open your global viewer profile"
+            title={t("nav.myProfile")}
           >
             <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border group-hover:ring-primary/40 transition-all">
               <AvatarImage src={meData?.avatar_url ?? undefined} alt={meData?.login} />
@@ -381,7 +396,7 @@ export default function AppLayout() {
                 {meData?.login}
               </p>
               <p className="text-[10px] text-muted-foreground leading-none">
-                • My profile
+                • {t("nav.myProfile")}
               </p>
             </div>
             <Tooltip>
@@ -395,7 +410,7 @@ export default function AppLayout() {
               >
                 <IconLogOut />
               </TooltipTrigger>
-              <TooltipContent>Log out</TooltipContent>
+              <TooltipContent>{t("nav.logout")}</TooltipContent>
             </Tooltip>
           </div>
         </div>
