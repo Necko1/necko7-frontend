@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { authApi } from "@/lib/apiClient";
 import { cn } from "@/lib/utils";
+import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 
 const IconTwitch = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -75,6 +76,10 @@ export default function LoginPage() {
 
   return (
     <div className="glass rounded-2xl p-8 glow-teal space-y-6">
+      <div className="flex justify-end -mt-2 -mr-2">
+        <LanguageSwitcher className="bg-white/5 border-white/10" />
+      </div>
+
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="flex justify-center mb-4">

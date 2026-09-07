@@ -22,7 +22,7 @@ const IconGlobe = () => (
 
 export default function LanguageSwitcher({ className }: { className?: string }) {
   const { i18n, t } = useTranslation();
-  const currentLang = (i18n.language || "ru").startsWith("en") ? "en" : "ru";
+  const currentLang = (i18n.language || "en").startsWith("ru") ? "ru" : "en";
 
   return (
     <div
@@ -30,12 +30,12 @@ export default function LanguageSwitcher({ className }: { className?: string }) 
         "flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-sidebar-accent/50 border border-sidebar-border/60 text-xs select-none",
         className
       )}
-      title={t("common.language", "Язык")}
+      title={t("common.language", "Language")}
     >
       <div className="flex items-center gap-2 text-muted-foreground">
         <IconGlobe />
         <span className="text-[11px] font-medium tracking-wide">
-          {t("common.language", "Язык")}
+          {t("common.language", "Language")}
         </span>
       </div>
 

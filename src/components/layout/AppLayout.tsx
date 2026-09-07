@@ -3,6 +3,7 @@ import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-route
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -16,6 +17,12 @@ import { usersApi, broadcastersApi, authApi } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/utils";
 import type { AxiosError } from "axios";
+
+const IconTwitch = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+  </svg>
+);
 
 interface NavItem {
   label: string;
@@ -159,8 +166,10 @@ export default function AppLayout() {
   useEffect(() => {
     if (meData) {
       setCurrentUser(meData);
+    } else if (meError) {
+      setCurrentUser(null);
     }
-  }, [meData, setCurrentUser]);
+  }, [meData, meError, setCurrentUser]);
 
   // ── HOOK 5: Sync broadcasters into store ─────────────────────────────────
   useEffect(() => {
@@ -191,7 +200,7 @@ export default function AppLayout() {
     }
   }, [location.pathname, broadcasters, selectedBroadcasterId, setSelectedBroadcasterId]);
 
-  const selectedBroadcaster = getSelectedBroadcaster();
+  const selectedBroadcaster = meData ? getSelectedBroadcaster() : null;
   const roleUpper = selectedBroadcaster?.role?.toUpperCase();
   const isViewer = roleUpper === "VIEWER";
 
@@ -206,6 +215,23 @@ export default function AppLayout() {
   }, [isViewer, selectedBroadcaster, location.pathname, navigate]);
 
   const navItems: NavItem[] = useMemo(() => {
+    // 1. Guest viewing public channel route: show Rewards only, no Profile!
+    if (!meData && location.pathname.startsWith("/c/")) {
+      const channelLogin = location.pathname.split("/")[2] || "";
+      return [
+        {
+          label: t("nav.rewards"),
+          to: `/c/${channelLogin}`,
+          icon: <IconGift />,
+          isActive: (pathname: string) => {
+            const lower = pathname.toLowerCase();
+            const target = `/c/${channelLogin.toLowerCase()}`;
+            return lower === target || lower.startsWith(`${target}/rewards`);
+          },
+        },
+      ];
+    }
+
     if (isViewer && selectedBroadcaster) {
       return [
         {
@@ -234,7 +260,7 @@ export default function AppLayout() {
       { label: t("nav.leaderboard"), to: "/leaderboard", icon: <IconTrophy /> },
       { label: t("nav.chat"), to: "/chat", icon: <IconChat /> },
     ];
-  }, [isViewer, selectedBroadcaster, t]);
+  }, [meData, location.pathname, isViewer, selectedBroadcaster, t]);
 
 
   // While checking auth — show full-screen loader
@@ -260,14 +286,9 @@ export default function AppLayout() {
   if (meError) {
     const status = (meError as AxiosError)?.response?.status;
     if (status === 404) return <Navigate to="/init-bot" replace />;
-    if (location.pathname.startsWith("/c/")) {
-      return (
-        <main className="min-h-screen bg-background">
-          <Outlet />
-        </main>
-      );
+    if (!location.pathname.startsWith("/c/")) {
+      return <Navigate to="/login" replace />;
     }
-    return <Navigate to="/login" replace />;
   }
 
   return (
@@ -277,7 +298,22 @@ export default function AppLayout() {
 
         {/* Broadcaster section */}
         <div className="p-4 space-y-2">
-          {bcastLoading ? (
+          {!meData ? (
+            /* Guest header: brand title only, no account switch or broadcaster select */
+            <div className="flex items-center gap-3 p-2">
+              <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm tracking-wider shadow-sm">
+                n7
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-base tracking-tight text-sidebar-foreground leading-tight">
+                  necko7
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  rewards bot
+                </span>
+              </div>
+            </div>
+          ) : bcastLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full rounded-xl" />
               <Skeleton className="h-7 w-3/4 rounded-lg" />
@@ -380,49 +416,59 @@ export default function AppLayout() {
           <LanguageSwitcher />
         </div>
 
-        {/* User profile at bottom */}
+        {/* User profile or Guest login at bottom */}
         <div className="p-3">
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate("/me")}
-            onKeyDown={(e) => e.key === "Enter" && navigate("/me")}
-            className={cn(
-              "w-full flex items-center gap-3 p-2 rounded-xl transition-all cursor-pointer group text-left select-none",
-              location.pathname === "/me"
-                ? "bg-sidebar-accent border border-primary/30 shadow-xs"
-                : "hover:bg-sidebar-accent/60"
-            )}
-            title={t("nav.myProfile")}
-          >
-            <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border group-hover:ring-primary/40 transition-all">
-              <AvatarImage src={meData?.avatar_url ?? undefined} alt={meData?.login} />
-              <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
-                {(meData?.login || "??").slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate group-hover:text-primary transition-colors">
-                {meData?.login}
-              </p>
-              <p className="text-[10px] text-muted-foreground leading-none">
-                • {t("nav.myProfile")}
-              </p>
+          {!meData ? (
+            <Button
+              onClick={() => navigate("/login")}
+              className="w-full flex items-center justify-center gap-2.5 h-10 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
+            >
+              <IconTwitch />
+              <span>{t("profile.signInWithTwitch", "Log in with Twitch")}</span>
+            </Button>
+          ) : (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/me")}
+              onKeyDown={(e) => e.key === "Enter" && navigate("/me")}
+              className={cn(
+                "w-full flex items-center gap-3 p-2 rounded-xl transition-all cursor-pointer group text-left select-none",
+                location.pathname === "/me"
+                  ? "bg-sidebar-accent border border-primary/30 shadow-xs"
+                  : "hover:bg-sidebar-accent/60"
+              )}
+              title={t("nav.myProfile")}
+            >
+              <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border group-hover:ring-primary/40 transition-all">
+                <AvatarImage src={meData.avatar_url ?? undefined} alt={meData.login} />
+                <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
+                  {(meData.login || "??").slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-sidebar-foreground truncate group-hover:text-primary transition-colors">
+                  {meData.login}
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-none">
+                  • {t("nav.myProfile")}
+                </p>
+              </div>
+              <Tooltip>
+                <TooltipTrigger
+                  className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-accent"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    logoutMutation.mutate();
+                  }}
+                  aria-disabled={logoutMutation.isPending}
+                >
+                  <IconLogOut />
+                </TooltipTrigger>
+                <TooltipContent>{t("nav.logout")}</TooltipContent>
+              </Tooltip>
             </div>
-            <Tooltip>
-              <TooltipTrigger
-                className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-accent"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  logoutMutation.mutate();
-                }}
-                aria-disabled={logoutMutation.isPending}
-              >
-                <IconLogOut />
-              </TooltipTrigger>
-              <TooltipContent>{t("nav.logout")}</TooltipContent>
-            </Tooltip>
-          </div>
+          )}
         </div>
       </aside>
 

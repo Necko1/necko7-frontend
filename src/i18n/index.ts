@@ -3,7 +3,7 @@ import { initReactI18next } from "react-i18next";
 import { ru } from "./locales/ru";
 import { en } from "./locales/en";
 
-const savedLang = (typeof window !== "undefined" && localStorage.getItem("necko_lang")) || "ru";
+const savedLang = (typeof window !== "undefined" && localStorage.getItem("necko_lang")) || "en";
 
 i18n
   .use(initReactI18next)
@@ -13,7 +13,7 @@ i18n
       en: { translation: en },
     },
     lng: savedLang,
-    fallbackLng: "ru",
+    fallbackLng: "en",
     interpolation: {
       escapeValue: false, // React already safes from XSS
     },

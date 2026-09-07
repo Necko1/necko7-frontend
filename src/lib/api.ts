@@ -34,7 +34,7 @@ api.interceptors.response.use(
     // If user is already on /login or /init-bot, NEVER reload the page!
     if (status === 401) {
       const path = window.location.pathname;
-      if (!path.startsWith("/login") && !path.startsWith("/init-bot")) {
+      if (!path.startsWith("/login") && !path.startsWith("/init-bot") && !path.startsWith("/c/")) {
         isRedirecting = true;
         setTimeout(() => {
           window.location.href = "/login";
