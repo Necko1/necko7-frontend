@@ -21,6 +21,8 @@ interface NavItem {
   label: string;
   to: string;
   icon: React.ReactNode;
+  end?: boolean;
+  isActive?: (pathname: string) => boolean;
 }
 
 // Simple SVG icons inline to avoid import issues
@@ -210,16 +212,22 @@ export default function AppLayout() {
           label: t("nav.rewards"),
           to: `/c/${selectedBroadcaster.channel_login}`,
           icon: <IconGift />,
+          isActive: (pathname: string) => {
+            const lower = pathname.toLowerCase();
+            const target = `/c/${selectedBroadcaster.channel_login.toLowerCase()}`;
+            return lower === target || lower.startsWith(`${target}/rewards`);
+          },
         },
         {
           label: t("nav.profile"),
           to: `/c/${selectedBroadcaster.channel_login}/profile`,
           icon: <IconUser />,
+          end: true,
         },
       ];
     }
     return [
-      { label: t("nav.dashboard"), to: "/dashboard", icon: <IconGrid /> },
+      { label: t("nav.dashboard"), to: "/dashboard", icon: <IconGrid />, end: true },
       { label: t("nav.rewards"), to: "/rewards", icon: <IconGift /> },
       { label: t("nav.redemptions"), to: "/redemptions", icon: <IconList /> },
       { label: t("nav.logs"), to: "/logs", icon: <IconTerminal /> },
@@ -348,14 +356,16 @@ export default function AppLayout() {
             <NavLink
               key={item.to}
               to={item.to}
-              className={({ isActive }) =>
-                cn(
+              end={item.end}
+              className={({ isActive }) => {
+                const active = item.isActive ? item.isActive(location.pathname) : isActive;
+                return cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
-                  isActive
+                  active
                     ? "bg-sidebar-accent text-primary font-semibold shadow-sm"
                     : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-                )
-              }
+                );
+              }}
             >
               {item.icon}
               {item.label}

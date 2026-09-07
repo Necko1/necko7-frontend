@@ -431,7 +431,7 @@ export const en = {
     userLimit: "User limit:",
     cooldown: "Cooldown:",
     maxPerStream: "max {{count}} per stream",
-    maxPerUserStream: "max {{count}} per user/stream",
+    maxPerUserStream: "max {{count}} per stream",
     botLimitsTitle: "Bot Purchase Limits",
     globalLimitLabel: "Global limit (all viewers):",
     personalLimitLabel: "Personal limit (per viewer):",

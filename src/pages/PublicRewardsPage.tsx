@@ -741,8 +741,8 @@ function RewardDetailExpandedView({
   const isFixed = reward.reward_type === "FIXED";
 
   const hasTwitchLimits =
-    reward.max_redemptions_per_stream != null ||
-    reward.max_redemptions_per_user_per_stream != null ||
+    (reward.max_redemptions_per_stream != null && reward.max_redemptions_per_stream > 0) ||
+    (reward.max_redemptions_per_user_per_stream != null && reward.max_redemptions_per_user_per_stream > 0) ||
     (reward.global_cooldown_seconds != null && reward.global_cooldown_seconds > 0);
 
   const hasBotLimits =
@@ -958,22 +958,22 @@ function RewardDetailExpandedView({
                   </h4>
                 </div>
                 <div className="space-y-1.5 text-xs text-foreground">
-                  {reward.max_redemptions_per_stream != null && (
-                    <div className="flex items-center justify-between gap-2 py-0.5 border-b border-border/30">
-                      <span className="text-muted-foreground">{t("public.streamLimit", "Stream limit:")}</span>
-                      <span className="font-semibold text-foreground">{t("public.maxPerStream", { count: reward.max_redemptions_per_stream })}</span>
+                  {reward.max_redemptions_per_stream != null && reward.max_redemptions_per_stream > 0 && (
+                    <div className="flex items-center justify-between gap-2 py-1 border-b border-border/30 last:border-b-0">
+                      <span className="text-muted-foreground truncate min-w-0">{t("public.streamLimit", "Stream limit:")}</span>
+                      <span className="font-semibold text-foreground shrink-0 whitespace-nowrap">{t("public.maxPerStream", { count: reward.max_redemptions_per_stream })}</span>
                     </div>
                   )}
-                  {reward.max_redemptions_per_user_per_stream != null && (
-                    <div className="flex items-center justify-between gap-2 py-0.5 border-b border-border/30">
-                      <span className="text-muted-foreground">{t("public.userLimit", "User limit:")}</span>
-                      <span className="font-semibold text-foreground">{t("public.maxPerUserStream", { count: reward.max_redemptions_per_user_per_stream })}</span>
+                  {reward.max_redemptions_per_user_per_stream != null && reward.max_redemptions_per_user_per_stream > 0 && (
+                    <div className="flex items-center justify-between gap-2 py-1 border-b border-border/30 last:border-b-0">
+                      <span className="text-muted-foreground truncate min-w-0">{t("public.userLimit", "User limit:")}</span>
+                      <span className="font-semibold text-foreground shrink-0 whitespace-nowrap">{t("public.maxPerUserStream", { count: reward.max_redemptions_per_user_per_stream })}</span>
                     </div>
                   )}
                   {reward.global_cooldown_seconds != null && reward.global_cooldown_seconds > 0 && (
-                    <div className="flex items-center justify-between gap-2 py-0.5">
-                      <span className="text-muted-foreground">{t("public.cooldown", "Cooldown:")}</span>
-                      <span className="font-semibold text-foreground">{formatCooldown(reward.global_cooldown_seconds)}</span>
+                    <div className="flex items-center justify-between gap-2 py-1 border-b border-border/30 last:border-b-0">
+                      <span className="text-muted-foreground truncate min-w-0">{t("public.cooldown", "Cooldown:")}</span>
+                      <span className="font-semibold text-foreground shrink-0 whitespace-nowrap">{formatCooldown(reward.global_cooldown_seconds)}</span>
                     </div>
                   )}
                 </div>
@@ -991,17 +991,17 @@ function RewardDetailExpandedView({
                 </div>
                 <div className="space-y-1.5 text-xs text-foreground">
                   {reward.purchase_limits?.global?.map((rule, i) => (
-                    <div key={`g-${i}`} className="flex items-center justify-between gap-2 py-0.5 border-b border-border/30">
-                      <span className="text-muted-foreground">{t("public.globalLimitLabel", "Global limit (all viewers):")}</span>
-                      <span className="font-semibold text-foreground">
+                    <div key={`g-${i}`} className="flex items-center justify-between gap-2 py-1 border-b border-border/30 last:border-b-0">
+                      <span className="text-muted-foreground truncate min-w-0">{t("public.globalLimitLabel", "Global limit (all viewers):")}</span>
+                      <span className="font-semibold text-foreground shrink-0 whitespace-nowrap">
                         {rule.window_hours ? t("public.maxEveryHours", { count: rule.max_redemptions, hours: rule.window_hours }) : t("public.maxAllTime", { count: rule.max_redemptions })}
                       </span>
                     </div>
                   ))}
                   {reward.purchase_limits?.user?.map((rule, i) => (
-                    <div key={`u-${i}`} className="flex items-center justify-between gap-2 py-0.5 border-b border-border/30 last:border-0">
-                      <span className="text-muted-foreground">{t("public.personalLimitLabel", "Personal limit (per viewer):")}</span>
-                      <span className="font-semibold text-foreground">
+                    <div key={`u-${i}`} className="flex items-center justify-between gap-2 py-1 border-b border-border/30 last:border-b-0">
+                      <span className="text-muted-foreground truncate min-w-0">{t("public.personalLimitLabel", "Personal limit (per viewer):")}</span>
+                      <span className="font-semibold text-foreground shrink-0 whitespace-nowrap">
                         {rule.window_hours ? t("public.maxEveryHours", { count: rule.max_redemptions, hours: rule.window_hours }) : t("public.maxAllTime", { count: rule.max_redemptions })}
                       </span>
                     </div>
