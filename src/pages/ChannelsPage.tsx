@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { PinOffIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -47,14 +49,7 @@ const IconArrowRight = () => (
   </svg>
 );
 
-const IconPinOff = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="2" y1="2" x2="22" y2="22" />
-    <line x1="12" y1="17" x2="12" y2="22" />
-    <path d="M9 9v-.24A2 2 0 0 1 11 7h2a2 2 0 0 1 2 2v4a4 4 0 0 0 .86 2.45" />
-    <path d="M5 17h12" />
-  </svg>
-);
+const IconPinOff = () => <HugeiconsIcon icon={PinOffIcon} size={15} strokeWidth={2} />;
 
 export default function ChannelsPage() {
   const navigate = useNavigate();

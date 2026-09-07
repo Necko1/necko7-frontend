@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkinImage from "@/components/common/SkinImage";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import type { AxiosError } from "axios";
 
@@ -26,21 +28,9 @@ const IconTwitch = () => (
   </svg>
 );
 
-const IconPin = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="17" x2="12" y2="22" />
-    <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.89A4 4 0 0 1 14 9V5a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v4a4 4 0 0 1-2.11 3.56l-1.78.89A2 2 0 0 0 5 15.24Z" />
-  </svg>
-);
+const IconPin = () => <HugeiconsIcon icon={PinIcon} size={15} strokeWidth={2} />;
 
-const IconPinOff = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="2" y1="2" x2="22" y2="22" />
-    <line x1="12" y1="17" x2="12" y2="22" />
-    <path d="M9 9v-.24A2 2 0 0 1 11 7h2a2 2 0 0 1 2 2v4a4 4 0 0 0 .86 2.45" />
-    <path d="M5 17h12" />
-  </svg>
-);
+const IconPinOff = () => <HugeiconsIcon icon={PinOffIcon} size={15} strokeWidth={2} />;
 
 const IconArrowLeft = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -336,22 +326,9 @@ export default function PublicRewardsPage() {
             </Avatar>
 
             <div className="space-y-1.5 min-w-0">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-2xl font-black tracking-tight text-foreground truncate">
-                  {broadcasterInfo.display_name || broadcasterInfo.channel_login}
-                </h1>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "text-xs font-semibold px-2.5 py-0.5",
-                    broadcasterInfo.public_rewards_enabled
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                      : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                  )}
-                >
-                  {broadcasterInfo.public_rewards_enabled ? "Rewards Showcase Active" : "Showcase Disabled"}
-                </Badge>
-              </div>
+              <h1 className="text-2xl font-black tracking-tight text-foreground truncate">
+                {broadcasterInfo.display_name || broadcasterInfo.channel_login}
+              </h1>
 
               <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                 <span className="font-medium text-foreground/80">
@@ -478,9 +455,9 @@ export default function PublicRewardsPage() {
             <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/60 overflow-x-auto">
               {[
                 { id: "ALL", label: "All Rewards" },
-                { id: "FIXED", label: "Single Skin" },
-                { id: "POOL", label: "Skin Pools" },
-                { id: "FILTER", label: "Filter Auto" },
+                { id: "FIXED", label: "Fixed" },
+                { id: "POOL", label: "Skin Pool" },
+                { id: "FILTER", label: "Filter" },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -595,7 +572,7 @@ function RewardCard({
             <SkinImage
               marketItemName={reward.market_item_name}
               size={300}
-              className="w-full h-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-contain drop-shadow-md"
             />
           ) : (
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -673,7 +650,7 @@ function RewardCard({
                 reward.reward_type === "FILTER" && "bg-teal-500/10 text-teal-500 border-teal-500/20"
               )}
             >
-              {reward.reward_type === "FIXED" ? "Single Skin" : reward.reward_type === "POOL" ? `Pool (${reward.pool_items?.length ?? 0})` : "Dynamic Filter"}
+              {reward.reward_type === "FIXED" ? "Fixed" : reward.reward_type === "POOL" ? `Skin Pool (${reward.pool_items?.length ?? 0})` : "Filter"}
             </Badge>
 
             {hasLimits && (
@@ -810,7 +787,7 @@ function RewardDetailExpandedView({
                   isFilter && "bg-teal-500/10 text-teal-500 border-teal-500/20"
                 )}
               >
-                {isFixed ? "Single Skin Reward" : isPool ? `Skin Pool (${reward.pool_items?.length ?? 0} skins)` : "Filter Auto Reward"}
+                {isFixed ? "Fixed" : isPool ? `Skin Pool (${reward.pool_items?.length ?? 0} skins)` : "Filter"}
               </Badge>
 
               {reward.is_paused && (
@@ -852,7 +829,7 @@ function RewardDetailExpandedView({
               target="_blank"
               rel="noopener noreferrer"
               title={`View "${reward.market_item_name}" on CS:GO Market`}
-              className="w-48 h-48 drop-shadow-xl shrink-0 group/img hover:scale-105 transition-transform cursor-pointer"
+              className="w-48 h-48 drop-shadow-xl shrink-0 cursor-pointer"
             >
               <SkinImage marketItemName={reward.market_item_name} size={300} />
             </a>
@@ -893,7 +870,7 @@ function RewardDetailExpandedView({
           <div className="p-6 rounded-2xl border border-teal-500/20 bg-teal-500/5 space-y-3">
             <h3 className="text-sm font-bold text-teal-400 flex items-center gap-2">
               <IconSparkles />
-              <span>Auto-Purchase Filter Criteria</span>
+              <span>Filter Criteria</span>
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div className="p-3 rounded-xl bg-card border border-border">
