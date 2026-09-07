@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { formatMajorCurrency, formatMinorCurrency } from "@/lib/currency";
 import ChatDashboardWidget from "@/components/chat/ChatDashboardWidget";
+import DashboardLogsWidget from "@/components/dashboard/DashboardLogsWidget";
 
 // ── Stat Card ──────────────────────────────────────────────────────────────
 interface StatCardProps {
@@ -265,6 +266,9 @@ export default function DashboardPage() {
           accentClass="border-primary/10"
         />
       </div>
+
+      {/* System Health & Logs (24h) */}
+      <DashboardLogsWidget channelId={selectedBroadcasterId} />
 
       {/* Chat Analytics Section */}
       <ChatDashboardWidget

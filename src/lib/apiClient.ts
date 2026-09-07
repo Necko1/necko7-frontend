@@ -34,6 +34,10 @@ import type {
   ChatDashboardData,
   ChannelMessagesQuery,
   PaginatedChannelMessagesResponse,
+  // Channel Logs (v0.5.4)
+  ListChannelLogsQuery,
+  PaginatedChannelLogsResponse,
+  ChannelLogsSummaryResponse,
 } from "@/types/api";
 import { config } from "@/config";
 
@@ -240,3 +244,19 @@ export const chatApi = {
       `/api/v1/broadcasters/${channelId}/chat/users/${userId}/summary`
     ),
 };
+
+// ===== Channel Logs (v0.5.4) =====
+
+export const logsApi = {
+  list: (channelId: string, params?: ListChannelLogsQuery) =>
+    api.get<PaginatedChannelLogsResponse>(
+      `/api/v1/broadcasters/${channelId}/logs`,
+      { params }
+    ),
+
+  summary: (channelId: string) =>
+    api.get<ChannelLogsSummaryResponse>(
+      `/api/v1/broadcasters/${channelId}/logs/summary`
+    ),
+};
+

@@ -46,6 +46,7 @@ export interface BroadcasterSettingsResponse {
   refund_if_no_money: boolean;
   pause_reward_if_no_money: boolean;
   market_chance_to_transfer: number;
+  add_bot_badge: boolean;
   chat_messages: Record<string, Record<string, string>>;
 }
 
@@ -58,6 +59,7 @@ export interface UpdateBroadcasterSettingsBody {
   refund_if_no_money?: boolean | null;
   pause_reward_if_no_money?: boolean | null;
   market_chance_to_transfer?: number | null;
+  add_bot_badge?: boolean | null;
   chat_messages?: Record<string, Record<string, string>> | null;
 }
 
@@ -457,3 +459,52 @@ export interface PaginatedChannelMessagesResponse {
   offset: number;
   limit: number;
 }
+
+// ===== Channel Logs (v0.5.4) =====
+
+export type ChannelLogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
+
+export type ChannelLogCategory =
+  | "REDEMPTION"
+  | "REWARD"
+  | "MARKET"
+  | "BOT"
+  | "AUTH"
+  | "SYSTEM";
+
+export interface ChannelLogResponse {
+  id: number;
+  broadcaster_id: string;
+  level: ChannelLogLevel;
+  category: ChannelLogCategory;
+  event_type: string;
+  message: string;
+  details?: Record<string, unknown> | null;
+  solution_hint?: string | null;
+  created_at: string;
+}
+
+export interface ChannelLogsSummaryResponse {
+  errors_last_24h: number;
+  warnings_last_24h: number;
+  info_last_24h: number;
+  total_last_24h: number;
+}
+
+export interface ListChannelLogsQuery {
+  level?: ChannelLogLevel | null;
+  category?: ChannelLogCategory | null;
+  search?: string | null;
+  from?: string | null;
+  to?: string | null;
+  offset?: number | null;
+  limit?: number | null;
+}
+
+export interface PaginatedChannelLogsResponse {
+  items: ChannelLogResponse[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+

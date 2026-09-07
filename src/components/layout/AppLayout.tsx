@@ -84,10 +84,18 @@ const IconTrophy = () => (
   </svg>
 );
 
+const IconTerminal = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="4 17 10 11 4 5" />
+    <line x1="12" y1="19" x2="20" y2="19" />
+  </svg>
+);
+
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: <IconGrid /> },
   { label: "Rewards", to: "/rewards", icon: <IconGift /> },
   { label: "Redemptions", to: "/redemptions", icon: <IconList /> },
+  { label: "Logs", to: "/logs", icon: <IconTerminal /> },
   { label: "Leaderboard", to: "/leaderboard", icon: <IconTrophy /> },
   { label: "Chat", to: "/chat", icon: <IconChat /> },
 ];

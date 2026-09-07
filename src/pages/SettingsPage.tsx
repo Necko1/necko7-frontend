@@ -111,6 +111,7 @@ function GeneralTab({ channelId }: { channelId: string }) {
         refund_if_no_money: settings.refund_if_no_money,
         pause_reward_if_no_money: settings.pause_reward_if_no_money,
         market_chance_to_transfer: settings.market_chance_to_transfer,
+        add_bot_badge: settings.add_bot_badge,
       });
     }
   }, [settings]);
@@ -135,14 +136,24 @@ function GeneralTab({ channelId }: { channelId: string }) {
 
   return (
     <div className="space-y-6">
-      <Section title="Bot Status" description="Enable or disable the bot for this channel.">
-        <ToggleField
-          id="is_active"
-          label="Bot Active"
-          description="When disabled, the bot will not process any new redemptions."
-          checked={form.is_active ?? true}
-          onChange={(v) => set("is_active", v)}
-        />
+      <Section title="Bot Status" description="Enable or disable the bot for this channel and configure chat badges.">
+        <div className="space-y-4">
+          <ToggleField
+            id="is_active"
+            label="Bot Active"
+            description="When disabled, the bot will not process any new redemptions."
+            checked={form.is_active ?? true}
+            onChange={(v) => set("is_active", v)}
+          />
+          <Separator />
+          <ToggleField
+            id="add_bot_badge"
+            label="Add Bot Badge to Chat Messages"
+            description="Send chat messages with the official Twitch Chat Bot badge (via App Access Token) instead of the standard user badge."
+            checked={form.add_bot_badge ?? false}
+            onChange={(v) => set("add_bot_badge", v)}
+          />
+        </div>
       </Section>
 
       <Section title="Pricing" description="Control how market prices translate into Twitch channel point costs.">
