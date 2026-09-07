@@ -149,7 +149,7 @@ function renderChatRequirementText(req: {
 
   const isAllTime = !req.time_window_hours || req.time_window_hours === 0;
   const windowStr = isAllTime
-    ? "all-time (за всё время)"
+    ? "all-time"
     : `in the last ${req.time_window_hours} hours`;
 
   if (minMsgs > 0 && minChars > 0) {
@@ -325,12 +325,12 @@ export default function PublicRewardsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           {/* Avatar + Name + Badges */}
           <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20 rounded-2xl ring-4 ring-primary/20 shrink-0 shadow-md">
+            <Avatar className="h-20 w-20 rounded-full ring-4 ring-primary/20 shrink-0 shadow-md">
               <AvatarImage
                 src={broadcasterInfo.profile_image_url ?? undefined}
                 alt={broadcasterInfo.display_name || broadcasterInfo.channel_login}
               />
-              <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground rounded-2xl">
+              <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground rounded-full">
                 {broadcasterInfo.channel_login.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -1010,7 +1010,7 @@ function RewardDetailExpandedView({
                     <div key={`g-${i}`} className="flex items-center justify-between gap-2 py-0.5 border-b border-border/30">
                       <span className="text-muted-foreground">Global limit (all viewers):</span>
                       <span className="font-semibold text-foreground">
-                        max {rule.max_redemptions} {rule.window_hours ? `every ${rule.window_hours}h` : "all-time (за всё время)"}
+                        max {rule.max_redemptions} {rule.window_hours ? `every ${rule.window_hours}h` : "all-time"}
                       </span>
                     </div>
                   ))}
@@ -1018,7 +1018,7 @@ function RewardDetailExpandedView({
                     <div key={`u-${i}`} className="flex items-center justify-between gap-2 py-0.5 border-b border-border/30 last:border-0">
                       <span className="text-muted-foreground">Personal limit (per viewer):</span>
                       <span className="font-semibold text-foreground">
-                        max {rule.max_redemptions} {rule.window_hours ? `every ${rule.window_hours}h` : "all-time (за всё время)"}
+                        max {rule.max_redemptions} {rule.window_hours ? `every ${rule.window_hours}h` : "all-time"}
                       </span>
                     </div>
                   ))}

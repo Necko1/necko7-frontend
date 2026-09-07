@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkinImage from "@/components/common/SkinImage";
+import { formatMinorCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { RedemptionStatus } from "@/types/api";
 
@@ -15,6 +16,13 @@ import type { RedemptionStatus } from "@/types/api";
 const IconArrowLeft = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+  </svg>
+);
+
+const IconExternalLink = ({ className }: { className?: string } = {}) => (
+  <svg className={cn("shrink-0", className)} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
   </svg>
 );
 
@@ -141,9 +149,9 @@ export default function ChannelProfilePage() {
         </Button>
 
         <div className="rounded-3xl border border-border bg-card p-12 text-center space-y-6 max-w-xl mx-auto">
-          <Avatar className="h-20 w-20 rounded-2xl ring-4 ring-primary/20 mx-auto">
-            <AvatarImage src={broadcasterInfo.profile_image_url ?? undefined} />
-            <AvatarFallback className="text-xl font-bold bg-primary text-primary-foreground">
+          <Avatar className="h-20 w-20 rounded-full ring-4 ring-primary/20 mx-auto overflow-hidden">
+            <AvatarImage src={broadcasterInfo.profile_image_url ?? undefined} className="rounded-full object-cover" />
+            <AvatarFallback className="text-xl font-bold bg-primary text-primary-foreground rounded-full">
               {broadcasterInfo.channel_login.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -194,22 +202,17 @@ export default function ChannelProfilePage() {
       <div className="rounded-3xl border border-border bg-card p-6 md:p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 rounded-2xl ring-2 ring-primary/20 shrink-0">
-              <AvatarImage src={currentUser.avatar_url ?? undefined} alt={currentUser.login} />
-              <AvatarFallback className="text-lg font-bold bg-primary text-primary-foreground rounded-2xl">
+            <Avatar className="h-20 w-20 rounded-full ring-4 ring-primary/20 shrink-0 shadow-sm overflow-hidden">
+              <AvatarImage src={currentUser.avatar_url ?? undefined} alt={currentUser.login} className="rounded-full object-cover" />
+              <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground rounded-full">
                 {currentUser.login.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-foreground">
-                  @{currentUser.login}
-                </h1>
-                <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
-                  Viewer Profile
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-black tracking-tight text-foreground">
+                @{currentUser.login}
+              </h1>
+              <p className="text-xs text-muted-foreground">
                 Statistics on stream <span className="font-semibold text-foreground">@{broadcasterInfo.display_name || broadcasterInfo.channel_login}</span>
               </p>
             </div>
@@ -309,7 +312,7 @@ export default function ChannelProfilePage() {
 
             <div className="text-[11px] text-muted-foreground flex items-center justify-between pt-1 border-t border-border/40">
               <span>Pending delivery: {profile.redemption_stats.pending}</span>
-              <span>Total skin value: ~{profile.redemption_stats.total_market_value.toLocaleString()}</span>
+              <span>Total skin value: ~{formatMinorCurrency(profile.redemption_stats.total_market_value, redemptions[0]?.currency ?? "RUB")}</span>
             </div>
           </div>
         </div>
@@ -333,23 +336,28 @@ export default function ChannelProfilePage() {
               );
 
               return (
-                <div
+                <Link
                   key={limit.twitch_reward_id}
-                  className="p-4 rounded-xl border border-border/70 bg-background space-y-2.5"
+                  to={`/c/${broadcasterInfo.channel_login}/rewards/${limit.twitch_reward_id}`}
+                  className="p-4 rounded-xl border border-border/70 bg-background space-y-2.5 hover:border-primary/50 hover:shadow-md hover:shadow-primary/5 transition-all block group text-left"
+                  title={`View "${limit.reward_title}" on stream showcase`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h4 className="text-xs font-bold text-foreground truncate" title={limit.reward_title}>
+                    <h4 className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors" title={limit.reward_title}>
                       {limit.reward_title}
                     </h4>
-                    {limit.is_limit_reached ? (
-                      <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px] shrink-0">
-                        Limit Reached
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[10px] shrink-0">
-                        {limit.remaining_redemptions} left
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {limit.is_limit_reached ? (
+                        <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px]">
+                          Limit Reached
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[10px]">
+                          {limit.remaining_redemptions} left
+                        </Badge>
+                      )}
+                      <IconExternalLink className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                   </div>
 
                   {/* Progress Bar */}
@@ -365,9 +373,9 @@ export default function ChannelProfilePage() {
 
                   <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                     <span>{limit.used_redemptions} / {limit.max_redemptions} used</span>
-                    <span>{limit.window_hours ? `Per ${limit.window_hours}h` : "Per stream"}</span>
+                    <span>{limit.window_hours ? `Per ${limit.window_hours}h` : "All-time"}</span>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -398,13 +406,22 @@ export default function ChannelProfilePage() {
                 className="flex items-center justify-between p-3.5 rounded-xl border border-border/60 bg-background gap-4 flex-wrap"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-secondary/50 p-1 flex items-center justify-center shrink-0">
+                  <Link
+                    to={`/c/${broadcasterInfo.channel_login}/rewards/${redemption.twitch_reward_id}`}
+                    className="w-10 h-10 rounded-lg bg-secondary/50 p-1 flex items-center justify-center shrink-0 hover:scale-105 transition-transform"
+                    title={`View "${redemption.reward_title}" on stream showcase`}
+                  >
                     <SkinImage marketItemName={redemption.market_item_name} size={150} />
-                  </div>
+                  </Link>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-foreground truncate">
-                      {redemption.reward_title}
-                    </p>
+                    <Link
+                      to={`/c/${broadcasterInfo.channel_login}/rewards/${redemption.twitch_reward_id}`}
+                      className="text-xs font-bold text-foreground truncate hover:text-primary hover:underline transition-colors flex items-center gap-1.5"
+                      title={`View "${redemption.reward_title}" on stream showcase`}
+                    >
+                      <span className="truncate">{redemption.reward_title}</span>
+                      <IconExternalLink className="text-muted-foreground shrink-0" />
+                    </Link>
                     <p className="text-[11px] text-muted-foreground truncate">
                       {redemption.market_item_name || "Custom item"}
                     </p>
@@ -418,7 +435,7 @@ export default function ChannelProfilePage() {
 
                   {redemption.market_paid_price != null && (
                     <span className="font-mono text-muted-foreground text-[11px]">
-                      {redemption.currency} {redemption.market_paid_price.toFixed(2)}
+                      {formatMinorCurrency(redemption.market_paid_price, redemption.currency)}
                     </span>
                   )}
 

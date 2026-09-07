@@ -916,7 +916,7 @@ function FilterPreviewBlock({
                             className="text-[10px] text-muted-foreground/70"
                             title={`Volume: ${item.volume}`}
                           >
-                            {item.volume} шт.
+                            {item.volume} pcs.
                           </span>
                         )}
                       </div>

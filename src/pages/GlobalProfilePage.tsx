@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkinImage from "@/components/common/SkinImage";
+import { formatMinorCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { RedemptionStatus } from "@/types/api";
 
@@ -34,8 +35,8 @@ const IconBroadcast = () => (
   </svg>
 );
 
-const IconExternal = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const IconExternal = ({ className }: { className?: string } = {}) => (
+  <svg className={cn("shrink-0", className)} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
     <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
   </svg>
@@ -97,21 +98,16 @@ export default function GlobalProfilePage() {
       <div className="rounded-3xl border border-border bg-card p-6 md:p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20 rounded-2xl ring-4 ring-primary/20 shrink-0 shadow-sm">
-              <AvatarImage src={currentUser?.avatar_url ?? undefined} alt={currentUser?.login} />
-              <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground rounded-2xl">
+            <Avatar className="h-20 w-20 rounded-full ring-4 ring-primary/20 shrink-0 shadow-sm overflow-hidden">
+              <AvatarImage src={currentUser?.avatar_url ?? undefined} alt={currentUser?.login} className="rounded-full object-cover" />
+              <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground rounded-full">
                 {(currentUser?.login || "??").slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-1">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-2xl font-black tracking-tight text-foreground">
-                  @{currentUser?.login}
-                </h1>
-                <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20 font-semibold">
-                  Global Profile
-                </Badge>
-              </div>
+              <h1 className="text-2xl font-black tracking-tight text-foreground">
+                @{currentUser?.login}
+              </h1>
               <p className="text-xs text-muted-foreground font-mono">
                 Twitch ID: {currentUser?.twitch_id}
               </p>
@@ -198,7 +194,7 @@ export default function GlobalProfilePage() {
 
             <div className="text-[11px] text-muted-foreground flex items-center justify-between pt-1 border-t border-border/40">
               <span>Pending orders: {globalProfile.redemption_stats.pending}</span>
-              <span>Total skin value: ~{globalProfile.redemption_stats.total_market_value.toLocaleString()}</span>
+              <span>Total skin value: ~{formatMinorCurrency(globalProfile.redemption_stats.total_market_value, globalRedemptions[0]?.currency ?? "RUB")}</span>
             </div>
           </div>
         </div>
@@ -225,9 +221,9 @@ export default function GlobalProfilePage() {
                 className="flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-background hover:border-primary/40 transition-colors gap-3"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <Avatar className="h-10 w-10 rounded-xl ring-1 ring-primary/20 shrink-0">
-                    <AvatarImage src={ch.profile_image_url ?? undefined} alt={ch.display_name || ch.channel_login} />
-                    <AvatarFallback className="text-xs font-bold bg-primary text-primary-foreground">
+                  <Avatar className="h-10 w-10 rounded-full ring-1 ring-primary/20 shrink-0 overflow-hidden">
+                    <AvatarImage src={ch.profile_image_url ?? undefined} alt={ch.display_name || ch.channel_login} className="rounded-full object-cover" />
+                    <AvatarFallback className="text-xs font-bold bg-primary text-primary-foreground rounded-full">
                       {ch.channel_login.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -286,14 +282,23 @@ export default function GlobalProfilePage() {
                 className="flex items-center justify-between p-3.5 rounded-xl border border-border/60 bg-background gap-4 flex-wrap"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-secondary/50 p-1 flex items-center justify-center shrink-0">
+                  <Link
+                    to={`/c/${redemption.channel_login}/rewards/${redemption.twitch_reward_id}`}
+                    className="w-10 h-10 rounded-lg bg-secondary/50 p-1 flex items-center justify-center shrink-0 hover:scale-105 transition-transform"
+                    title={`View "${redemption.reward_title}" on @${redemption.channel_login} showcase`}
+                  >
                     <SkinImage marketItemName={redemption.market_item_name} size={150} />
-                  </div>
+                  </Link>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-bold text-foreground truncate">
-                        {redemption.reward_title}
-                      </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Link
+                        to={`/c/${redemption.channel_login}/rewards/${redemption.twitch_reward_id}`}
+                        className="text-xs font-bold text-foreground truncate hover:text-primary hover:underline transition-colors flex items-center gap-1"
+                        title={`View "${redemption.reward_title}" on @${redemption.channel_login} showcase`}
+                      >
+                        <span className="truncate">{redemption.reward_title}</span>
+                        <IconExternal className="opacity-60" />
+                      </Link>
                       <Link
                         to={`/c/${redemption.channel_login}`}
                         className="text-[10px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground hover:text-foreground font-mono"
@@ -314,7 +319,7 @@ export default function GlobalProfilePage() {
 
                   {redemption.market_paid_price != null && (
                     <span className="font-mono text-muted-foreground text-[11px]">
-                      {redemption.currency} {redemption.market_paid_price.toFixed(2)}
+                      {formatMinorCurrency(redemption.market_paid_price, redemption.currency)}
                     </span>
                   )}
 
