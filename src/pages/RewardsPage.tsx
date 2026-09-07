@@ -525,12 +525,12 @@ function RewardCard({
               Manual price
             </Badge>
           )}
-          {(reward.chat_min_messages != null || reward.chat_min_characters != null) && (
+          {((reward.chat_min_messages ?? 0) > 0 || (reward.chat_min_characters ?? 0) > 0) && (
             <Badge variant="outline" className="text-xs border-violet-500/30 text-violet-400 bg-violet-500/10" title="Has Chat Activity Requirements">
-              {reward.chat_min_messages != null ? `${reward.chat_min_messages} msgs` : ""}
-              {reward.chat_min_messages != null && reward.chat_min_characters != null ? ` ${reward.chat_logical_operator ?? "AND"} ` : ""}
-              {reward.chat_min_characters != null ? `${reward.chat_min_characters} chars` : ""}
-              {reward.chat_time_window_hours != null ? ` / ${reward.chat_time_window_hours}h` : ""}
+              {(reward.chat_min_messages ?? 0) > 0 ? `${reward.chat_min_messages} msgs` : ""}
+              {(reward.chat_min_messages ?? 0) > 0 && (reward.chat_min_characters ?? 0) > 0 ? ` ${reward.chat_logical_operator ?? "AND"} ` : ""}
+              {(reward.chat_min_characters ?? 0) > 0 ? `${reward.chat_min_characters} chars` : ""}
+              {(reward.chat_time_window_hours ?? 0) > 0 ? ` / ${reward.chat_time_window_hours}h` : ""}
             </Badge>
           )}
           {((reward.purchase_limits?.user?.length ?? 0) > 0 || (reward.purchase_limits?.global?.length ?? 0) > 0) && (
@@ -1489,7 +1489,10 @@ function StepChatRequirements({
   form: Partial<CreateRewardBody>;
   onChange: (patch: Partial<CreateRewardBody>) => void;
 }) {
-  const hasRequirements = !!(form.chat_min_messages || form.chat_min_characters);
+  const hasRequirements = !!(
+    (form.chat_min_messages && form.chat_min_messages > 0) ||
+    (form.chat_min_characters && form.chat_min_characters > 0)
+  );
 
   return (
     <div className="space-y-5">
@@ -1511,10 +1514,11 @@ function StepChatRequirements({
             type="number"
             min={0}
             placeholder="e.g. 50 (optional)"
-            value={form.chat_min_messages ?? ""}
+            value={form.chat_min_messages && form.chat_min_messages > 0 ? form.chat_min_messages : ""}
             onChange={(e) => {
               const val = e.target.value.trim();
-              onChange({ chat_min_messages: val === "" ? null : Math.max(0, parseInt(val) || 0) });
+              const num = parseInt(val);
+              onChange({ chat_min_messages: val === "" || isNaN(num) || num <= 0 ? null : num });
             }}
           />
           <p className="text-[11px] text-muted-foreground">
@@ -1529,10 +1533,11 @@ function StepChatRequirements({
             type="number"
             min={0}
             placeholder="e.g. 500 (optional)"
-            value={form.chat_min_characters ?? ""}
+            value={form.chat_min_characters && form.chat_min_characters > 0 ? form.chat_min_characters : ""}
             onChange={(e) => {
               const val = e.target.value.trim();
-              onChange({ chat_min_characters: val === "" ? null : Math.max(0, parseInt(val) || 0) });
+              const num = parseInt(val);
+              onChange({ chat_min_characters: val === "" || isNaN(num) || num <= 0 ? null : num });
             }}
           />
           <p className="text-[11px] text-muted-foreground">
@@ -1549,10 +1554,11 @@ function StepChatRequirements({
             type="number"
             min={1}
             placeholder="e.g. 24 (leave empty for all-time)"
-            value={form.chat_time_window_hours ?? ""}
+            value={form.chat_time_window_hours && form.chat_time_window_hours > 0 ? form.chat_time_window_hours : ""}
             onChange={(e) => {
               const val = e.target.value.trim();
-              onChange({ chat_time_window_hours: val === "" ? null : Math.max(1, parseInt(val) || 0) });
+              const num = parseInt(val);
+              onChange({ chat_time_window_hours: val === "" || isNaN(num) || num <= 0 ? null : num });
             }}
           />
           <p className="text-[11px] text-muted-foreground">
@@ -1620,10 +1626,10 @@ function StepChatRequirements({
           <span className="text-primary font-bold">Rule Preview:</span>
           <span className="text-foreground">
             Viewer needs{" "}
-            {form.chat_min_messages ? <strong>{form.chat_min_messages} messages</strong> : null}
-            {form.chat_min_messages && form.chat_min_characters ? ` ${form.chat_logical_operator ?? "AND"} ` : null}
-            {form.chat_min_characters ? <strong>{form.chat_min_characters} characters</strong> : null}
-            {form.chat_time_window_hours ? ` in the last ${form.chat_time_window_hours} hours` : " of all-time activity"}
+            {(form.chat_min_messages ?? 0) > 0 ? <strong>{form.chat_min_messages} messages</strong> : null}
+            {(form.chat_min_messages ?? 0) > 0 && (form.chat_min_characters ?? 0) > 0 ? ` ${form.chat_logical_operator ?? "AND"} ` : null}
+            {(form.chat_min_characters ?? 0) > 0 ? <strong>{form.chat_min_characters} characters</strong> : null}
+            {(form.chat_time_window_hours ?? 0) > 0 ? ` in the last ${form.chat_time_window_hours} hours` : " of all-time activity"}
             .
           </span>
         </div>
@@ -2156,16 +2162,16 @@ function RewardWizard({
       market_autobuy: form.market_autobuy ?? true,
       is_paused: form.is_paused ?? false,
       chat_min_messages:
-        form.chat_min_messages != null
-          ? Math.max(0, Number(form.chat_min_messages) || 0)
+        (form.chat_min_messages != null && form.chat_min_messages > 0)
+          ? form.chat_min_messages
           : 0,
       chat_min_characters:
-        form.chat_min_characters != null
-          ? Math.max(0, Number(form.chat_min_characters) || 0)
+        (form.chat_min_characters != null && form.chat_min_characters > 0)
+          ? form.chat_min_characters
           : 0,
       chat_time_window_hours:
-        form.chat_time_window_hours != null
-          ? Math.max(0, Number(form.chat_time_window_hours) || 0)
+        (form.chat_time_window_hours != null && form.chat_time_window_hours > 0)
+          ? form.chat_time_window_hours
           : 0,
       chat_logical_operator: form.chat_logical_operator ?? "AND",
       refund_if_chat_req_failed: form.refund_if_chat_req_failed ?? true,
@@ -2492,7 +2498,7 @@ function RewardEditDialog({
 
             <TabsContent value="overview" className="mt-4 space-y-5 min-w-0">
               {/* Chat Activity Requirements card */}
-              {(reward.chat_min_messages != null || reward.chat_min_characters != null) && (
+              {((reward.chat_min_messages ?? 0) > 0 || (reward.chat_min_characters ?? 0) > 0) && (
                 <div className="space-y-2 rounded-xl border border-violet-500/30 bg-violet-500/5 p-3.5">
                   <div className="flex items-center gap-2">
                     <span className="text-base">💬</span>
@@ -2501,11 +2507,15 @@ function RewardEditDialog({
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                     <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
                       <p className="text-muted-foreground mb-0.5">Min Messages</p>
-                      <p className="font-medium text-foreground">{reward.chat_min_messages ?? "None"}</p>
+                      <p className="font-medium text-foreground">
+                        {(reward.chat_min_messages ?? 0) > 0 ? reward.chat_min_messages : "None"}
+                      </p>
                     </div>
                     <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
                       <p className="text-muted-foreground mb-0.5">Min Characters</p>
-                      <p className="font-medium text-foreground">{reward.chat_min_characters ?? "None"}</p>
+                      <p className="font-medium text-foreground">
+                        {(reward.chat_min_characters ?? 0) > 0 ? reward.chat_min_characters : "None"}
+                      </p>
                     </div>
                     <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
                       <p className="text-muted-foreground mb-0.5">Logic Operator</p>
@@ -2513,7 +2523,9 @@ function RewardEditDialog({
                     </div>
                     <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
                       <p className="text-muted-foreground mb-0.5">Time Window</p>
-                      <p className="font-medium text-foreground">{reward.chat_time_window_hours ? `${reward.chat_time_window_hours}h` : "All time"}</p>
+                      <p className="font-medium text-foreground">
+                        {(reward.chat_time_window_hours ?? 0) > 0 ? `${reward.chat_time_window_hours}h` : "All time"}
+                      </p>
                     </div>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
