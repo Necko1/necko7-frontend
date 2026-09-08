@@ -249,6 +249,8 @@ export const en = {
     topChattersSubtitle: "Most active viewers during this period",
     fullLeaderboard: "Full Leaderboard",
     noChatterActivity: "No chatter activity found in this period",
+    modeContinuous: "Continuous",
+    modeActiveOnly: "Active only",
   },
   chatUser: {
     userProfile: "Chat User Profile",

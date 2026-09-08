@@ -578,11 +578,7 @@ export default function AppLayout() {
                   {selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
                 </span>
               </div>
-            ) : (
-              <span className="text-sm font-bold text-foreground tracking-tight">
-                necko7
-              </span>
-            )}
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">

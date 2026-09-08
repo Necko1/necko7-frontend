@@ -8,18 +8,24 @@ import { cn } from "@/lib/utils";
 interface ChatTimelineChartProps {
   timeline: ChatTimelinePoint[];
   isLoading?: boolean;
+  bucketHours?: number | null;
+  timeWindowHours?: number | null;
 }
 
 type MetricType = "messages" | "characters" | "chatters";
+type TimelineMode = "continuous" | "active";
 
 export default function ChatTimelineChart({
   timeline,
   isLoading,
+  bucketHours,
+  timeWindowHours,
 }: ChatTimelineChartProps) {
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language?.startsWith("ru") ? dateFnsRu : dateFnsEn;
 
   const [metric, setMetric] = useState<MetricType>("messages");
+  const [timelineMode, setTimelineMode] = useState<TimelineMode>("continuous");
   const [hoveredPoint, setHoveredPoint] = useState<{
     point: ChatTimelinePoint;
     x: number;
@@ -50,20 +56,98 @@ export default function ChatTimelineChart({
     },
   }[metric];
 
-  const { points, maxValue, totalMetric } = useMemo(() => {
+  // Fill in zero-activity gaps when in continuous mode
+  const points = useMemo(() => {
     if (!timeline || timeline.length === 0) {
-      return { points: [], maxValue: 0, totalMetric: 0 };
+      return [];
+    }
+
+    if (timelineMode === "active") {
+      return timeline;
+    }
+
+    const stepHours = bucketHours && bucketHours > 0 ? bucketHours : 1;
+    const stepMs = stepHours * 3600 * 1000;
+
+    const pointsMap = new Map<number, ChatTimelinePoint>();
+    let earliestServerMs = Infinity;
+    let latestServerMs = -Infinity;
+
+    for (const p of timeline) {
+      const ms = new Date(p.bucket_start).getTime();
+      if (!isNaN(ms)) {
+        const norm = Math.floor(ms / stepMs) * stepMs;
+        pointsMap.set(norm, p);
+        if (norm < earliestServerMs) earliestServerMs = norm;
+        if (norm > latestServerMs) latestServerMs = norm;
+      }
+    }
+
+    if (pointsMap.size === 0) {
+      return timeline;
+    }
+
+    let startMs: number;
+    let endMs: number;
+
+    if (timeWindowHours && timeWindowHours > 0) {
+      const nowNorm = Math.floor(Date.now() / stepMs) * stepMs;
+      endMs = Math.max(nowNorm, latestServerMs);
+      startMs = endMs - (timeWindowHours - stepHours) * 3600 * 1000;
+    } else {
+      startMs = earliestServerMs;
+      endMs = latestServerMs;
+    }
+
+    // Safety guard to avoid generating too many DOM nodes
+    const totalSteps = Math.floor((endMs - startMs) / stepMs) + 1;
+    if (totalSteps > 350) {
+      startMs = endMs - (350 - 1) * stepMs;
+    }
+
+    const filled: ChatTimelinePoint[] = [];
+    for (let t = startMs; t <= endMs; t += stepMs) {
+      const existing = pointsMap.get(t);
+      if (existing) {
+        filled.push(existing);
+      } else {
+        filled.push({
+          bucket_start: new Date(t).toISOString(),
+          message_count: 0,
+          char_count: 0,
+          unique_chatters: 0,
+        });
+      }
+    }
+
+    return filled;
+  }, [timeline, timelineMode, bucketHours, timeWindowHours]);
+
+  const { maxValue, totalMetric } = useMemo(() => {
+    if (!points || points.length === 0) {
+      return { maxValue: 0, totalMetric: 0 };
     }
     const field = metricConfig.field;
     let max = 0;
     let total = 0;
-    for (const p of timeline) {
+    for (const p of points) {
       const val = p[field];
       if (val > max) max = val;
       total += val;
     }
-    return { points: timeline, maxValue: max > 0 ? max : 1, totalMetric: total };
-  }, [timeline, metricConfig.field]);
+    return { maxValue: max > 0 ? max : 1, totalMetric: total };
+  }, [points, metricConfig.field]);
+
+  const isMultiDay = useMemo(() => {
+    if (points.length < 2) return false;
+    const first = new Date(points[0].bucket_start).getTime();
+    const last = new Date(points[points.length - 1].bucket_start).getTime();
+    return last - first > 30 * 3600 * 1000;
+  }, [points]);
+
+  const barMinW =
+    points.length > 150 ? "min-w-[1px]" : points.length > 70 ? "min-w-[2px]" : "min-w-[3px]";
+  const barRounded = points.length > 150 ? "rounded-t-none" : "rounded-t-sm";
 
   if (isLoading) {
     return (
@@ -104,27 +188,58 @@ export default function ChatTimelineChart({
           </p>
         </div>
 
-        {/* Metric tabs */}
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/30 p-1 self-start sm:self-auto">
-          {(["messages", "characters", "chatters"] as const).map((m) => (
+        {/* Mode toggle + Metric tabs */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Continuous vs Active-only toggle */}
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/30 p-1">
             <button
-              key={m}
               type="button"
-              onClick={() => setMetric(m)}
+              onClick={() => setTimelineMode("continuous")}
               className={cn(
-                "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
-                metric === m
-                  ? "bg-card text-foreground shadow-xs border border-border/80"
+                "px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                timelineMode === "continuous"
+                  ? "bg-card text-foreground shadow-xs border border-border/80 font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {m === "messages"
-                ? t("chat.messagesTab")
-                : m === "characters"
-                ? t("chat.charactersTab")
-                : t("chat.chattersTab")}
+              {t("chat.modeContinuous")}
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setTimelineMode("active")}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                timelineMode === "active"
+                  ? "bg-card text-foreground shadow-xs border border-border/80 font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t("chat.modeActiveOnly")}
+            </button>
+          </div>
+
+          {/* Metric tabs */}
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/30 p-1">
+            {(["messages", "characters", "chatters"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMetric(m)}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                  metric === m
+                    ? "bg-card text-foreground shadow-xs border border-border/80 font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {m === "messages"
+                  ? t("chat.messagesTab")
+                  : m === "characters"
+                  ? t("chat.charactersTab")
+                  : t("chat.chattersTab")}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -165,16 +280,22 @@ export default function ChatTimelineChart({
                 >
                   <div
                     className={cn(
-                      "w-[85%] min-w-[3px] rounded-t-md transition-all duration-150",
-                      metric === "messages" &&
-                        "bg-gradient-to-t from-cyan-500/20 via-cyan-500/60 to-cyan-400",
-                      metric === "characters" &&
-                        "bg-gradient-to-t from-violet-500/20 via-violet-500/60 to-violet-400",
-                      metric === "chatters" &&
-                        "bg-gradient-to-t from-emerald-500/20 via-emerald-500/60 to-emerald-400",
-                      isHovered
-                        ? "brightness-125 opacity-100 shadow-sm ring-1 ring-white/20"
-                        : "opacity-85 hover:opacity-100"
+                      "w-[85%] transition-all duration-150",
+                      barMinW,
+                      barRounded,
+                      val === 0
+                        ? "bg-muted/30 hover:bg-muted/70 opacity-40 hover:opacity-100"
+                        : cn(
+                            metric === "messages" &&
+                              "bg-gradient-to-t from-cyan-500/20 via-cyan-500/60 to-cyan-400",
+                            metric === "characters" &&
+                              "bg-gradient-to-t from-violet-500/20 via-violet-500/60 to-violet-400",
+                            metric === "chatters" &&
+                              "bg-gradient-to-t from-emerald-500/20 via-emerald-500/60 to-emerald-400",
+                            isHovered
+                              ? "brightness-125 opacity-100 shadow-sm ring-1 ring-white/20"
+                              : "opacity-85 hover:opacity-100"
+                          )
                     )}
                     style={{ height: `${heightPct}%` }}
                   />
@@ -215,7 +336,9 @@ export default function ChatTimelineChart({
                     transform,
                   }}
                 >
-                  {format(new Date(p.bucket_start), "HH:mm")}
+                  {isMultiDay
+                    ? format(new Date(p.bucket_start), "dd MMM", { locale: dateLocale })
+                    : format(new Date(p.bucket_start), "HH:mm")}
                 </span>
               );
             })}

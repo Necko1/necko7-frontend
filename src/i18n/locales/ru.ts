@@ -251,6 +251,8 @@ export const ru = {
     topChattersSubtitle: "Самые активные зрители за выбранный период",
     fullLeaderboard: "Полный лидерборд",
     noChatterActivity: "Нет активности зрителей за этот период",
+    modeContinuous: "Непрерывный",
+    modeActiveOnly: "Только активность",
   },
   chatUser: {
     userProfile: "Профиль зрителя в чате",

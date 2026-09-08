@@ -241,7 +241,12 @@ export default function ChatDashboardWidget({
       </div>
 
       {/* Activity Timeline Chart */}
-      <ChatTimelineChart timeline={timeline} isLoading={isLoading} />
+      <ChatTimelineChart
+        timeline={timeline}
+        isLoading={isLoading}
+        bucketHours={bucketHours}
+        timeWindowHours={timeWindow}
+      />
 
       {/* Top Chatters block (if enabled) */}
       {showTopChatters && (
