@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import type { ChatTimelinePoint } from "@/types/api";
 import { format } from "date-fns";
+import { ru as dateFnsRu, enUS as dateFnsEn } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 interface ChatTimelineChartProps {
@@ -14,6 +16,9 @@ export default function ChatTimelineChart({
   timeline,
   isLoading,
 }: ChatTimelineChartProps) {
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language?.startsWith("ru") ? dateFnsRu : dateFnsEn;
+
   const [metric, setMetric] = useState<MetricType>("messages");
   const [hoveredPoint, setHoveredPoint] = useState<{
     point: ChatTimelinePoint;
@@ -23,19 +28,22 @@ export default function ChatTimelineChart({
 
   const metricConfig = {
     messages: {
-      label: "Messages",
+      label: t("chat.messages"),
+      totalLabel: t("chat.totalMessagesMetric"),
       field: "message_count" as const,
       color: "#06b6d4", // cyan-500
       gradientId: "grad-messages",
     },
     characters: {
-      label: "Characters",
+      label: t("chat.characters"),
+      totalLabel: t("chat.totalCharactersMetric"),
       field: "char_count" as const,
       color: "#8b5cf6", // violet-500
       gradientId: "grad-chars",
     },
     chatters: {
-      label: "Unique Chatters",
+      label: t("chat.uniqueChatters"),
+      totalLabel: t("chat.totalChattersMetric"),
       field: "unique_chatters" as const,
       color: "#10b981", // emerald-500
       gradientId: "grad-chatters",
@@ -83,13 +91,13 @@ export default function ChatTimelineChart({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            Activity Timeline
+            {t("chat.activityTimeline")}
             <span className="text-xs font-normal text-muted-foreground">
-              ({points.length} {points.length === 1 ? "interval" : "intervals"})
+              {t("chat.intervalsCount", { count: points.length })}
             </span>
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Total {metricConfig.label.toLowerCase()}:{" "}
+            {metricConfig.totalLabel}{" "}
             <span className="font-semibold text-foreground">
               {totalMetric.toLocaleString()}
             </span>
@@ -111,10 +119,10 @@ export default function ChatTimelineChart({
               )}
             >
               {m === "messages"
-                ? "Messages"
+                ? t("chat.messagesTab")
                 : m === "characters"
-                ? "Characters"
-                : "Chatters"}
+                ? t("chat.charactersTab")
+                : t("chat.chattersTab")}
             </button>
           ))}
         </div>
@@ -123,7 +131,7 @@ export default function ChatTimelineChart({
       {/* Chart container */}
       {points.length === 0 ? (
         <div className="h-44 flex flex-col items-center justify-center text-center text-muted-foreground text-xs">
-          <p>No activity points recorded in this period</p>
+          <p>{t("chat.noActivityPoints")}</p>
         </div>
       ) : (
         <div className="relative pt-2 pb-1">
@@ -230,21 +238,22 @@ export default function ChatTimelineChart({
               <p className="font-semibold text-foreground text-[11px]">
                 {format(
                   new Date(hoveredPoint.point.bucket_start),
-                  "dd MMM yyyy · HH:mm"
+                  "dd MMM yyyy · HH:mm",
+                  { locale: dateLocale }
                 )}
               </p>
               <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-0.5">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block" />
-                  {hoveredPoint.point.message_count.toLocaleString()} msgs
+                  {hoveredPoint.point.message_count.toLocaleString()} {t("common.msgs")}
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-violet-400 inline-block" />
-                  {hoveredPoint.point.char_count.toLocaleString()} chars
+                  {hoveredPoint.point.char_count.toLocaleString()} {t("common.chars")}
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-                  {hoveredPoint.point.unique_chatters.toLocaleString()} users
+                  {hoveredPoint.point.unique_chatters.toLocaleString()} {t("common.users")}
                 </span>
               </div>
             </div>

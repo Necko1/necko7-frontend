@@ -10,12 +10,12 @@ import { format, isToday, isYesterday } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 
-const TIME_WINDOWS: { label: string; value: number | null }[] = [
-  { label: "All time", value: null },
-  { label: "6h", value: 6 },
-  { label: "24h", value: 24 },
-  { label: "7d", value: 168 },
-  { label: "30d", value: 720 },
+const TIME_WINDOWS: { key: string; label: string; value: number | null }[] = [
+  { key: "logs.presetAll", label: "All time", value: null },
+  { key: "logs.preset6h", label: "6h", value: 6 },
+  { key: "logs.preset24h", label: "24h", value: 24 },
+  { key: "logs.preset7d", label: "7d", value: 168 },
+  { key: "chat.preset30d", label: "30d", value: 720 },
 ];
 
 const PAGE_SIZE = 50;
@@ -294,7 +294,7 @@ export default function ChatMessagesPage() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {tw.value === null ? t("logs.presetAll") : tw.label}
+              {t(tw.key, tw.label)}
             </button>
           ))}
         </div>

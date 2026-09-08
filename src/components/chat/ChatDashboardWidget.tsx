@@ -1,23 +1,24 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { chatApi } from "@/lib/apiClient";
 import type { ChatTopUserItem } from "@/types/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import ChatTimelineChart from "./ChatTimelineChart";
 
-const TIME_WINDOWS: { label: string; value: number | null }[] = [
-  { label: "24 hours", value: 24 },
-  { label: "7 days", value: 168 },
-  { label: "30 days", value: 720 },
-  { label: "All time", value: null },
+const TIME_WINDOWS: { key: string; value: number | null }[] = [
+  { key: "time24h", value: 24 },
+  { key: "time7d", value: 168 },
+  { key: "time30d", value: 720 },
+  { key: "timeAll", value: null },
 ];
 
-const BUCKETS: { label: string; value: number | null }[] = [
-  { label: "1h step", value: 1 },
-  { label: "6h step", value: 6 },
-  { label: "24h step", value: 24 },
+const BUCKETS: { key: string; value: number | null }[] = [
+  { key: "bucket1h", value: 1 },
+  { key: "bucket6h", value: 6 },
+  { key: "bucket24h", value: 24 },
 ];
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -114,8 +115,9 @@ interface ChatDashboardWidgetProps {
 export default function ChatDashboardWidget({
   channelId,
   showTopChatters = false,
-  title = "Chat Analytics & Activity",
+  title,
 }: ChatDashboardWidgetProps) {
+  const { t } = useTranslation();
   const [timeWindow, setTimeWindow] = useState<number | null>(168); // default 7 days
   const [bucketHours, setBucketHours] = useState<number | null>(6);
 
@@ -142,13 +144,15 @@ export default function ChatDashboardWidget({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-foreground tracking-tight">{title}</h2>
+            <h2 className="text-lg font-bold text-foreground tracking-tight">
+              {title ?? t("chat.analyticsTitle")}
+            </h2>
             {isFetching && (
               <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Channel viewer messages, character volume and active chatter trends
+            {t("chat.timelineSubtitle")}
           </p>
         </div>
 
@@ -168,7 +172,7 @@ export default function ChatDashboardWidget({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {tw.label}
+                {t(`chat.${tw.key}`)}
               </button>
             ))}
           </div>
@@ -187,7 +191,7 @@ export default function ChatDashboardWidget({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {b.label}
+                {t(`chat.${b.key}`)}
               </button>
             ))}
           </div>
@@ -197,31 +201,31 @@ export default function ChatDashboardWidget({
       {/* 4 KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <ChatKpiCard
-          title="Total Messages"
+          title={t("chat.totalMessages")}
           value={summary ? summary.total_messages.toLocaleString() : "–"}
-          subtitle="Sent in selected period"
+          subtitle={t("chat.sentInPeriod")}
           icon={<IconMessage />}
           loading={isLoading}
           accentClass="border-cyan-500/15"
         />
         <ChatKpiCard
-          title="Total Characters"
+          title={t("chat.totalCharacters")}
           value={summary ? summary.total_characters.toLocaleString() : "–"}
-          subtitle="Total message volume"
+          subtitle={t("chat.totalMessageVolume")}
           icon={<IconText />}
           loading={isLoading}
           accentClass="border-violet-500/15"
         />
         <ChatKpiCard
-          title="Unique Chatters"
+          title={t("chat.uniqueChatters")}
           value={summary ? summary.unique_chatters.toLocaleString() : "–"}
-          subtitle="Active viewers in chat"
+          subtitle={t("chat.activeViewersInChat")}
           icon={<IconUsers />}
           loading={isLoading}
           accentClass="border-emerald-500/15"
         />
         <ChatKpiCard
-          title="Avg Characters / Message"
+          title={t("chat.avgCharsPerMessage")}
           value={
             summary
               ? summary.avg_characters_per_message.toLocaleString(undefined, {
@@ -229,7 +233,7 @@ export default function ChatDashboardWidget({
                 })
               : "–"
           }
-          subtitle="Average message length"
+          subtitle={t("chat.avgMessageLength")}
           icon={<IconSparkles />}
           loading={isLoading}
           accentClass="border-amber-500/15"
@@ -244,16 +248,16 @@ export default function ChatDashboardWidget({
         <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Top Chatters</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("chat.topChatters")}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Most active viewers during this period
+                {t("chat.topChattersSubtitle")}
               </p>
             </div>
             <Link
               to="/leaderboard"
               className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
             >
-              Full Leaderboard
+              {t("chat.fullLeaderboard")}
               <IconChevronRight />
             </Link>
           </div>
@@ -266,7 +270,7 @@ export default function ChatDashboardWidget({
             </div>
           ) : topChatters.length === 0 ? (
             <div className="py-8 text-center text-xs text-muted-foreground">
-              No chatter activity found in this period
+              {t("chat.noChatterActivity")}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -285,14 +289,14 @@ export default function ChatDashboardWidget({
                       @{item.chatter_user_login}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      {item.char_count.toLocaleString()} chars
+                      {item.char_count.toLocaleString()} {t("common.chars")}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-xs font-bold text-primary tabular-nums">
                       {item.message_count.toLocaleString()}
                     </span>
-                    <p className="text-[10px] text-muted-foreground">msgs</p>
+                    <p className="text-[10px] text-muted-foreground">{t("common.msgs")}</p>
                   </div>
                 </Link>
               ))}
