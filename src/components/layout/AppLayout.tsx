@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,18 @@ import type { AxiosError } from "axios";
 const IconTwitch = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
     <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+  </svg>
+);
+
+const IconMenu = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" />
+  </svg>
+);
+
+const IconX = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 
@@ -120,7 +132,9 @@ const NAV_ITEMS: NavItem[] = [
 export default function AppLayout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const qc = useQueryClient();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const {
     setCurrentUser,
     broadcasters,
@@ -129,6 +143,34 @@ export default function AppLayout() {
     setSelectedBroadcasterId,
     getSelectedBroadcaster,
   } = useAppStore();
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
+  // Close mobile sidebar on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && mobileOpen) {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileOpen]);
 
   // ── HOOK 1: Auth query ──────────────────────────────────────────────────
   const {
@@ -180,8 +222,6 @@ export default function AppLayout() {
       }
     }
   }, [broadcastersData, selectedBroadcasterId, setBroadcasters, setSelectedBroadcasterId]);
-
-  const location = useLocation();
 
   // Sync selected broadcaster if navigating directly to a /c/:identifier URL
   useEffect(() => {
@@ -293,8 +333,40 @@ export default function AppLayout() {
 
   return (
     <div className="flex w-full min-h-screen">
+      {/* Mobile Backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden transition-opacity duration-300"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside className="w-64 shrink-0 flex flex-col border-r border-sidebar-border bg-sidebar h-screen sticky top-0 overflow-hidden">
+      <aside
+        className={cn(
+          "flex flex-col border-r border-sidebar-border bg-sidebar overflow-hidden transition-transform duration-300 ease-in-out",
+          // Desktop: sticky in flex layout
+          "md:static md:translate-x-0 md:w-64 md:h-screen md:sticky md:top-0 md:shrink-0 md:z-auto",
+          // Mobile: slide-over drawer
+          "fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] h-full shadow-2xl",
+          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        )}
+      >
+        {/* Mobile close bar */}
+        <div className="md:hidden flex items-center justify-between px-4 pt-3.5 pb-1 shrink-0">
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Menu
+          </span>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+            aria-label={t("common.close", "Close")}
+          >
+            <IconX />
+          </button>
+        </div>
 
         {/* Broadcaster section */}
         {meData ? (
@@ -328,10 +400,11 @@ export default function AppLayout() {
                 {!isViewer && (
                   <Tooltip>
                     <TooltipTrigger
-                      className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-sidebar-foreground hover:bg-accent"
-                      onClick={() =>
-                        navigate(`/broadcasters/${selectedBroadcaster.channel_id}/settings`)
-                      }
+                      className="h-7 w-7 flex items-center justify-center rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-sidebar-foreground hover:bg-accent cursor-pointer"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        navigate(`/broadcasters/${selectedBroadcaster.channel_id}/settings`);
+                      }}
                     >
                       <IconSettings />
                     </TooltipTrigger>
@@ -343,8 +416,11 @@ export default function AppLayout() {
               {/* Switch channel button — always shown */}
               <button
                 type="button"
-                onClick={() => navigate("/channels")}
-                className="w-full flex items-center justify-between text-xs h-7.5 px-2.5 rounded-lg border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors group"
+                onClick={() => {
+                  setMobileOpen(false);
+                  navigate("/channels");
+                }}
+                className="w-full flex items-center justify-between text-xs h-7.5 px-2.5 rounded-lg border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors group cursor-pointer"
               >
                 <span className="flex items-center gap-2">
                   <IconSwap />
@@ -359,8 +435,11 @@ export default function AppLayout() {
             /* No broadcaster selected */
             <button
               type="button"
-              onClick={() => navigate("/channels")}
-              className="w-full p-2.5 rounded-xl border border-dashed border-sidebar-border text-center hover:border-primary/50 hover:bg-sidebar-accent/50 transition-colors group"
+              onClick={() => {
+                setMobileOpen(false);
+                navigate("/channels");
+              }}
+              className="w-full p-2.5 rounded-xl border border-dashed border-sidebar-border text-center hover:border-primary/50 hover:bg-sidebar-accent/50 transition-colors group cursor-pointer"
             >
               <p className="text-xs font-medium text-primary flex items-center justify-center gap-1.5">
                 <IconPlus />
@@ -380,6 +459,7 @@ export default function AppLayout() {
               key={item.to}
               to={item.to}
               end={item.end}
+              onClick={() => setMobileOpen(false)}
               className={({ isActive }) => {
                 const active = item.isActive ? item.isActive(location.pathname) : isActive;
                 return cn(
@@ -407,7 +487,10 @@ export default function AppLayout() {
         <div className="p-3">
           {!meData ? (
             <Button
-              onClick={() => navigate("/login")}
+              onClick={() => {
+                setMobileOpen(false);
+                navigate("/login");
+              }}
               className="w-full flex items-center justify-center gap-2.5 h-10 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
             >
               <IconTwitch />
@@ -417,8 +500,16 @@ export default function AppLayout() {
             <div
               role="button"
               tabIndex={0}
-              onClick={() => navigate("/me")}
-              onKeyDown={(e) => e.key === "Enter" && navigate("/me")}
+              onClick={() => {
+                setMobileOpen(false);
+                navigate("/me");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setMobileOpen(false);
+                  navigate("/me");
+                }
+              }}
               className={cn(
                 "w-full flex items-center gap-3 p-2 rounded-xl transition-all cursor-pointer group text-left select-none",
                 location.pathname === "/me"
@@ -443,7 +534,7 @@ export default function AppLayout() {
               </div>
               <Tooltip>
                 <TooltipTrigger
-                  className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-accent"
+                  className="h-7 w-7 flex items-center justify-center rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-accent cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
                     logoutMutation.mutate();
@@ -459,10 +550,74 @@ export default function AppLayout() {
         </div>
       </aside>
 
-      {/* ── Main content ── */}
-      <main className="flex-1 min-w-0 min-h-screen overflow-y-scroll [scrollbar-gutter:stable] bg-background">
-        <Outlet />
-      </main>
+      {/* ── Main area (mobile header + content) ── */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* Mobile Header Bar */}
+        <header className="md:hidden sticky top-0 z-30 flex items-center justify-between h-14 px-4 border-b border-sidebar-border bg-sidebar/95 backdrop-blur-md shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="p-2 -ml-2 rounded-xl text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+              aria-label="Open menu"
+            >
+              <IconMenu />
+            </button>
+            {selectedBroadcaster ? (
+              <div className="flex items-center gap-2 min-w-0">
+                <Avatar className="h-7 w-7 ring-1 ring-primary/30 shrink-0">
+                  <AvatarImage
+                    src={selectedBroadcaster.profile_image_url ?? undefined}
+                    alt={selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
+                  />
+                  <AvatarFallback className="text-[10px] font-semibold bg-primary text-primary-foreground">
+                    {(selectedBroadcaster.channel_login || "??").slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs font-semibold text-foreground truncate max-w-[150px]">
+                  {selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
+                </span>
+              </div>
+            ) : (
+              <span className="text-sm font-bold text-foreground tracking-tight">
+                necko7
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {meData ? (
+              <button
+                type="button"
+                onClick={() => navigate("/me")}
+                className="p-0.5 rounded-full hover:ring-2 hover:ring-primary/40 transition-all cursor-pointer"
+                title={t("nav.myProfile")}
+              >
+                <Avatar className="h-7 w-7 shrink-0 ring-1 ring-border">
+                  <AvatarImage src={meData.avatar_url ?? undefined} alt={meData.login} />
+                  <AvatarFallback className="text-[10px] bg-secondary text-secondary-foreground">
+                    {(meData.login || "??").slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => navigate("/login")}
+                className="h-8 px-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs gap-1.5 cursor-pointer"
+              >
+                <IconTwitch />
+                <span>{t("profile.signInWithTwitch", "Login")}</span>
+              </Button>
+            )}
+          </div>
+        </header>
+
+        {/* Main page content */}
+        <main className="flex-1 min-w-0 min-h-screen overflow-y-scroll [scrollbar-gutter:stable] bg-background">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
