@@ -77,7 +77,7 @@ export default function LoginPage() {
   return (
     <div className="glass rounded-2xl p-8 glow-teal space-y-6">
       <div className="flex justify-end -mt-2 -mr-2">
-        <LanguageSwitcher className="bg-white/5 border-white/10" />
+        <LanguageSwitcher variant="compact" className="bg-white/5 border-white/10" />
       </div>
 
       {/* Header */}
@@ -124,11 +124,6 @@ export default function LoginPage() {
           description={t("auth.loginUserDesc")}
         />
       </div>
-
-      {/* Footer note */}
-      <p className="text-center text-xs text-muted-foreground/60">
-        {t("auth.sessionNote")}
-      </p>
     </div>
   );
 }

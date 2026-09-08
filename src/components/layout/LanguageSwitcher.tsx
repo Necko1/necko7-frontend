@@ -20,9 +20,61 @@ const IconGlobe = () => (
   </svg>
 );
 
-export default function LanguageSwitcher({ className }: { className?: string }) {
+export default function LanguageSwitcher({
+  className,
+  variant = "default",
+}: {
+  className?: string;
+  variant?: "default" | "compact";
+}) {
   const { i18n, t } = useTranslation();
   const currentLang = (i18n.language || "en").startsWith("ru") ? "ru" : "en";
+
+  if (variant === "compact") {
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-1.5 p-1 rounded-xl bg-sidebar-accent/50 border border-sidebar-border/60 text-xs select-none",
+          className
+        )}
+        title={t("common.language", "Language")}
+      >
+        <div className="pl-1.5 text-muted-foreground flex items-center">
+          <IconGlobe />
+        </div>
+        <div className="flex items-center gap-0.5 bg-background/50 p-0.5 rounded-lg border border-border/40">
+          <button
+            type="button"
+            onClick={() => changeAppLanguage("ru")}
+            className={cn(
+              "px-1.5 py-0.5 rounded-md text-sm leading-none transition-all cursor-pointer",
+              currentLang === "ru"
+                ? "bg-primary/20 border border-primary/40 shadow-xs opacity-100"
+                : "opacity-40 hover:opacity-90 grayscale hover:grayscale-0"
+            )}
+            title="Русский"
+            aria-label="Русский язык"
+          >
+            🇷🇺
+          </button>
+          <button
+            type="button"
+            onClick={() => changeAppLanguage("en")}
+            className={cn(
+              "px-1.5 py-0.5 rounded-md text-sm leading-none transition-all cursor-pointer",
+              currentLang === "en"
+                ? "bg-primary/20 border border-primary/40 shadow-xs opacity-100"
+                : "opacity-40 hover:opacity-90 grayscale hover:grayscale-0"
+            )}
+            title="English"
+            aria-label="English language"
+          >
+            🇬🇧
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
