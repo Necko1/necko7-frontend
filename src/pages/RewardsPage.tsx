@@ -42,11 +42,29 @@ import {
 import { cn } from "@/lib/utils";
 import RedemptionList from "@/components/redemptions/RedemptionList";
 import { config } from "@/config";
+import { getShortRewardUrl } from "@/lib/shortUrl";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 const IconPlus = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+const IconLink = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+const IconCheck = ({ className }: { className?: string } = {}) => (
+  <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+const IconCopy = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
   </svg>
 );
 const IconSearch = () => (
@@ -2426,6 +2444,12 @@ function RewardEditDialog({
   });
 
   const [showIconDownloader, setShowIconDownloader] = useState(false);
+  const [shortCopied, setShortCopied] = useState(false);
+
+  const { broadcasters } = useAppStore();
+  const currentBroadcaster = broadcasters.find((b) => b.channel_id === channelId);
+  const channelLogin = currentBroadcaster?.channel_login || channelId;
+  const shortUrl = reward ? getShortRewardUrl(channelLogin, reward.twitch_id) : "";
 
   if (!reward) return null;
 
@@ -2555,6 +2579,22 @@ function RewardEditDialog({
                 {t("rewards.downloadIcon", "Download Icon")}
               </Button>
             )}
+            {shortUrl && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-xs font-medium"
+                onClick={() => {
+                  navigator.clipboard.writeText(shortUrl);
+                  setShortCopied(true);
+                  setTimeout(() => setShortCopied(false), 2000);
+                }}
+                title={shortUrl}
+              >
+                {shortCopied ? <IconCheck className="text-emerald-400" /> : <IconLink />}
+                <span>{shortCopied ? t("rewards.shortLinkCopied", "Link Copied!") : t("rewards.copyShortLink", "Short Link")}</span>
+              </Button>
+            )}
           </div>
 
           <Separator className="my-2" />
@@ -2567,6 +2607,36 @@ function RewardEditDialog({
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-5 min-w-0">
+              {/* Short link banner for Twitch description */}
+              {shortUrl && (
+                <div className="rounded-xl border border-primary/25 bg-primary/5 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 font-semibold text-foreground">
+                      <IconLink />
+                      <span>{t("rewards.shortLinkTitle", "Short Link for Twitch Description")}</span>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
+                        {shortUrl.length} {t("common.chars", "chars")}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground font-mono truncate select-all">
+                      {shortUrl}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs h-8 shrink-0 bg-background/80 hover:bg-background"
+                    onClick={() => {
+                      navigator.clipboard.writeText(shortUrl);
+                      setShortCopied(true);
+                      setTimeout(() => setShortCopied(false), 2000);
+                    }}
+                  >
+                    {shortCopied ? <IconCheck className="text-emerald-400" /> : <IconCopy />}
+                    <span>{shortCopied ? t("common.copied", "Copied!") : t("common.copy", "Copy")}</span>
+                  </Button>
+                </div>
+              )}
               {/* Chat Activity Requirements card */}
               {((reward.chat_min_messages ?? 0) > 0 || (reward.chat_min_characters ?? 0) > 0) && (
                 <div className="space-y-2 rounded-xl border border-violet-500/30 bg-violet-500/5 p-3.5">

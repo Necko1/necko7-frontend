@@ -14,6 +14,7 @@ import SkinImage from "@/components/common/SkinImage";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { getShortRewardUrl, base64UrlToUuid, uuidToBase64Url } from "@/lib/shortUrl";
 import type { AxiosError } from "axios";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -56,6 +57,13 @@ const IconShare = () => (
 const IconCheck = ({ className }: { className?: string } = {}) => (
   <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const IconLink = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </svg>
 );
 
@@ -183,7 +191,8 @@ function renderChatRequirementText(
 
 export default function PublicRewardsPage() {
   const { t } = useTranslation();
-  const { identifier, rewardId } = useParams<{ identifier: string; rewardId?: string }>();
+  const { identifier, rewardId: rawRewardId } = useParams<{ identifier: string; rewardId?: string }>();
+  const rewardId = useMemo(() => (rawRewardId ? base64UrlToUuid(rawRewardId) : undefined), [rawRewardId]);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { currentUser, broadcasters } = useAppStore();
@@ -274,7 +283,10 @@ export default function PublicRewardsPage() {
   }, [rewards, search, typeFilter]);
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    const url = selectedReward && identifier
+      ? getShortRewardUrl(identifier, selectedReward.twitch_id)
+      : window.location.href;
+    navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -448,6 +460,7 @@ export default function PublicRewardsPage() {
         /* ── Full Content Detail View (Expanded) ── */
         <RewardDetailExpandedView
           reward={selectedReward}
+          identifier={identifier!}
           onBack={() => navigate(`/c/${identifier}`)}
           onCopyLink={handleCopyLink}
           copied={copied}
@@ -726,16 +739,31 @@ function RewardCard({
 // ── Full Content Detail View (Expanded) ────────────────────────────────────
 function RewardDetailExpandedView({
   reward,
+  identifier,
   onBack,
   onCopyLink,
   copied,
 }: {
   reward: PublicRewardResponse;
+  identifier: string;
   onBack: () => void;
   onCopyLink: () => void;
   copied: boolean;
 }) {
   const { t } = useTranslation();
+  const [shortCopied, setShortCopied] = useState(false);
+  const shortUrl = useMemo(
+    () => getShortRewardUrl(identifier, reward.twitch_id),
+    [identifier, reward.twitch_id]
+  );
+  const shortSlug = `/r/${identifier}/${uuidToBase64Url(reward.twitch_id)}`;
+
+  const handleCopyShort = () => {
+    navigator.clipboard.writeText(shortUrl);
+    setShortCopied(true);
+    setTimeout(() => setShortCopied(false), 2000);
+  };
+
   const isPool = reward.reward_type === "POOL";
   const isFilter = reward.reward_type === "FILTER";
   const isFixed = reward.reward_type === "FIXED";
@@ -767,12 +795,29 @@ function RewardDetailExpandedView({
           <span>{t("public.backToAll", "Back to all rewards")}</span>
         </Button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Compact short link pill */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyShort}
+            className="gap-1.5 text-xs font-mono h-8 border-border/80 hover:border-primary/40 text-muted-foreground hover:text-foreground"
+            title={t("public.shortLinkHint", "Compact link for Twitch reward description (under 200 chars)")}
+          >
+            {shortCopied ? <IconCheck className="text-emerald-400" /> : <IconLink />}
+            <span className="hidden sm:inline">
+              {shortCopied ? t("public.shortLinkCopied", "Short link copied!") : shortSlug}
+            </span>
+            <span className="sm:hidden">
+              {shortCopied ? t("common.copied", "Copied!") : t("public.copyShortLink", "Short Link")}
+            </span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={onCopyLink}
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs h-8"
           >
             {copied ? <IconCheck className="text-emerald-400" /> : <IconShare />}
             <span>{copied ? t("public.linkCopied", "Link Copied") : t("public.shareReward", "Share Reward")}</span>

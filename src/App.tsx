@@ -18,6 +18,7 @@ import LogsPage from "@/pages/LogsPage";
 import PublicRewardsPage from "@/pages/PublicRewardsPage";
 import ChannelProfilePage from "@/pages/ChannelProfilePage";
 import GlobalProfilePage from "@/pages/GlobalProfilePage";
+import ShortRewardRedirect from "@/pages/ShortRewardRedirect";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +65,9 @@ export default function App() {
                 <Route path="/c/:identifier/rewards/:rewardId" element={<PublicRewardsPage />} />
                 <Route path="/c/:identifier/profile" element={<ChannelProfilePage />} />
                 <Route path="/me" element={<GlobalProfilePage />} />
+
+                {/* Compact reward short link route: /r/:identifier/:shortRewardId */}
+                <Route path="/r/:identifier/:shortRewardId" element={<ShortRewardRedirect />} />
               </Route>
 
               {/* Catch-all */}
