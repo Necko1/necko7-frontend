@@ -60,7 +60,7 @@ export const ru = {
   },
   auth: {
     welcomeTitle: "Добро пожаловать в necko7",
-    welcomeSubtitle: "Бот наград CS:GO скинами за баллы Twitch канала",
+    welcomeSubtitle: "Бот наград CS2 скинами за баллы Twitch канала",
     chooseLoginType: "Выберите тип входа",
     connectStreamerTitle: "Подключить как стример",
     connectStreamerDesc: "Авторизуйте бота и получите полный контроль над своим каналом",
@@ -312,7 +312,7 @@ export const ru = {
       refundIfNoMoneyDesc: "Автоматически возвращать баллы, если на маркете недостаточно баланса.",
       pauseIfNoMoney: "Приостановить награду при нехватке баланса",
       pauseIfNoMoneyDesc: "Приостановить награду на Twitch вместо отмены при исчерпании средств.",
-      marketApiKey: "API-ключ CS:GO Market",
+      marketApiKey: "API-ключ CS2 Market",
       marketApiKeyDesc: "Ключ с market.csgo.com для автоматической покупки и передачи скинов зрителям.",
       marketKeySet: "✓ API-ключ маркета настроен",
       marketKeyNotSet: "⚠ API-ключ маркета не задан — автопокупка отключена",
@@ -341,7 +341,7 @@ export const ru = {
         trades: "Обмены Steam",
         tradesDesc: "Отправка trade offer, принятие, отклонение и таймауты.",
         market_errors: "Ошибки маркета",
-        market_errorsDesc: "Ошибки API CS:GO Market и проверки инвентаря Steam.",
+        market_errorsDesc: "Ошибки API CS2 Market и проверки инвентаря Steam.",
         chat_requirements: "Требования чата",
         chat_requirementsDesc: "Требования к активности зрителя в чате (сообщения и символы).",
         limits: "Лимиты",
@@ -689,7 +689,7 @@ export const ru = {
       steps: {
         type: {
           title: "Тип и скин",
-          subtitle: "Выберите тип награды и скин CS:GO",
+          subtitle: "Выберите тип награды и скин CS2",
         },
         pricing: {
           title: "Ценообразование",

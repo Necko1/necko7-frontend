@@ -60,7 +60,7 @@ export const en = {
   },
   auth: {
     welcomeTitle: "Welcome to necko7",
-    welcomeSubtitle: "CS:GO skin rewards bot for Twitch streamers",
+    welcomeSubtitle: "CS2 skin rewards bot for Twitch streamers",
     chooseLoginType: "Choose login type",
     connectStreamerTitle: "Connect as Streamer",
     connectStreamerDesc: "Authorize bot & get full control over your channel",
@@ -311,7 +311,7 @@ export const en = {
       pauseIfNoMoney: "Pause reward if insufficient balance",
       pauseIfNoMoneyDesc: "Pause the Twitch reward instead of failing when the balance runs out.",
       marketApiKey: "Market API Key",
-      marketApiKeyDesc: "Set the API key for the CS:GO market integration.",
+      marketApiKeyDesc: "Set the API key for the CS2 market integration.",
       marketKeySet: "✓ Market API key is currently configured",
       marketKeyNotSet: "⚠ No market API key set — auto-buy is disabled",
       marketKeyPlaceholderSet: "••••••••••••••• (already set)",
@@ -339,7 +339,7 @@ export const en = {
         trades: "Trades",
         tradesDesc: "Steam trade offer delivery, acceptance, declines, and timeouts.",
         market_errors: "Market Errors",
-        market_errorsDesc: "CS:GO Market API and Steam inventory verification error messages.",
+        market_errorsDesc: "CS2 Market API and Steam inventory verification error messages.",
         chat_requirements: "Chat Requirements",
         chat_requirementsDesc: "Viewer chat activity requirements (messages and character count).",
         limits: "Limits",
@@ -373,7 +373,7 @@ export const en = {
       showCostPoints: "Show Channel Points Cost",
       showCostPointsDesc: "Display the Twitch channel points cost required to redeem each reward.",
       showMarketPrice: "Show Estimated Market Price",
-      showMarketPriceDesc: "Display real-time CS market item prices in your store currency (RUB/USD).",
+      showMarketPriceDesc: "Display real-time CS2 market item prices in your store currency (RUB/USD).",
       showPriceDeviation: "Show Permissible Price Deviation",
       showPriceDeviationDesc: "Show allowable market price deviation percentage (±%).",
       poolTitle: "Skin Pool Visibility",
@@ -687,7 +687,7 @@ export const en = {
       steps: {
         type: {
           title: "Type & Skin",
-          subtitle: "Select reward type and CS skin item",
+          subtitle: "Select reward type and CS2 skin item",
         },
         pricing: {
           title: "Pricing",

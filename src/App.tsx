@@ -44,6 +44,9 @@ export default function App() {
               {/* Standalone — no layout, self-contained background */}
               <Route path="/init-bot" element={<InitBotPage />} />
 
+              {/* Compact reward short link redirect: stateless, immediate client-side redirect */}
+              <Route path="/r/:identifier/:shortRewardId" element={<ShortRewardRedirect />} />
+
               {/* App routes (handles both viewer and admin layouts) */}
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
@@ -65,9 +68,6 @@ export default function App() {
                 <Route path="/c/:identifier/rewards/:rewardId" element={<PublicRewardsPage />} />
                 <Route path="/c/:identifier/profile" element={<ChannelProfilePage />} />
                 <Route path="/me" element={<GlobalProfilePage />} />
-
-                {/* Compact reward short link route: /r/:identifier/:shortRewardId */}
-                <Route path="/r/:identifier/:shortRewardId" element={<ShortRewardRedirect />} />
               </Route>
 
               {/* Catch-all */}

@@ -2071,7 +2071,7 @@ function StepPurchaseLimits({
 const STEPS = [
   {
     title: "Type & Skin",
-    subtitle: "Select reward type and CS skin item",
+    subtitle: "Select reward type and CS2 skin item",
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -2607,36 +2607,6 @@ function RewardEditDialog({
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-5 min-w-0">
-              {/* Short link banner for Twitch description */}
-              {shortUrl && (
-                <div className="rounded-xl border border-primary/25 bg-primary/5 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 font-semibold text-foreground">
-                      <IconLink />
-                      <span>{t("rewards.shortLinkTitle", "Short Link for Twitch Description")}</span>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
-                        {shortUrl.length} {t("common.chars", "chars")}
-                      </Badge>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground font-mono truncate select-all">
-                      {shortUrl}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5 text-xs h-8 shrink-0 bg-background/80 hover:bg-background"
-                    onClick={() => {
-                      navigator.clipboard.writeText(shortUrl);
-                      setShortCopied(true);
-                      setTimeout(() => setShortCopied(false), 2000);
-                    }}
-                  >
-                    {shortCopied ? <IconCheck className="text-emerald-400" /> : <IconCopy />}
-                    <span>{shortCopied ? t("common.copied", "Copied!") : t("common.copy", "Copy")}</span>
-                  </Button>
-                </div>
-              )}
               {/* Chat Activity Requirements card */}
               {((reward.chat_min_messages ?? 0) > 0 || (reward.chat_min_characters ?? 0) > 0) && (
                 <div className="space-y-2 rounded-xl border border-violet-500/30 bg-violet-500/5 p-3.5">

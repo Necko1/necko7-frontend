@@ -282,7 +282,7 @@ const CATEGORY_META: Record<string, CategoryMeta> = {
   market_errors: {
     id: "market_errors",
     label: "Market Errors",
-    description: "CS:GO Market API and Steam inventory verification error messages.",
+    description: "CS2 Market API and Steam inventory verification error messages.",
   },
   chat_requirements: {
     id: "chat_requirements",

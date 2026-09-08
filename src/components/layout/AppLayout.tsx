@@ -256,7 +256,7 @@ export default function AppLayout() {
 
   const navItems: NavItem[] = useMemo(() => {
     // 1. Guest viewing public channel route: show Rewards only, no Profile!
-    if (!meData && location.pathname.startsWith("/c/")) {
+    if (!meData && (location.pathname.startsWith("/c/") || location.pathname.startsWith("/r/"))) {
       const channelLogin = location.pathname.split("/")[2] || "";
       return [
         {
@@ -326,7 +326,7 @@ export default function AppLayout() {
   if (meError) {
     const status = (meError as AxiosError)?.response?.status;
     if (status === 404) return <Navigate to="/init-bot" replace />;
-    if (!location.pathname.startsWith("/c/")) {
+    if (!location.pathname.startsWith("/c/") && !location.pathname.startsWith("/r/")) {
       return <Navigate to="/login" replace />;
     }
   }

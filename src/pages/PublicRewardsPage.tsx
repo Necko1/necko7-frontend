@@ -462,8 +462,6 @@ export default function PublicRewardsPage() {
           reward={selectedReward}
           identifier={identifier!}
           onBack={() => navigate(`/c/${identifier}`)}
-          onCopyLink={handleCopyLink}
-          copied={copied}
         />
       ) : (
         /* ── Catalog Overview (Cards Grid) ── */
@@ -694,7 +692,7 @@ function RewardCard({
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="hover:text-primary hover:underline inline-flex items-center gap-1 transition-colors truncate max-w-full"
-                title={`View "${reward.market_item_name}" on CS:GO Market`}
+                title={`View "${reward.market_item_name}" on CS2 Market`}
               >
                 <span className="truncate">{reward.market_item_name}</span>
                 <IconExternalLink />
@@ -741,14 +739,10 @@ function RewardDetailExpandedView({
   reward,
   identifier,
   onBack,
-  onCopyLink,
-  copied,
 }: {
   reward: PublicRewardResponse;
   identifier: string;
   onBack: () => void;
-  onCopyLink: () => void;
-  copied: boolean;
 }) {
   const { t } = useTranslation();
   const [shortCopied, setShortCopied] = useState(false);
@@ -795,8 +789,8 @@ function RewardDetailExpandedView({
           <span>{t("public.backToAll", "Back to all rewards")}</span>
         </Button>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Compact short link pill */}
+        <div className="flex items-center gap-2">
+          {/* Compact short link button */}
           <Button
             variant="outline"
             size="sm"
@@ -811,16 +805,6 @@ function RewardDetailExpandedView({
             <span className="sm:hidden">
               {shortCopied ? t("common.copied", "Copied!") : t("public.copyShortLink", "Short Link")}
             </span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onCopyLink}
-            className="gap-1.5 text-xs h-8"
-          >
-            {copied ? <IconCheck className="text-emerald-400" /> : <IconShare />}
-            <span>{copied ? t("public.linkCopied", "Link Copied") : t("public.shareReward", "Share Reward")}</span>
           </Button>
         </div>
       </div>
@@ -880,7 +864,7 @@ function RewardDetailExpandedView({
               href={getCsgoMarketUrl(reward.market_item_name)}
               target="_blank"
               rel="noopener noreferrer"
-              title={`View "${reward.market_item_name}" on CS:GO Market`}
+              title={`View "${reward.market_item_name}" on CS2 Market`}
               className="w-48 h-48 drop-shadow-xl shrink-0 cursor-pointer"
             >
               <SkinImage marketItemName={reward.market_item_name} size={300} />
@@ -893,7 +877,7 @@ function RewardDetailExpandedView({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 group/link hover:text-primary transition-colors text-left"
-                  title={`View "${reward.market_item_name}" on CS:GO Market`}
+                  title={`View "${reward.market_item_name}" on CS2 Market`}
                 >
                   <h3 className="text-xl font-bold text-foreground group-hover/link:text-primary transition-colors">
                     {reward.market_item_name || t("public.unknownSkin", "Unknown skin")}
@@ -1081,7 +1065,7 @@ function PoolMiniCard({
       href={marketUrl}
       target="_blank"
       rel="noopener noreferrer"
-      title={`View "${item.market_hash_name}" on CS:GO Market`}
+      title={`View "${item.market_hash_name}" on CS2 Market`}
       className="group/pool flex flex-col justify-between p-4 rounded-2xl border border-border/80 bg-background/80 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all space-y-3 cursor-pointer text-left no-underline block"
     >
       {/* Top: Drop Chance Badge (NO EMOJI) & Price with Deviation */}
