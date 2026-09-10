@@ -30,6 +30,7 @@ export default function RedemptionsPage() {
     { value: "", label: t("redemptions.statuses.all") },
     { value: "PENDING", label: t("redemptions.statuses.pending") },
     { value: "ORDER_CREATED", label: t("redemptions.statuses.orderCreated") },
+    { value: "MANUAL_HOLD", label: t("redemptions.statuses.manualHold") },
     { value: "COMPLETED", label: t("redemptions.statuses.completed") },
     { value: "FAILED_REFUND", label: t("redemptions.statuses.refunded") },
     { value: "FAILED_PENALTY", label: t("redemptions.statuses.penalized") },

@@ -10,16 +10,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { formatMinorCurrency } from "@/lib/currency";
+import { toast } from "sonner";
 
 // ── Status helpers ─────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<RedemptionStatus, string> = {
   PENDING: "Pending",
   ORDER_CREATED: "Order Created",
+  MANUAL_HOLD: "Manual Hold",
   COMPLETED: "Completed",
   FAILED_REFUND: "Refunded",
   FAILED_PENALTY: "Penalized",
   Pending: "Pending",
   OrderCreated: "Order Created",
+  ManualHold: "Manual Hold",
   Completed: "Completed",
   FailedRefund: "Refunded",
   FailedPenalty: "Penalized",
@@ -28,14 +31,26 @@ const STATUS_LABELS: Record<RedemptionStatus, string> = {
 const STATUS_CLASSES: Record<RedemptionStatus, string> = {
   PENDING: "status-pending",
   ORDER_CREATED: "status-order-created",
+  MANUAL_HOLD: "status-manual-hold",
   COMPLETED: "status-completed",
   FAILED_REFUND: "status-failed-refund",
   FAILED_PENALTY: "status-failed-penalty",
   Pending: "status-pending",
   OrderCreated: "status-order-created",
+  ManualHold: "status-manual-hold",
   Completed: "status-completed",
   FailedRefund: "status-failed-refund",
   FailedPenalty: "status-failed-penalty",
+};
+
+const FAIL_CAUSE_I18N_KEYS: Record<string, string> = {
+  buyer_not_claimed: "redemptions.failCauses.buyer_not_claimed",
+  invalid_trade_url: "redemptions.failCauses.invalid_trade_url",
+  buyer_banned: "redemptions.failCauses.buyer_banned",
+  timeout: "redemptions.failCauses.timeout",
+  market_retry_failed: "redemptions.failCauses.market_retry_failed",
+  no_money: "redemptions.failCauses.no_money",
+  price_above_max: "redemptions.failCauses.price_above_max",
 };
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -98,15 +113,57 @@ function RedemptionRow({
 
   const retryMutation = useMutation({
     mutationFn: () => redemptionsApi.retry(channelId, redemption.twitch_redemption_id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["redemptions"] }),
+    onSuccess: (res) => {
+      const updated = res.data;
+      qc.setQueriesData({ queryKey: ["redemptions"] }, (oldData: any) => {
+        if (!oldData || !oldData.items) return oldData;
+        return {
+          ...oldData,
+          items: oldData.items.map((item: RedemptionResponse) =>
+            item.twitch_redemption_id === updated.twitch_redemption_id
+              ? { ...item, ...updated }
+              : item
+          ),
+        };
+      });
+      qc.invalidateQueries({ queryKey: ["redemptions"] });
+      toast.success(t("redemptions.retrySuccess", "Заказ успешно создан на маркете!"));
+    },
+    onError: (err: any) => {
+      const message =
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        t("redemptions.retryError", "Ошибка маркета при создании заказа");
+      toast.error(message);
+    },
   });
   const refundMutation = useMutation({
     mutationFn: () => redemptionsApi.refund(channelId, redemption.twitch_redemption_id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["redemptions"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["redemptions"] });
+      toast.success(t("redemptions.refundSuccess", "Баллы успешно возвращены!"));
+    },
+    onError: (err: any) => {
+      const message =
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        t("redemptions.refundError", "Ошибка при возврате баллов");
+      toast.error(message);
+    },
   });
   const penaltyMutation = useMutation({
     mutationFn: () => redemptionsApi.penalty(channelId, redemption.twitch_redemption_id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["redemptions"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["redemptions"] });
+      toast.success(t("redemptions.penaltySuccess", "Выкуп успешно оштрафован!"));
+    },
+    onError: (err: any) => {
+      const message =
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        t("redemptions.penaltyError", "Ошибка при штрафе выкупа");
+      toast.error(message);
+    },
   });
 
   const isLoading = retryMutation.isPending || refundMutation.isPending || penaltyMutation.isPending;
@@ -117,6 +174,9 @@ function RedemptionRow({
   const isPending =
     redemption.status === "PENDING" ||
     redemption.status === "Pending";
+  const isManualHold =
+    redemption.status === "MANUAL_HOLD" ||
+    redemption.status === "ManualHold";
 
   const getStatusLabel = (status: RedemptionStatus) => {
     switch (status) {
@@ -126,6 +186,9 @@ function RedemptionRow({
       case "ORDER_CREATED":
       case "OrderCreated":
         return t("redemptions.statuses.orderCreated");
+      case "MANUAL_HOLD":
+      case "ManualHold":
+        return t("redemptions.statuses.manualHold");
       case "COMPLETED":
       case "Completed":
         return t("redemptions.statuses.completed");
@@ -297,23 +360,33 @@ function RedemptionRow({
               <p className="text-foreground">{format(new Date(redemption.updated_at), "dd MMM yyyy HH:mm:ss")}</p>
             </div>
             {redemption.fail_cause && (
-              <div className="col-span-2">
-                <p className="text-muted-foreground mb-0.5">{t("redemptions.failCause")}</p>
-                <p className="text-destructive">{redemption.fail_cause}</p>
+              <div className="col-span-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold text-destructive">
+                    {FAIL_CAUSE_I18N_KEYS[redemption.fail_cause]
+                      ? t(FAIL_CAUSE_I18N_KEYS[redemption.fail_cause])
+                      : redemption.fail_cause}
+                  </span>
+                  <code className="text-[10px] font-mono bg-destructive/10 text-destructive/80 px-1.5 py-0.5 rounded border border-destructive/20">
+                    {redemption.fail_cause}
+                  </code>
+                </div>
                 {redemption.fail_description && (
-                  <p className="text-muted-foreground text-xs mt-0.5">{redemption.fail_description}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {redemption.fail_description}
+                  </p>
                 )}
               </div>
             )}
           </div>
 
-          {/* Action buttons for failed / pending states */}
-          {(isFailedPenalty || isPending) && (
+          {/* Action buttons for failed / pending / manual hold states */}
+          {(isFailedPenalty || isPending || isManualHold) && (
             <div className="flex flex-wrap gap-2">
-              {isFailedPenalty && (
+              {(isFailedPenalty || isManualHold) && (
                 <Button
                   size="sm"
-                  className="gap-1.5 text-xs"
+                  className="gap-1.5 text-xs cursor-pointer"
                   onClick={() => retryMutation.mutate()}
                   disabled={isLoading}
                 >
@@ -321,11 +394,11 @@ function RedemptionRow({
                   {t("redemptions.retryMarketOrder")}
                 </Button>
               )}
-              {isPending && (
+              {(isPending || isManualHold) && (
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 text-xs"
+                  className="gap-1.5 text-xs cursor-pointer"
                   onClick={() => refundMutation.mutate()}
                   disabled={isLoading}
                 >
@@ -333,11 +406,11 @@ function RedemptionRow({
                   {t("redemptions.refund")}
                 </Button>
               )}
-              {isPending && (
+              {(isPending || isManualHold) && (
                 <Button
                   size="sm"
                   variant="destructive"
-                  className="gap-1.5 text-xs"
+                  className="gap-1.5 text-xs cursor-pointer"
                   onClick={() => penaltyMutation.mutate()}
                   disabled={isLoading}
                 >

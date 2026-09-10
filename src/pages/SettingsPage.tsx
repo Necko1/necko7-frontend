@@ -311,7 +311,11 @@ function getCategoryMeta(key: string, t?: (k: string, opt?: any) => string): Cat
   return { id: key, label, description: `Customizable chat messages for ${label}.` };
 }
 
-function formatMessageKey(key: string): string {
+function formatMessageKey(key: string, t?: (k: string, opt?: any) => string): string {
+  if (t) {
+    const translated = t(`settings.messagesTab.templates.${key}`, { defaultValue: "" });
+    if (translated) return translated;
+  }
   return key
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -661,7 +665,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-sm text-foreground">
-                        {formatMessageKey(msgKey)}
+                        {formatMessageKey(msgKey, t)}
                       </span>
                       <code className="text-[11px] font-mono text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded border border-border/50">
                         {msgKey}

@@ -61,12 +61,6 @@ const IconCheck = ({ className }: { className?: string } = {}) => (
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
-const IconCopy = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-  </svg>
-);
 const IconSearch = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -674,6 +668,7 @@ function PoolItemsEditor({
 }) {
   const { t } = useTranslation();
   const chances = calcPoolChances(items);
+  const [openMsgIndices, setOpenMsgIndices] = useState<Record<number, boolean>>({});
 
   const update = (idx: number, patch: Partial<PoolItemConfig>) => {
     onChange(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
@@ -689,84 +684,162 @@ function PoolItemsEditor({
 
   return (
     <div className="space-y-3">
-      {items.map((it, idx) => (
-        <div
-          key={idx}
-          className="relative rounded-xl border border-border bg-background/50 p-3 space-y-2"
-        >
-          {/* Header: skin name + chance badge */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 min-w-0">
-              <Input
-                placeholder="AWP | Asiimov (Field-Tested)"
-                value={it.market_hash_name}
-                onChange={(e) => update(idx, { market_hash_name: e.target.value })}
-                className="text-sm h-8"
-              />
-            </div>
-            <span className="shrink-0 text-xs font-mono text-primary tabular-nums bg-primary/10 rounded-md px-2 py-1">
-              {chances[idx].toFixed(1)}%
-            </span>
-            <button
-              type="button"
-              onClick={() => remove(idx)}
-              className="shrink-0 text-muted-foreground/60 hover:text-destructive transition-colors"
-              title={t("rewards.pool.removeSkin", "Remove")}
-            >
-              <IconClose />
-            </button>
-          </div>
-
-          {/* Skin mini-preview if name given */}
-          {it.market_hash_name && (
-            <div className="flex items-center gap-3">
-              <SkinImage
-                marketItemName={it.market_hash_name}
-                size={150}
-                objectFit="contain"
-                className="rounded-lg shrink-0"
-                style={{ width: 56, height: 42 }}
-              />
-              <a
-                href={`https://market.csgo.com/en/?search=${encodeURIComponent(it.market_hash_name)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-0.5 max-w-full min-w-0"
-                title={it.market_hash_name}
+      {items.map((it, idx) => {
+        const isMsgOpen = openMsgIndices[idx] ?? Boolean(it.custom_message);
+        return (
+          <div
+            key={idx}
+            className="relative rounded-xl border border-border bg-background/50 p-3 space-y-2.5"
+          >
+            {/* Header: skin name + chance badge */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <Input
+                  placeholder="AWP | Asiimov (Field-Tested)"
+                  value={it.market_hash_name}
+                  onChange={(e) => update(idx, { market_hash_name: e.target.value })}
+                  className="text-sm h-8"
+                />
+              </div>
+              <span className="shrink-0 text-xs font-mono text-primary tabular-nums bg-primary/10 rounded-md px-2 py-1">
+                {chances[idx].toFixed(1)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => remove(idx)}
+                className="shrink-0 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
+                title={t("rewards.pool.removeSkin", "Remove")}
               >
-                <span className="truncate min-w-0">{it.market_hash_name}</span>
-                <IconExternalLink className="shrink-0" />
-              </a>
+                <IconClose />
+              </button>
             </div>
-          )}
 
-          {/* Weight + deviation */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("rewards.pool.weight", "Weight")}</Label>
-              <Input
-                type="number"
-                min={0.01}
-                step={0.01}
-                value={it.weight}
-                onChange={(e) => update(idx, { weight: parseFloat(e.target.value) || 1 })}
-                className="h-8 text-sm"
-              />
+            {/* Skin mini-preview if name given */}
+            {it.market_hash_name && (
+              <div className="flex items-center gap-3">
+                <SkinImage
+                  marketItemName={it.market_hash_name}
+                  size={150}
+                  objectFit="contain"
+                  className="rounded-lg shrink-0"
+                  style={{ width: 56, height: 42 }}
+                />
+                <a
+                  href={`https://market.csgo.com/en/?search=${encodeURIComponent(it.market_hash_name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-0.5 max-w-full min-w-0"
+                  title={it.market_hash_name}
+                >
+                  <span className="truncate min-w-0">{it.market_hash_name}</span>
+                  <IconExternalLink className="shrink-0" />
+                </a>
+              </div>
+            )}
+
+            {/* Weight + deviation */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{t("rewards.pool.weight", "Weight")}</Label>
+                <Input
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  value={it.weight}
+                  onChange={(e) => update(idx, { weight: parseFloat(e.target.value) || 1 })}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{t("rewards.pool.maxDeviation", "Max deviation %")}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={it.permissible_market_price_deviation}
+                  onChange={(e) => update(idx, { permissible_market_price_deviation: parseInt(e.target.value) || 0 })}
+                  className="h-8 text-sm"
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("rewards.pool.maxDeviation", "Max deviation %")}</Label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={it.permissible_market_price_deviation}
-                onChange={(e) => update(idx, { permissible_market_price_deviation: parseInt(e.target.value) || 0 })}
-                className="h-8 text-sm"
-              />
+
+            {/* Custom chat message collapsible section */}
+            <div className="pt-1.5 border-t border-border/40">
+              <button
+                type="button"
+                onClick={() => setOpenMsgIndices((prev) => ({ ...prev, [idx]: !isMsgOpen }))}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-full text-left"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={cn("transition-transform duration-150", isMsgOpen && "rotate-90")}
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+                <span className="font-medium">
+                  {t("rewards.pool.customMessageTitle", "Сообщение в чат при выпадении")}
+                </span>
+                {it.custom_message ? (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 font-normal ml-auto">
+                    {t("rewards.pool.customMessageActive", "Кастомное")}
+                  </Badge>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground/60 font-normal ml-auto">
+                    ({t("rewards.pool.customMessageDefault", "по умолчанию")})
+                  </span>
+                )}
+              </button>
+
+              {isMsgOpen && (
+                <div className="mt-2 space-y-2 rounded-lg bg-muted/20 p-2.5 border border-border/50 text-xs">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-muted-foreground text-[11px]">
+                      {t("rewards.pool.customMessageHint", "Теги для вставки:")}
+                    </span>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {["buyer", "item", "chance"].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            const cur = it.custom_message || "";
+                            update(idx, { custom_message: cur ? `${cur} {${tag}}` : `{${tag}}` });
+                          }}
+                          title={`Click to add {${tag}}`}
+                          className="inline-flex items-center gap-0.5 text-[10px] font-mono px-1.5 py-0.5 rounded border border-primary/25 bg-primary/5 hover:bg-primary/15 text-primary cursor-pointer active:scale-95"
+                        >
+                          <span>{`{${tag}}`}</span>
+                          <span className="opacity-50">+</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Textarea
+                    rows={2}
+                    placeholder={t(
+                      "rewards.pool.customMessagePlaceholder",
+                      "@{buyer}, твой дроп: {item} (шанс: {chance})! Заказ уже создаётся на маркете, ожидай трейд."
+                    )}
+                    value={it.custom_message ?? ""}
+                    onChange={(e) =>
+                      update(idx, { custom_message: e.target.value ? e.target.value : null })
+                    }
+                    className="text-xs h-auto min-h-[56px] resize-y"
+                  />
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       <button
         type="button"
@@ -1020,6 +1093,11 @@ function PoolItemsDetail({
                     </span>
                   )}
                 </p>
+                {item.custom_message && (
+                  <p className="text-[11px] text-muted-foreground/80 truncate max-w-sm" title={item.custom_message}>
+                    💬 <span className="italic">{item.custom_message}</span>
+                  </p>
+                )}
               </div>
               <div className="text-right shrink-0">
                 <p className="text-sm font-bold tabular-nums text-primary">{chances[idx].toFixed(1)}%</p>

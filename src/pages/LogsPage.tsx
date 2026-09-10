@@ -164,6 +164,12 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
 
   const hasDetails = log.details && Object.keys(log.details).length > 0;
   const hasSolution = !!log.solution_hint;
+  const tradeOfferUrl =
+    typeof log.details?.tradeoffer_url === "string"
+      ? (log.details.tradeoffer_url as string)
+      : typeof log.details?.trade_offer_url === "string"
+      ? (log.details.trade_offer_url as string)
+      : undefined;
 
   return (
     <div
@@ -235,6 +241,29 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
               <span className="text-amber-400/80 w-32 shrink-0 font-semibold">solution_hint:</span>
               <span className="bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20 text-amber-200 break-words flex-1">
                 {log.solution_hint}
+              </span>
+            </div>
+          )}
+
+          {/* Steam Trade Offer action button if present in details */}
+          {Boolean(tradeOfferUrl) && (
+            <div className="flex items-center gap-3 py-1.5 px-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <a
+                href={tradeOfferUrl!}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-sans text-xs font-medium shadow-xs transition-colors shrink-0"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                {t("logs.openSteamTrade", "Открыть обмен в Steam ↗")}
+              </a>
+              <span className="text-[11px] text-muted-foreground truncate font-mono">
+                {tradeOfferUrl || (log.details?.tradeoffer_url as string)}
               </span>
             </div>
           )}

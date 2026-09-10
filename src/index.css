@@ -241,6 +241,7 @@ body {
 .status-completed { @apply bg-emerald-500/15 text-emerald-400 border border-emerald-500/25; }
 .status-failed-refund { @apply bg-orange-500/15 text-orange-400 border border-orange-500/25; }
 .status-failed-penalty { @apply bg-red-500/15 text-red-400 border border-red-500/25; }
+.status-manual-hold { @apply bg-purple-500/15 text-purple-400 border border-purple-500/25; }
 
 /* ── Number formatting helper ── */
 .tabular-nums {

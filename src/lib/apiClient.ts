@@ -17,6 +17,7 @@ import type {
   ListRewardsQuery,
   PreviewFilterBody,
   PreviewFilterResponse,
+  RedemptionResponse,
   PaginatedRedemptionsResponse,
   ListRedemptionsQuery,
   StatsResponse,
@@ -185,7 +186,7 @@ export const redemptionsApi = {
     api.post(`/api/v1/broadcasters/${channelId}/redemptions/${redemptionId}/refund`),
 
   retry: (channelId: string, redemptionId: string) =>
-    api.post(`/api/v1/broadcasters/${channelId}/redemptions/${redemptionId}/retry`),
+    api.post<RedemptionResponse>(`/api/v1/broadcasters/${channelId}/redemptions/${redemptionId}/retry`),
 };
 
 // ===== Stats =====

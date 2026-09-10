@@ -150,6 +150,7 @@ export interface PoolItemConfig {
   weight: number;
   permissible_market_price_deviation: number;
   current_market_price?: number;
+  custom_message?: string | null;
 }
 
 export interface MarketPriceItem {
@@ -313,11 +314,13 @@ export interface BatchRewardBody {
 export type RedemptionStatus =
   | "PENDING"
   | "ORDER_CREATED"
+  | "MANUAL_HOLD"
   | "COMPLETED"
   | "FAILED_REFUND"
   | "FAILED_PENALTY"
   | "Pending"
   | "OrderCreated"
+  | "ManualHold"
   | "Completed"
   | "FailedRefund"
   | "FailedPenalty";
