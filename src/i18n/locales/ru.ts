@@ -170,6 +170,8 @@ export const ru = {
     penaltySuccess: "Выкуп успешно оштрафован!",
     penaltyError: "Ошибка при штрафе выкупа",
     failCauses: {
+      seller_timeout_retries_exhausted: "Превышено число попыток из-за таймаута продавца",
+      seller_timeout: "Продавец не отправил обмен вовремя",
       buyer_not_claimed: "Зритель не принял или отклонил трейд в Steam",
       invalid_trade_url: "Неверная ссылка на обмен",
       buyer_banned: "Трейд-бан или ограничения обмена у зрителя",
@@ -177,6 +179,9 @@ export const ru = {
       market_retry_failed: "Маркет отклонил повторный заказ",
       no_money: "Недостаточно средств на балансе бота",
       price_above_max: "Текущая цена выше допустимого максимума",
+      item_not_found: "Предмет не найден на маркете",
+      market_error: "Ошибка маркета",
+      filter_exhausted: "Нет доступных предметов по фильтру",
     },
   },
   logs: {
@@ -301,6 +306,7 @@ export const ru = {
     subtitle: "Управление интеграцией с маркетом, правами доступа и ботом",
     headerSubtitle: "Настройка поведения бота, ценообразования, сообщений и прав доступа.",
     noChannel: "Канал не выбран.",
+    saveChanges: "Сохранить изменения",
     tabs: {
       general: "Общие",
       chatMessages: "Сообщения чата",

@@ -44,6 +44,8 @@ const STATUS_CLASSES: Record<RedemptionStatus, string> = {
 };
 
 const FAIL_CAUSE_I18N_KEYS: Record<string, string> = {
+  seller_timeout_retries_exhausted: "redemptions.failCauses.seller_timeout_retries_exhausted",
+  seller_timeout: "redemptions.failCauses.seller_timeout",
   buyer_not_claimed: "redemptions.failCauses.buyer_not_claimed",
   invalid_trade_url: "redemptions.failCauses.invalid_trade_url",
   buyer_banned: "redemptions.failCauses.buyer_banned",
@@ -51,7 +53,60 @@ const FAIL_CAUSE_I18N_KEYS: Record<string, string> = {
   market_retry_failed: "redemptions.failCauses.market_retry_failed",
   no_money: "redemptions.failCauses.no_money",
   price_above_max: "redemptions.failCauses.price_above_max",
+  item_not_found: "redemptions.failCauses.item_not_found",
+  market_error: "redemptions.failCauses.market_error",
+  filter_exhausted: "redemptions.failCauses.filter_exhausted",
 };
+
+function formatFailCause(cause: string): string {
+  return cause
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+const FAIL_DESCRIPTION_TRANSLATIONS: {
+  en: Record<string, string>;
+  ru: Record<string, string>;
+} = {
+  en: {
+    "Не найден предмет с указанным шансом на передачу по указанной цене или ниже":
+      "No item found with specified transfer chance at or below permissible price",
+    "Не найден предмет по указанной цене или ниже":
+      "No item found at or below permissible price",
+    "Не найден подходящий предмет на маркете":
+      "No matching item found on CSGO Market",
+    "Недостаточно средств на балансе бота":
+      "Insufficient bot market balance",
+    "Таймаут ожидания передачи":
+      "Trade transfer timeout",
+    "Зритель не принял трейд вовремя":
+      "Viewer did not accept trade offer in time",
+    "Неверная ссылка на обмен":
+      "Invalid Steam trade offer URL",
+    "Трейд-бан или ограничения у зрителя":
+      "Trade restrictions or trade ban on viewer",
+  },
+  ru: {
+    "Viewer did not accept trade offer on Steam in time or declined it":
+      "Зритель не принял трейд в Steam вовремя или отклонил его",
+    "Market rejected purchase retry: item not available":
+      "Маркет отклонил повторный заказ: предмет недоступен",
+    "Viewer did not accept trade offer in time":
+      "Зритель не принял обмен в Steam вовремя",
+  },
+};
+
+function getLocalizedFailDescription(desc: string | null | undefined, language: string): string | null {
+  if (!desc) return null;
+  const isEn = language.startsWith("en");
+  const dict = isEn ? FAIL_DESCRIPTION_TRANSLATIONS.en : FAIL_DESCRIPTION_TRANSLATIONS.ru;
+  if (dict[desc]) return dict[desc];
+  if (!isEn && desc.startsWith("Market rejected purchase retry: ")) {
+    const reason = desc.replace("Market rejected purchase retry: ", "");
+    return `Маркет отклонил повторный заказ: ${reason}`;
+  }
+  return desc;
+}
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 const IconRetry = () => (
@@ -105,7 +160,7 @@ function RedemptionRow({
   channelId: string;
   compact?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [tradeCopied, setTradeCopied] = useState(false);
   const qc = useQueryClient();
@@ -365,7 +420,7 @@ function RedemptionRow({
                   <span className="text-xs font-semibold text-destructive">
                     {FAIL_CAUSE_I18N_KEYS[redemption.fail_cause]
                       ? t(FAIL_CAUSE_I18N_KEYS[redemption.fail_cause])
-                      : redemption.fail_cause}
+                      : formatFailCause(redemption.fail_cause)}
                   </span>
                   <code className="text-[10px] font-mono bg-destructive/10 text-destructive/80 px-1.5 py-0.5 rounded border border-destructive/20">
                     {redemption.fail_cause}
@@ -373,7 +428,7 @@ function RedemptionRow({
                 </div>
                 {redemption.fail_description && (
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    {redemption.fail_description}
+                    {getLocalizedFailDescription(redemption.fail_description, i18n.language)}
                   </p>
                 )}
               </div>

@@ -170,6 +170,8 @@ export const en = {
     penaltySuccess: "Redemption successfully penalized!",
     penaltyError: "Error penalizing redemption",
     failCauses: {
+      seller_timeout_retries_exhausted: "Seller trade timeout — retries exhausted",
+      seller_timeout: "Seller did not send trade offer in time",
       buyer_not_claimed: "Viewer did not accept or declined trade offer in Steam",
       invalid_trade_url: "Invalid Steam trade offer URL",
       buyer_banned: "Trade ban or trade restriction on viewer",
@@ -177,6 +179,9 @@ export const en = {
       market_retry_failed: "Market rejected purchase retry",
       no_money: "Insufficient bot market balance",
       price_above_max: "Current market price exceeds maximum allowed",
+      item_not_found: "Item not found on market",
+      market_error: "Market error",
+      filter_exhausted: "No matching items found for filter",
     },
   },
   logs: {
@@ -299,6 +304,7 @@ export const en = {
     subtitle: "Manage market integration, permissions, and bot account",
     headerSubtitle: "Configure bot behavior, pricing, messages, and access control.",
     noChannel: "No channel selected.",
+    saveChanges: "Save Changes",
     tabs: {
       general: "General",
       chatMessages: "Chat Messages",
