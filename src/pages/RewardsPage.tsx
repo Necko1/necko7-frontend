@@ -1,3 +1,5 @@
+import { PageHeader, QueryError, EmptyState } from "@/components/common/Page";
+import ConfirmAction from "@/components/common/ConfirmAction";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -416,22 +418,26 @@ function RewardCard({
 
   return (
     <div
+      data-paused={reward.is_paused} data-selected={selected}
       onClick={handleCardClick}
+      role="button" tabIndex={reward.is_deleted ? -1 : 0} aria-disabled={reward.is_deleted} aria-label={reward.twitch_title}
+      onKeyDown={e => { if (!reward.is_deleted && e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onClick(); } }}
       className={cn(
-        "relative rounded-2xl border bg-card cursor-pointer transition-all duration-200 group overflow-hidden select-none",
-        "hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
+        "reward-tile relative cursor-pointer transition-colors duration-200 group overflow-hidden select-none",
+        "hover:border-primary/50 focus-visible:border-primary",
         selected && !reward.is_deleted && "border-primary/80 bg-primary/10 shadow-lg shadow-primary/15 ring-2 ring-primary/50",
-        reward.is_paused && !selected && "opacity-60",
-        reward.is_deleted && "opacity-40 pointer-events-none"
+        reward.is_paused && !selected && "border-amber-400/25",
+        reward.is_deleted && "border-dashed"
       )}
     >
+      <div className="relative">
       {/* Skin / type banner */}
       {type === "FIXED" && reward.market_item_name ? (
         <SkinImage
           marketItemName={reward.market_item_name}
           size={300}
           objectFit="contain"
-          className="w-full rounded-t-2xl aspect-[4/3]"
+          className="reward-art w-full"
         />
       ) : type === "POOL" && poolPreviewSkin ? (
         <div className="relative">
@@ -439,7 +445,7 @@ function RewardCard({
             marketItemName={poolPreviewSkin}
             size={300}
             objectFit="contain"
-            className="w-full rounded-t-2xl aspect-[4/3]"
+            className="reward-art w-full"
           />
           <div className="absolute top-2 left-2 rounded-lg bg-black/60 backdrop-blur-sm px-2 py-1 flex items-center gap-1.5 text-[10px] text-white/90 font-medium">
             <IconPool />
@@ -447,7 +453,7 @@ function RewardCard({
           </div>
         </div>
       ) : type === "FILTER" ? (
-        <div className="w-full aspect-[4/3] rounded-t-2xl bg-gradient-to-br from-violet-500/10 via-primary/5 to-cyan-500/10 flex flex-col items-center justify-center gap-2 border-b border-border">
+        <div className="reward-art w-full flex flex-col items-center justify-center gap-2 border-b border-border">
           <div className="rounded-full bg-primary/10 p-3 text-primary">
             <IconFilter />
           </div>
@@ -458,15 +464,17 @@ function RewardCard({
           )}
         </div>
       ) : (
-        <div className="w-full aspect-[4/3] rounded-t-2xl bg-muted/30 flex items-center justify-center text-muted-foreground/30">
+        <div className="reward-art w-full flex items-center justify-center text-muted-foreground/30">
           <IconImage />
         </div>
       )}
 
-      <div className="p-4">
+      <span className="reward-type-stamp">{type} / {reward.currency}</span>
+      </div>
+      <div className="reward-body">
         {/* Checkbox */}
         {!reward.is_deleted && (
-          <div
+          <button type="button" aria-pressed={selected} aria-label={`${t("common.select", "Select")} ${reward.twitch_title}`}
             className="absolute top-3 right-3 z-10 p-1 cursor-pointer"
             title={selected ? "Deselect (or Ctrl+Click)" : "Select (or Ctrl+Click)"}
             onClick={(e) => {
@@ -485,7 +493,7 @@ function RewardCard({
                 "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all backdrop-blur-sm",
                 selected
                   ? "bg-primary border-primary shadow-sm shadow-primary/30"
-                  : "border-white/60 bg-black/30 opacity-0 group-hover:opacity-100"
+                  : "border-white/60 bg-black/30 opacity-100"
               )}
             >
               {selected && (
@@ -494,7 +502,7 @@ function RewardCard({
                 </svg>
               )}
             </div>
-          </div>
+          </button>
         )}
 
         {/* Status badges */}
@@ -604,11 +612,11 @@ function RewardCard({
 
         {/* Price info */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+          <div className="reward-price">
             <p className="text-xs text-muted-foreground">{t("rewards.card.marketPrice", "Market price")}</p>
             <p className="text-sm font-bold tabular-nums text-foreground">{formattedPrice}</p>
           </div>
-          <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+          <div className="reward-price">
             {isManual ? (
               <>
                 <p className="text-xs text-muted-foreground">{t("rewards.card.twitchPoints", "Twitch Points")}</p>
@@ -2347,74 +2355,14 @@ function RewardWizard({
 
   return (
     <div className="space-y-5">
-      {/* Step indicator */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-1 sm:gap-2">
-          {STEPS.map((s, idx) => {
-            const isClickable = isEdit || idx <= step;
-            const isCurrent = idx === step;
-            const isPast = idx < step;
-            return (
-              <div key={idx} className="flex items-center flex-1 last:flex-none">
-                <button
-                  type="button"
-                  onClick={() => isClickable && setStep(idx as StepIndex)}
-                  disabled={!isClickable}
-                  className={cn(
-                    "relative w-12 h-12 rounded-xl flex items-center justify-center transition-all shrink-0",
-                    isCurrent
-                      ? "border-2 border-primary bg-primary text-primary-foreground"
-                      : isEdit || isPast
-                      ? "border-2 border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary cursor-pointer"
-                      : "border border-border bg-card/60 text-muted-foreground/40 cursor-not-allowed"
-                  )}
-                  title={t("rewards.wizard.stepOf", { current: idx + 1, total: STEPS.length })}
-                >
-                  {s.icon}
-                  {/* Step number badge */}
-                  <span
-                    className={cn(
-                      "absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center border",
-                      isCurrent
-                        ? "bg-background text-primary border-primary font-black"
-                        : isPast
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted text-muted-foreground border-border"
-                    )}
-                  >
-                    {isPast ? "✓" : idx + 1}
-                  </span>
-                </button>
-                {idx < STEPS.length - 1 && (
-                  <div
-                    className={cn(
-                      "flex-1 h-0.5 mx-2 rounded-full transition-colors",
-                      isEdit || isPast ? "bg-primary/50" : "bg-border/60"
-                    )}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Active step title & subtitle */}
-        <div className="flex items-baseline justify-between pt-0.5 px-0.5">
-          <div>
-            <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">
-              {t("rewards.wizard.stepOf", { current: step + 1, total: STEPS.length })}
-            </span>
-            <h3 className="text-sm font-bold text-foreground leading-tight">
-              {stepInfo[step].title}
-            </h3>
-          </div>
-          <p className="text-xs text-muted-foreground hidden sm:block">
-            {stepInfo[step].subtitle}
-          </p>
-        </div>
-      </div>
-
-      <Separator />
+      <nav className="wizard-progress" aria-label={t("rewards.wizard.stepOf", { current: step + 1, total: STEPS.length })}>
+        {STEPS.map((_, idx) => <button key={idx} type="button" disabled={!isEdit && idx > step}
+          aria-current={idx === step ? "step" : undefined} aria-label={stepInfo[idx].title}
+          onClick={() => setStep(idx as StepIndex)}>
+          <span>{String(idx + 1).padStart(2, "0")}</span><span>{stepInfo[idx].title}</span>
+        </button>)}
+      </nav>
+      <div className="wizard-heading"><h3>{stepInfo[step].title}</h3><p>{stepInfo[step].subtitle}</p></div>
 
       {/* Step content */}
       <div>
@@ -2521,6 +2469,7 @@ function RewardEditDialog({
     },
   });
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [showIconDownloader, setShowIconDownloader] = useState(false);
   const [shortCopied, setShortCopied] = useState(false);
 
@@ -2639,7 +2588,7 @@ function RewardEditDialog({
               variant="destructive"
               className="gap-1.5 text-xs"
               onClick={() => {
-                if (confirm(t("rewards.deleteConfirmSingle", { title: reward.twitch_title }))) deleteMutation.mutate();
+                setConfirmDelete(true);
               }}
               disabled={deleteMutation.isPending}
             >
@@ -2677,6 +2626,7 @@ function RewardEditDialog({
 
           <Separator className="my-2" />
 
+          <ConfirmAction open={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={() => { if (!deleteMutation.isPending) deleteMutation.mutate(); }} pending={deleteMutation.isPending} destructive title={t("rewards.deleteConfirmSingle", { title: reward.twitch_title })} description={t("ops.deleteRewardDesc")} label={t("common.delete")} />
           <Tabs defaultValue="overview" className="w-full min-w-0">
             <TabsList className="w-full justify-start">
               <TabsTrigger value="overview">{t("rewards.tabs.overview", "Overview")}</TabsTrigger>
@@ -2693,23 +2643,23 @@ function RewardEditDialog({
                     <p className="text-xs font-semibold text-violet-300">{t("rewards.chatReq.title", "Chat Activity Requirements")}</p>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+                    <div className="reward-price">
                       <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.minMessages", "Min Messages")}</p>
                       <p className="font-medium text-foreground">
                         {(reward.chat_min_messages ?? 0) > 0 ? reward.chat_min_messages : t("rewards.chatReq.none", "None")}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+                    <div className="reward-price">
                       <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.minCharacters", "Min Characters")}</p>
                       <p className="font-medium text-foreground">
                         {(reward.chat_min_characters ?? 0) > 0 ? reward.chat_min_characters : t("rewards.chatReq.none", "None")}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+                    <div className="reward-price">
                       <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.logicOperator", "Logic Operator")}</p>
                       <p className="font-medium text-foreground">{reward.chat_logical_operator ?? "AND"}</p>
                     </div>
-                    <div className="rounded-lg bg-background/60 border border-border px-3 py-2">
+                    <div className="reward-price">
                       <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.timeWindow", "Time Window")}</p>
                       <p className="font-medium text-foreground">
                         {(reward.chat_time_window_hours ?? 0) > 0 ? `${reward.chat_time_window_hours}h` : t("rewards.chatReq.allTime", "All time")}
@@ -2792,7 +2742,7 @@ function RewardEditDialog({
                       { label: t("rewards.steps.namePrefix", "Name Prefix"), val: reward.filter_config.name_prefix ?? "–" },
                       { label: t("rewards.steps.minVolume", "Min Volume"), val: reward.filter_config.min_volume?.toString() ?? "–" },
                     ].map(({ label, val }) => (
-                      <div key={label} className="rounded-lg bg-background/60 border border-border px-3 py-2">
+                      <div key={label} className="reward-price">
                         <p className="text-muted-foreground mb-0.5">{label}</p>
                         <p className="font-medium text-foreground">{val}</p>
                       </div>
@@ -2851,7 +2801,7 @@ function RewardEditDialog({
                   { label: t("rewards.pricing.minMarketPrice", "Min Price Limit"), val: reward.min_market_price != null ? formatMinorCurrency(reward.min_market_price, reward.currency) : t("rewards.chatReq.none", "None") },
                   { label: t("rewards.pricing.maxMarketPrice", "Max Price Limit"), val: reward.max_market_price != null ? formatMinorCurrency(reward.max_market_price, reward.currency) : t("rewards.chatReq.none", "None") },
                 ].map(({ label, val }) => (
-                  <div key={label} className="rounded-lg bg-background/60 border border-border px-3 py-2">
+                  <div key={label} className="reward-price">
                     <p className="text-muted-foreground mb-0.5">{label}</p>
                     <p className="font-medium text-foreground">{val}</p>
                   </div>
@@ -2988,7 +2938,7 @@ function BulkActionBar({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 px-4 rounded-2xl border border-border/80 bg-card/90 backdrop-blur-xl shadow-2xl shadow-black/50 ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-5 duration-200 max-w-[95vw] overflow-x-auto">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 px-4 rounded-xl border border-border/80 bg-card/90 backdrop-blur-xl shadow-2xl shadow-black/50 ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-5 duration-200 max-w-[95vw] overflow-x-auto">
       <div className="flex items-center gap-2 pr-1">
         <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
         <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
@@ -3079,8 +3029,9 @@ export default function RewardsPage() {
 
   const [editingReward, setEditingReward] = useState<RewardResponse | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [confirmBatch, setConfirmBatch] = useState(false);
 
-  const { data: rewards = [], isLoading } = useQuery({
+  const { data: rewards = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["rewards", channelId, showDeleted],
     queryFn: () =>
       rewardsApi
@@ -3097,6 +3048,7 @@ export default function RewardsPage() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rewards", channelId] });
+      setConfirmBatch(false);
       setSelectedIds(new Set());
       lastSelectedIdRef.current = null;
     },
@@ -3259,37 +3211,25 @@ export default function RewardsPage() {
 
   if (!channelId) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-96">
+      <div className="page-shell flex items-center justify-center min-h-96">
         <p className="text-muted-foreground">{t("rewards.selectChannelFirst", "Select a broadcaster channel first.")}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6 pb-28">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("rewards.title", "Rewards")}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("rewards.countRewards", { count: filtered.length })}
-            {search && ` ${t("rewards.matchingSearch", { query: search })}`}
-          </p>
-        </div>
-        <Button className="gap-2" onClick={() => setShowCreate(true)}>
-          <IconPlus />
-          {t("rewards.newReward", "New Reward")}
-        </Button>
-      </div>
-
+    <div className="page-shell space-y-6 pb-28">
+      <PageHeader eyebrow={t("ops.configuration")} title={t("rewards.title")} description={t("ops.rewardDesc")} actions={<Button onClick={() => setShowCreate(true)}><IconPlus />{t("rewards.newReward")}</Button>} />
+      <p className="text-xs text-muted-foreground">{t("rewards.countRewards", { count: filtered.length })}</p>
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="reward-toolbar flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-56 max-w-sm">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
             <IconSearch />
           </span>
           <Input
             className="pl-9"
+            aria-label={t("rewards.searchPlaceholder")}
             placeholder={t("rewards.searchPlaceholder", "Search by title, skin, description…")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -3297,10 +3237,11 @@ export default function RewardsPage() {
         </div>
 
         {/* Status filter */}
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1">
+        <div className="reward-filter-group">
           {(["all", "active", "paused"] as const).map((f) => (
             <button
               key={f}
+              aria-pressed={filterPaused === f}
               onClick={() => {
                 setFilterPaused(f);
                 if (f !== "paused") setFilterPauseReason("all");
@@ -3319,7 +3260,7 @@ export default function RewardsPage() {
 
         {/* Pause reason filter (visible when paused is selected) */}
         {filterPaused === "paused" && (
-          <div className="flex items-center gap-1 rounded-xl border border-orange-500/30 bg-card p-1">
+          <div className="reward-filter-group">
             {([
               { key: "all", label: t("rewards.pauseReasonFilter.all", "All reasons") },
               { key: "MANUAL", label: t("rewards.pauseReasonFilter.manual", "Manual") },
@@ -3328,6 +3269,7 @@ export default function RewardsPage() {
             ] as const).map(({ key, label }) => (
               <button
                 key={key}
+                aria-pressed={filterPauseReason === key}
                 onClick={() => setFilterPauseReason(key)}
                 className={cn(
                   "px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
@@ -3343,10 +3285,11 @@ export default function RewardsPage() {
         )}
 
         {/* Type filter */}
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1">
+        <div className="reward-filter-group">
           {(["all", "FIXED", "POOL", "FILTER"] as const).map((f) => (
             <button
               key={f}
+              aria-pressed={filterType === f}
               onClick={() => setFilterType(f)}
               className={cn(
                 "px-3 py-1 rounded-lg text-xs font-medium transition-all",
@@ -3372,13 +3315,13 @@ export default function RewardsPage() {
       </div>
 
       {/* Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+      {isError ? <QueryError onRetry={() => void refetch()} /> : isLoading ? (
+        <div className="reward-grid">
           {Array.from({ length: 10 }).map((_, i) => (
-            <Skeleton key={i} className="h-52 rounded-2xl" />
+            <Skeleton key={i} className="h-52 rounded-xl" />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : rewards.length === 0 && !showDeleted ? <EmptyState title={t("ops.rewardEmpty")} description={t("ops.rewardEmptyDesc")} action={<Button onClick={() => setShowCreate(true)}>{t("rewards.newReward")}</Button>} /> : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-64 text-center space-y-3">
           <p className="text-muted-foreground">{t("rewards.noRewards", "No rewards found")}</p>
           <Button variant="outline" onClick={() => { setSearch(""); setFilterPaused("all"); setFilterType("all"); }}>
@@ -3386,7 +3329,7 @@ export default function RewardsPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="reward-grid">
           {filtered.map((reward) => (
             <RewardCard
               key={reward.twitch_id}
@@ -3413,16 +3356,18 @@ export default function RewardsPage() {
           onPause={() => batchMutation.mutate("pause")}
           onUnpause={() => batchMutation.mutate("unpause")}
           onDelete={() => {
-            if (confirm(t("rewards.deleteConfirmBatch", { count: selectedIds.size }))) batchMutation.mutate("delete");
+            setConfirmBatch(true);
           }}
           onClear={handleClearSelection}
           loading={batchMutation.isPending}
         />
       )}
 
+      <ConfirmAction open={confirmBatch} onClose={() => setConfirmBatch(false)} onConfirm={() => { if (!batchMutation.isPending) batchMutation.mutate("delete"); }} pending={batchMutation.isPending} destructive title={t("rewards.deleteConfirmBatch", { count: selectedIds.size })} description={t("ops.deleteRewardDesc")} label={t("common.delete")} context={rewards.filter(r => selectedIds.has(r.twitch_id)).map(r => r.twitch_title).join("\n")} />
       {/* Modals */}
       <RewardEditDialog
-        reward={editingReward}
+        key={editingReward?.twitch_id ?? "none"}
+        reward={rewards.find(r => r.twitch_id === editingReward?.twitch_id) ?? editingReward}
         channelId={channelId}
         open={!!editingReward}
         onClose={() => setEditingReward(null)}

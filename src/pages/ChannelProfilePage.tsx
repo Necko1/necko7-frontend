@@ -1,3 +1,4 @@
+import { QueryError } from "@/components/common/Page";
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -89,7 +90,7 @@ export default function ChannelProfilePage() {
   const pageSize = 15;
 
   // 1. Broadcaster info
-  const { data: broadcasterInfo, isLoading: isInfoLoading } = useQuery({
+  const { data: broadcasterInfo, isLoading: isInfoLoading, isError: infoError, refetch: retryInfo } = useQuery({
     queryKey: ["public-broadcaster", identifier],
     queryFn: () => publicApi.getBroadcasterInfo(identifier!).then((r) => r.data),
     enabled: !!identifier,
@@ -99,7 +100,7 @@ export default function ChannelProfilePage() {
   const channelId = broadcasterInfo?.channel_id;
 
   // 2. Viewer channel profile
-  const { data: profile, isLoading: isProfileLoading } = useQuery({
+  const { data: profile, isLoading: isProfileLoading, isError: profileError, refetch: retryProfile } = useQuery({
     queryKey: ["viewer-channel-profile", channelId],
     queryFn: () => viewerApi.getChannelProfile(channelId!).then((r) => r.data),
     enabled: !!channelId && !!currentUser,
@@ -107,7 +108,7 @@ export default function ChannelProfilePage() {
   });
 
   // 3. Viewer channel redemptions
-  const { data: redemptions = [], isLoading: isRedemptionsLoading } = useQuery({
+  const { data: redemptions = [], isLoading: isRedemptionsLoading, isError: historyError, refetch: retryHistory } = useQuery({
     queryKey: ["viewer-channel-redemptions", channelId, page],
     queryFn: () =>
       viewerApi
@@ -117,13 +118,14 @@ export default function ChannelProfilePage() {
     staleTime: 30_000,
   });
 
+  if (infoError || profileError || historyError) return <div className="page-shell"><QueryError onRetry={() => { void retryInfo(); void retryProfile(); void retryHistory(); }} /></div>;
   if (isInfoLoading) {
     return (
-      <div className="p-8 max-w-6xl mx-auto space-y-6">
-        <Skeleton className="h-28 w-full rounded-2xl" />
+      <div className="page-shell max-w-6xl mx-auto space-y-6">
+        <Skeleton className="h-28 w-full rounded-xl" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-44 rounded-2xl" />
-          <Skeleton className="h-44 rounded-2xl" />
+          <Skeleton className="h-44 rounded-xl" />
+          <Skeleton className="h-44 rounded-xl" />
         </div>
       </div>
     );
@@ -154,7 +156,7 @@ export default function ChannelProfilePage() {
           <span>{t("profile.backToShowcase", { channel: broadcasterInfo.channel_login })}</span>
         </Button>
 
-        <div className="rounded-3xl border border-border bg-card p-12 text-center space-y-6 max-w-xl mx-auto">
+        <div className="rounded-xl border border-border bg-card p-12 text-center space-y-6 max-w-xl mx-auto">
           <Avatar className="h-20 w-20 rounded-full ring-4 ring-primary/20 mx-auto overflow-hidden">
             <AvatarImage src={broadcasterInfo.profile_image_url ?? undefined} className="rounded-full object-cover" />
             <AvatarFallback className="text-xl font-bold bg-primary text-primary-foreground rounded-full">
@@ -186,7 +188,7 @@ export default function ChannelProfilePage() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
+    <div className="page-shell max-w-6xl">
       {/* ── Top Bar ── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <Button
@@ -205,7 +207,7 @@ export default function ChannelProfilePage() {
       </div>
 
       {/* ── Channel Profile Header ── */}
-      <div className="rounded-3xl border border-border bg-card p-6 md:p-8 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-6 md:p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20 rounded-full ring-4 ring-primary/20 shrink-0 shadow-sm overflow-hidden">
@@ -236,13 +238,13 @@ export default function ChannelProfilePage() {
       {/* ── Summary Stats Cards ── */}
       {isProfileLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-44 rounded-2xl" />
-          <Skeleton className="h-44 rounded-2xl" />
+          <Skeleton className="h-44 rounded-xl" />
+          <Skeleton className="h-44 rounded-xl" />
         </div>
       ) : profile ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Chat Stats Card */}
-          <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
@@ -282,7 +284,7 @@ export default function ChannelProfilePage() {
           </div>
 
           {/* Redemptions Stats Card */}
-          <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
@@ -326,7 +328,7 @@ export default function ChannelProfilePage() {
 
       {/* ── Active Reward Limits / Cooldowns ── */}
       {profile?.limits && profile.limits.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           <div className="flex items-center gap-2">
             <IconClock />
             <h3 className="text-sm font-bold text-foreground">
@@ -389,7 +391,7 @@ export default function ChannelProfilePage() {
       )}
 
       {/* ── Redemption History on this Channel ── */}
-      <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
         <h3 className="text-sm font-bold text-foreground">
           {t("profile.channelRedemptionsHistory")}
         </h3>

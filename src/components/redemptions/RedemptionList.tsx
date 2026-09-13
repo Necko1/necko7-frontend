@@ -1,5 +1,8 @@
+import ConfirmAction from "@/components/common/ConfirmAction";
+import { EmptyState, QueryError } from "@/components/common/Page";
+import { useAppStore } from "@/store/useAppStore";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { redemptionsApi } from "@/lib/apiClient";
@@ -13,21 +16,6 @@ import { formatMinorCurrency } from "@/lib/currency";
 import { toast } from "sonner";
 
 // ── Status helpers ─────────────────────────────────────────────────────────
-const STATUS_LABELS: Record<RedemptionStatus, string> = {
-  PENDING: "Pending",
-  ORDER_CREATED: "Order Created",
-  MANUAL_HOLD: "Manual Hold",
-  COMPLETED: "Completed",
-  FAILED_REFUND: "Refunded",
-  FAILED_PENALTY: "Penalized",
-  Pending: "Pending",
-  OrderCreated: "Order Created",
-  ManualHold: "Manual Hold",
-  Completed: "Completed",
-  FailedRefund: "Refunded",
-  FailedPenalty: "Penalized",
-};
-
 const STATUS_CLASSES: Record<RedemptionStatus, string> = {
   PENDING: "status-pending",
   ORDER_CREATED: "status-order-created",
@@ -154,14 +142,18 @@ const IconCopy = () => (
 function RedemptionRow({
   redemption,
   channelId,
-  compact,
+  compact: _compact,
 }: {
   redemption: RedemptionResponse;
   channelId: string;
   compact?: boolean;
 }) {
   const { t, i18n } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [params] = useSearchParams();
+  const [open, setOpen] = useState(() => params.get("redemption") === redemption.twitch_redemption_id);
+  const [action, setAction] = useState<"retry" | "refund" | "penalty" | null>(null);
+  const role = useAppStore(state => state.broadcasters.find(b => b.channel_id === channelId)?.role.toUpperCase());
+  const canAct = role === "OWNER" || role === "EDITOR";
   const [tradeCopied, setTradeCopied] = useState(false);
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -169,8 +161,9 @@ function RedemptionRow({
   const retryMutation = useMutation({
     mutationFn: () => redemptionsApi.retry(channelId, redemption.twitch_redemption_id),
     onSuccess: (res) => {
+      setAction(null);
       const updated = res.data;
-      qc.setQueriesData({ queryKey: ["redemptions"] }, (oldData: any) => {
+      qc.setQueriesData({ queryKey: ["redemptions", channelId] }, (oldData: any) => {
         if (!oldData || !oldData.items) return oldData;
         return {
           ...oldData,
@@ -181,7 +174,11 @@ function RedemptionRow({
           ),
         };
       });
-      qc.invalidateQueries({ queryKey: ["redemptions"] });
+      qc.invalidateQueries({ queryKey: ["redemptions", channelId] });
+      qc.invalidateQueries({ queryKey: ["stats", channelId] });
+      qc.invalidateQueries({ queryKey: ["balance", channelId] });
+      qc.invalidateQueries({ queryKey: ["channel-logs", channelId] });
+      qc.invalidateQueries({ queryKey: ["logs-summary", channelId] });
       toast.success(t("redemptions.retrySuccess", "Заказ успешно создан на маркете!"));
     },
     onError: (err: any) => {
@@ -195,7 +192,12 @@ function RedemptionRow({
   const refundMutation = useMutation({
     mutationFn: () => redemptionsApi.refund(channelId, redemption.twitch_redemption_id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["redemptions"] });
+      setAction(null);
+      qc.invalidateQueries({ queryKey: ["redemptions", channelId] });
+      qc.invalidateQueries({ queryKey: ["stats", channelId] });
+      qc.invalidateQueries({ queryKey: ["balance", channelId] });
+      qc.invalidateQueries({ queryKey: ["channel-logs", channelId] });
+      qc.invalidateQueries({ queryKey: ["logs-summary", channelId] });
       toast.success(t("redemptions.refundSuccess", "Баллы успешно возвращены!"));
     },
     onError: (err: any) => {
@@ -209,7 +211,12 @@ function RedemptionRow({
   const penaltyMutation = useMutation({
     mutationFn: () => redemptionsApi.penalty(channelId, redemption.twitch_redemption_id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["redemptions"] });
+      setAction(null);
+      qc.invalidateQueries({ queryKey: ["redemptions", channelId] });
+      qc.invalidateQueries({ queryKey: ["stats", channelId] });
+      qc.invalidateQueries({ queryKey: ["balance", channelId] });
+      qc.invalidateQueries({ queryKey: ["channel-logs", channelId] });
+      qc.invalidateQueries({ queryKey: ["logs-summary", channelId] });
       toast.success(t("redemptions.penaltySuccess", "Выкуп успешно оштрафован!"));
     },
     onError: (err: any) => {
@@ -272,50 +279,19 @@ function RedemptionRow({
   };
 
   return (
-    <div className="rounded-xl border border-border overflow-hidden transition-all">
-      {/* Main row */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
-      >
-        <Badge className={cn("text-xs shrink-0 rounded-md px-2 py-0.5 font-medium border", STATUS_CLASSES[redemption.status] || "status-pending")}>
-          {getStatusLabel(redemption.status)}
-        </Badge>
-        {redemption.retry_count > 0 && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-500 bg-amber-500/10 font-normal shrink-0">
-            {redemption.retry_count} {redemption.retry_count === 1 ? t("redemptions.retryOne") : t("redemptions.retriesMany")}
-          </Badge>
-        )}
-        {/* Clickable username */}
-        <button
-          type="button"
-          onClick={handleUserClick}
-          className="text-sm font-medium text-foreground hover:text-primary hover:underline shrink-0 flex items-center gap-1 transition-colors"
-        >
-          @{redemption.user_login}
-        </button>
-        {redemption.market_item_name && (
-          <span
-            className="text-xs text-muted-foreground/80 truncate max-w-[140px] sm:max-w-[220px] md:max-w-[320px] font-medium"
-            title={redemption.market_item_name}
-          >
-            {redemption.market_item_name}
-          </span>
-        )}
-        {!compact && (
-          <span className="text-xs text-muted-foreground ml-auto shrink-0">
-            {format(new Date(redemption.created_at), "dd MMM HH:mm")}
-          </span>
-        )}
-        <span className={cn("text-xs tabular-nums text-primary font-medium shrink-0", compact ? "ml-auto" : "ml-auto sm:ml-0")}>
-          {redemption.twitch_points_cost.toLocaleString()} {t("common.pts")}
-        </span>
-        <IconChevron open={open} />
+    <div className="ledger-row">
+      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={`detail-${redemption.twitch_redemption_id}`} className="ledger-summary">
+        <span className="ledger-status"><Badge className={cn("text-xs rounded px-2 py-1 font-medium", STATUS_CLASSES[redemption.status] || "status-pending")}>{getStatusLabel(redemption.status)}</Badge></span>
+        <span className="ledger-person min-w-0"><span className="block text-sm font-semibold truncate">{redemption.market_item_name || t("ops.unknownItem")}</span><span className="mt-1 block text-xs text-muted-foreground truncate">@{redemption.user_login}{redemption.retry_count > 0 && ` · ${redemption.retry_count} ${t("redemptions.retriesMany")}`}</span>{isManualHold && redemption.fail_cause && <span className="mt-1 block text-xs text-amber-300 truncate">{FAIL_CAUSE_I18N_KEYS[redemption.fail_cause] ? t(FAIL_CAUSE_I18N_KEYS[redemption.fail_cause]) : formatFailCause(redemption.fail_cause)}</span>}</span>
+        <span className="ledger-date text-xs text-muted-foreground">{format(new Date(redemption.created_at), "dd MMM HH:mm")}</span>
+        <span className="ledger-points text-xs tabular-nums text-right">{redemption.twitch_points_cost.toLocaleString()} <span className="text-muted-foreground">{t("common.pts")}</span></span>
+        <span className="ledger-chevron"><IconChevron open={open} /></span>
       </button>
 
       {/* Expanded details */}
       {open && (
-        <div className="border-t border-border bg-muted/10 px-4 py-4 space-y-4">
+        <div id={`detail-${redemption.twitch_redemption_id}`} className="border-t border-border bg-background/40 px-4 sm:px-6 py-5 space-y-5">
+          {isManualHold && <div className="border-l-2 border-amber-400 pl-3"><p className="text-sm font-semibold text-amber-300">{t("ops.holdReason")}</p><p className="mt-1 text-sm text-muted-foreground">{getLocalizedFailDescription(redemption.fail_description, i18n.language) || t("ops.noReason")}</p></div>}
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
               <p className="text-muted-foreground mb-0.5">{t("redemptions.redemptionId")}</p>
@@ -436,13 +412,13 @@ function RedemptionRow({
           </div>
 
           {/* Action buttons for failed / pending / manual hold states */}
-          {(isFailedPenalty || isPending || isManualHold) && (
+          {canAct && (isFailedPenalty || isPending || isManualHold) && (
             <div className="flex flex-wrap gap-2">
               {(isFailedPenalty || isManualHold) && (
                 <Button
                   size="sm"
                   className="gap-1.5 text-xs cursor-pointer"
-                  onClick={() => retryMutation.mutate()}
+                  onClick={() => setAction("retry")}
                   disabled={isLoading}
                 >
                   <IconRetry />
@@ -454,7 +430,7 @@ function RedemptionRow({
                   size="sm"
                   variant="outline"
                   className="gap-1.5 text-xs cursor-pointer"
-                  onClick={() => refundMutation.mutate()}
+                  onClick={() => setAction("refund")}
                   disabled={isLoading}
                 >
                   <IconRefund />
@@ -466,17 +442,22 @@ function RedemptionRow({
                   size="sm"
                   variant="destructive"
                   className="gap-1.5 text-xs cursor-pointer"
-                  onClick={() => penaltyMutation.mutate()}
+                  onClick={() => setAction("penalty")}
                   disabled={isLoading}
                 >
                   <IconPenalty />
-                  {t("redemptions.penalize")}
+                  {t("ops.penaltyLabel")}
                 </Button>
               )}
             </div>
           )}
         </div>
       )}
+      <ConfirmAction open={!!action} onClose={() => setAction(null)} pending={isLoading} destructive={action === "penalty"}
+        title={t(`ops.${action || "retry"}Title`)} description={t(`ops.${action || "retry"}Desc`)}
+        label={action === "retry" ? t("redemptions.retryMarketOrder") : action === "refund" ? t("redemptions.refund") : t("ops.penaltyLabel")}
+        context={t("ops.confirmContext", { user: redemption.user_login, points: redemption.twitch_points_cost.toLocaleString(), item: redemption.market_item_name || t("ops.unknownItem") })}
+        onConfirm={() => { if (isLoading || !canAct) return; if (action === "retry" ? !(isFailedPenalty || isManualHold) : !(isPending || isManualHold)) { setAction(null); return; } if (action === "retry") retryMutation.mutate(); if (action === "refund") refundMutation.mutate(); if (action === "penalty") penaltyMutation.mutate(); }} />
     </div>
   );
 }
@@ -491,7 +472,7 @@ interface RedemptionListProps {
   pageSize?: number;
 }
 
-export default function RedemptionList({
+function RedemptionListContent({
   channelId,
   rewardId,
   statusFilter,
@@ -502,7 +483,7 @@ export default function RedemptionList({
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["redemptions", channelId, rewardId, statusFilter, userIdFilter, page, pageSize],
     queryFn: () =>
       redemptionsApi
@@ -515,7 +496,7 @@ export default function RedemptionList({
         })
         .then((r) => r.data),
     enabled: !!channelId,
-    placeholderData: (prev) => prev,
+    refetchInterval: 15_000,
   });
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 1;
@@ -530,16 +511,14 @@ export default function RedemptionList({
     );
   }
 
-  if (!data || data.items.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground text-center py-8">
-        {t("redemptions.noRedemptions")}
-      </p>
-    );
-  }
+  if (isError) return <QueryError onRetry={() => void refetch()} />;
+  if (!data || data.items.length === 0) return <EmptyState title={t(statusFilter === "MANUAL_HOLD" ? "ops.noHolds" : "ops.emptyTransactions")} description={t(statusFilter === "MANUAL_HOLD" ? "ops.noHoldsDesc" : "ops.emptyTransactionsDesc")} />;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3" aria-busy={isFetching}>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span>{t("ops.live")} · {t("ops.updated", { time: format(dataUpdatedAt, "HH:mm:ss") })}</span><Button size="sm" variant="ghost" disabled={isFetching} onClick={() => void refetch()}>{t("ops.refresh")}</Button></div>
+      <div className="ledger-labels" aria-hidden="true"><span>{t("ops.status")}</span><span>{t("redemptions.marketItem")} / {t("ops.viewer")}</span><span className="ledger-date">{t("redemptions.created")}</span><span className="text-right">{t("redemptions.pointsCost")}</span><span /></div>
+      <div className="ledger">
       {data.items.map((r) => (
         <RedemptionRow
           key={r.twitch_redemption_id}
@@ -549,6 +528,7 @@ export default function RedemptionList({
         />
       ))}
 
+      </div>
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
@@ -575,4 +555,9 @@ export default function RedemptionList({
       )}
     </div>
   );
+}
+
+export default function RedemptionList(props: RedemptionListProps) {
+  const identity = [props.channelId, props.rewardId, props.statusFilter, props.userIdFilter, props.pageSize].join(":");
+  return <RedemptionListContent key={identity} {...props} />;
 }

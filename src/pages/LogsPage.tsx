@@ -1,3 +1,4 @@
+import { QueryError } from "@/components/common/Page";
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -181,10 +182,12 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
       {/* Main Single-Line Console Row */}
       <div
         onClick={onToggle}
-        className="flex items-baseline gap-3 px-4 py-2 text-xs font-mono cursor-pointer select-text"
+        role="button" tabIndex={0} aria-expanded={isExpanded}
+        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
+        className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-xs cursor-pointer select-text"
       >
         {/* Timestamp */}
-        <span className="text-muted-foreground/60 shrink-0 tabular-nums select-none">
+        <span className="text-muted-foreground shrink-0 tabular-nums select-none">
           {formatLogTimestamp(log.created_at)}
         </span>
 
@@ -209,18 +212,18 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
         </span>
 
         {/* Event Type */}
-        <span className="text-muted-foreground/80 shrink-0 select-none">
+        <span className="text-muted-foreground hidden xl:inline select-none text-xs">
           {log.event_type}
         </span>
 
         {/* Message */}
-        <span className="text-foreground flex-1 min-w-[200px] break-words">
+        <span className="text-foreground w-full xl:w-auto xl:flex-1 min-w-0 break-words text-sm">
           {log.message}
         </span>
 
         {/* Expand indicator on hover */}
         {(hasDetails || hasSolution) && (
-          <span className="text-[10px] text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 select-none">
+          <span className="text-[10px] text-muted-foreground transition-opacity shrink-0 select-none">
             {isExpanded ? t("logs.collapseAll") : t("logs.expandAll")}
           </span>
         )}
@@ -228,7 +231,7 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
 
       {/* Expanded Console Details (Indented, No tree symbols/chevrons) */}
       {isExpanded && (
-        <div className="pl-12 pr-4 pb-3 pt-1 text-xs font-mono space-y-2 select-text border-t border-white/[0.02]">
+        <div className="px-4 sm:pl-8 pb-3 pt-3 text-xs font-mono space-y-2 select-text border-t border-white/[0.02]">
           {/* event_type line */}
           <div className="flex items-baseline gap-2">
             <span className="text-muted-foreground/70 w-32 shrink-0">event_type:</span>
@@ -373,13 +376,14 @@ export default function LogsPage() {
   const {
     data: logsData,
     isLoading: logsLoading,
+    isError: logsError,
     isFetching: logsFetching,
     refetch: refetchLogs,
   } = useQuery({
     queryKey: ["channel-logs", channelId, queryPayload],
     queryFn: () => logsApi.list(channelId, queryPayload).then((r) => r.data),
     enabled: !!channelId,
-    placeholderData: (previousData) => previousData,
+
     refetchInterval: refreshInterval ?? false,
   });
 
@@ -431,7 +435,7 @@ export default function LogsPage() {
 
   if (!channelId) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-96">
+      <div className="page-shell flex items-center justify-center min-h-96">
         <p className="text-muted-foreground">{t("dashboard.selectChannel")}</p>
       </div>
     );
@@ -456,7 +460,7 @@ export default function LogsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6 w-full">
+    <div className="page-shell logs-workspace space-y-6 w-full">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -467,6 +471,7 @@ export default function LogsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground flex items-center gap-2">{t("ops.autoRefresh")}<select className="h-8 border border-border bg-background px-2 rounded" value={refreshInterval ?? 0} onChange={e => setRefreshInterval(Number(e.target.value) || null)}><option value={0}>{t("ops.off")}</option><option value={5000}>5s</option><option value={15000}>15s</option><option value={30000}>30s</option></select></label>
           <Button
             variant="outline"
             size="sm"
@@ -481,11 +486,11 @@ export default function LogsPage() {
       </div>
 
       {/* Filter Toolbar with 3 distinct lines */}
-      <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+      <div className="log-filters space-y-4">
         {/* Line 1: Levels & Categories */}
         <div className="flex flex-wrap items-center gap-4">
           {/* Level Filter */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider font-mono">
               {t("logs.level")}:
             </span>
@@ -638,7 +643,7 @@ export default function LogsPage() {
           </form>
 
           {/* Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1 text-xs">
               <Button
                 variant="ghost"
@@ -698,21 +703,16 @@ export default function LogsPage() {
       </div>
 
       {/* Terminal Console Stream Container */}
-      <div className="rounded-2xl border border-border/80 bg-[#14100c] shadow-2xl overflow-hidden w-full">
+      <div className="log-register overflow-hidden w-full">
         {/* Terminal Header Bar */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-black/40 border-b border-white/[0.06] text-xs font-mono select-none">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-mono select-none">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
-            </div>
             <span className="text-muted-foreground/80 font-medium ml-2">
-              terminal://channel-logs
+              {t("nav.logs")}
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-muted-foreground/60 text-[11px]">
+          <div className="flex items-center gap-3 text-muted-foreground text-[11px]">
             {logsLoading ? (
               <span>{t("common.loading")}</span>
             ) : (
@@ -724,8 +724,8 @@ export default function LogsPage() {
         </div>
 
         {/* Log Stream Body */}
-        <div className="min-h-[400px] overflow-x-auto">
-          {logsLoading ? (
+        <div className="min-h-48 overflow-x-auto">
+          {logsError ? <div className="p-4"><QueryError onRetry={() => void refetchLogs()} /></div> : logsLoading ? (
             <div className="p-4 space-y-3 font-mono text-xs">
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="flex items-center gap-3 animate-pulse">

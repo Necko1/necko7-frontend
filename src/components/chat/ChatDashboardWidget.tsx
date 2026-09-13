@@ -1,3 +1,4 @@
+import { QueryError } from "@/components/common/Page";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -121,7 +122,7 @@ export default function ChatDashboardWidget({
   const [timeWindow, setTimeWindow] = useState<number | null>(168); // default 7 days
   const [bucketHours, setBucketHours] = useState<number | null>(6);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: ["chatDashboard", channelId, timeWindow, bucketHours],
     queryFn: () =>
       chatApi
@@ -133,6 +134,8 @@ export default function ChatDashboardWidget({
     enabled: !!channelId,
     staleTime: 30_000,
   });
+
+  if (isError) return <QueryError onRetry={() => void refetch()} />;
 
   const summary = data?.summary;
   const timeline = data?.timeline ?? [];

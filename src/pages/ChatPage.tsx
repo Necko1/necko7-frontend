@@ -1,3 +1,4 @@
+import { QueryError } from "@/components/common/Page";
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -189,7 +190,7 @@ function LeaderboardColumn({
     setAllItems([]);
   }, [channelId, sortBy, timeWindowHours, search]);
 
-  const { data, isLoading, isFetching: colFetching } = useQuery({
+  const { data, isLoading, isFetching: colFetching, isError, refetch } = useQuery({
     queryKey: ["leaderboard", channelId, sortBy, timeWindowHours, search, offset],
     queryFn: () =>
       chatApi
@@ -203,7 +204,7 @@ function LeaderboardColumn({
         .then((r) => r.data),
     enabled: !!channelId,
     staleTime: 30_000,
-    placeholderData: (prev) => prev,
+
   });
 
   // Accumulate items across pages
@@ -227,6 +228,7 @@ function LeaderboardColumn({
 
   const displayItems = allItems.length > 0 ? allItems : data?.items ?? [];
 
+  if (isError) return <QueryError onRetry={() => void refetch()} />;
   return (
     <div className="flex flex-col gap-3">
       {/* Column header */}
@@ -308,14 +310,14 @@ export default function ChatPage() {
 
   if (!channelId) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-96">
+      <div className="page-shell flex items-center justify-center min-h-96">
         <p className="text-muted-foreground">{t("dashboard.selectChannel")}</p>
       </div>
     );
   }
 
   return (
-    <div key={refreshKey} className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div key={refreshKey} className="page-shell space-y-8 max-w-7xl mx-auto">
       {/* Activity Timeline & Metrics */}
       <ChatDashboardWidget
         channelId={channelId}

@@ -1,3 +1,4 @@
+import { QueryError } from "@/components/common/Page";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -276,14 +277,14 @@ export default function ChatUserPage() {
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
-  const { data: summary, isLoading: summaryLoading } = useQuery({
+  const { data: summary, isLoading: summaryLoading, isError: summaryError, refetch: retrySummary } = useQuery({
     queryKey: ["userSummary", channelId, targetUserId],
     queryFn: () => chatApi.getUserSummary(channelId, targetUserId).then((r) => r.data),
     enabled: !!channelId && !!targetUserId,
     staleTime: 60_000,
   });
 
-  const { data: periodStats, isLoading: statsLoading } = useQuery({
+  const { data: periodStats, isLoading: statsLoading, isError: statsError, refetch: retryStats } = useQuery({
     queryKey: ["userStats", channelId, targetUserId, timeWindow],
     queryFn: () =>
       chatApi
@@ -293,7 +294,7 @@ export default function ChatUserPage() {
     staleTime: 30_000,
   });
 
-  const { data: messagesData, isFetching: msgsFetching } = useQuery({
+  const { data: messagesData, isFetching: msgsFetching, isError: messagesError, refetch: retryMessages } = useQuery({
     queryKey: [
       "userMessages",
       channelId,
@@ -313,7 +314,7 @@ export default function ChatUserPage() {
         .then((r) => r.data),
     enabled: !!channelId && !!targetUserId,
     staleTime: 30_000,
-    placeholderData: (prev) => prev,
+
   });
 
   // Accumulate messages
@@ -329,7 +330,7 @@ export default function ChatUserPage() {
     });
   }, [messagesData, msgOffset]);
 
-  const { data: redemptionsData, isFetching: redsFetching } = useQuery({
+  const { data: redemptionsData, isFetching: redsFetching, isError: redemptionsError, refetch: retryRedemptions } = useQuery({
     queryKey: ["userRedemptions", channelId, targetUserId, redOffset],
     queryFn: () =>
       chatApi
@@ -340,7 +341,7 @@ export default function ChatUserPage() {
         .then((r) => r.data),
     enabled: !!channelId && !!targetUserId,
     staleTime: 30_000,
-    placeholderData: (prev) => prev,
+
   });
 
   // Accumulate redemptions
@@ -389,16 +390,18 @@ export default function ChatUserPage() {
     return groups;
   }, [allMessages, messagesData?.items, t]);
 
+  if (summaryError || statsError || messagesError || redemptionsError) return <div className="page-shell"><QueryError onRetry={() => { void retrySummary(); void retryStats(); void retryMessages(); void retryRedemptions(); }} /></div>;
+
   if (!channelId || !userId) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-96">
+  return (
+      <div className="page-shell flex items-center justify-center min-h-96">
         <p className="text-muted-foreground">{t("dashboard.selectChannelDesc")}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="page-shell space-y-6">
       {/* Back navigation */}
       <button
         type="button"
@@ -410,7 +413,7 @@ export default function ChatUserPage() {
       </button>
 
       {/* Profile header */}
-      <div className="flex items-center gap-4 p-5 rounded-2xl border border-border bg-card">
+      <div className="flex items-center gap-4 p-5 rounded-xl border border-border bg-card">
         {summaryLoading && statsLoading ? (
           <Skeleton className="w-14 h-14 rounded-full shrink-0" />
         ) : avatarUrl ? (
@@ -573,7 +576,7 @@ export default function ChatUserPage() {
           </div>
 
           {/* Stream-style messages list with date dividers */}
-          <div className="rounded-2xl border border-border bg-card/60 p-3 sm:p-4 space-y-4">
+          <div className="rounded-xl border border-border bg-card/60 p-3 sm:p-4 space-y-4">
             {statsLoading && allMessages.length === 0 ? (
               <div className="space-y-3 py-2">
                 {Array.from({ length: 8 }).map((_, i) => (

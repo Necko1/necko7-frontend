@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 .env
+# Browser verification artifacts
+test-results/
+playwright-report/
+
+.qa/

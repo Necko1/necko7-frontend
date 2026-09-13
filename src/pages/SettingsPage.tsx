@@ -1,3 +1,7 @@
+import ConfirmAction from "@/components/common/ConfirmAction";
+import { useAppStore } from "@/store/useAppStore";
+import { PageHeader, QueryError } from "@/components/common/Page";
+import { toast } from "sonner";
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -52,18 +56,8 @@ const IconCheck = () => (
 );
 
 // ── Section wrapper ────────────────────────────────────────────────────────
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
-      </div>
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        {children}
-      </div>
-    </div>
-  );
+function Section({ title, description, children, id }: { title: string; description?: string; children: React.ReactNode; id?: string }) {
+  return <section id={id} className="settings-section scroll-mt-20"><div><h2 className="text-sm font-semibold">{title}</h2>{description && <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{description}</p>}</div><div className="settings-fields">{children}</div></section>;
 }
 
 // ── Toggle field ───────────────────────────────────────────────────────────
@@ -97,32 +91,34 @@ function GeneralTab({ channelId }: { channelId: string }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
 
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings, isLoading, isError, refetch } = useQuery({
     queryKey: ["settings", channelId],
     queryFn: () => broadcastersApi.getSettings(channelId).then((r) => r.data),
   });
 
-  const [form, setForm] = useState<UpdateBroadcasterSettingsBody>({});
-
+  const [draft, setDraft] = useState<UpdateBroadcasterSettingsBody>({});
+  const base: UpdateBroadcasterSettingsBody = settings ? {
+    is_active: settings.is_active, base_price_multiplier: settings.base_price_multiplier,
+    update_prices_period: settings.update_prices_period, refund_on_buyer_fail: settings.refund_on_buyer_fail,
+    refund_if_no_money: settings.refund_if_no_money, pause_reward_if_no_money: settings.pause_reward_if_no_money,
+    market_chance_to_transfer: settings.market_chance_to_transfer, add_bot_badge: settings.add_bot_badge,
+  } : {};
+  const form = { ...base, ...draft };
+  const dirty = Object.entries(draft).some(([key, value]) => value !== base[key as keyof typeof base] && value !== null);
   useEffect(() => {
-    if (settings) {
-      setForm({
-        is_active: settings.is_active,
-        base_price_multiplier: settings.base_price_multiplier,
-        update_prices_period: settings.update_prices_period,
-        refund_on_buyer_fail: settings.refund_on_buyer_fail,
-        refund_if_no_money: settings.refund_if_no_money,
-        pause_reward_if_no_money: settings.pause_reward_if_no_money,
-        market_chance_to_transfer: settings.market_chance_to_transfer,
-        add_bot_badge: settings.add_bot_badge,
-      });
-    }
-  }, [settings]);
-
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
   const updateMutation = useMutation({
-    mutationFn: (body: UpdateBroadcasterSettingsBody) =>
-      broadcastersApi.updateSettings(channelId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["settings", channelId] }),
+    mutationFn: (body: UpdateBroadcasterSettingsBody) => broadcastersApi.updateSettings(channelId, body),
+    onSuccess: response => {
+      qc.setQueryData(["settings", channelId], response.data);
+      qc.invalidateQueries({ queryKey: ["balance", channelId] });
+      setDraft({});
+      toast.success(t("ops.saved"));
+    },
   });
 
   if (isLoading) {
@@ -134,12 +130,35 @@ function GeneralTab({ channelId }: { channelId: string }) {
     );
   }
 
+  if (isError || !settings) return <QueryError onRetry={() => void refetch()} />;
+
   const set = <K extends keyof UpdateBroadcasterSettingsBody>(key: K, val: UpdateBroadcasterSettingsBody[K]) =>
-    setForm((f) => ({ ...f, [key]: val }));
+    setDraft((f) => ({ ...f, [key]: val }));
 
   return (
-    <div className="space-y-6">
-      <Section title={t("settings.general.botStatus")} description={t("settings.general.botStatusDesc")}>
+    <form className="space-y-7" onSubmit={e => { e.preventDefault(); if (dirty && !updateMutation.isPending) updateMutation.mutate(draft); }}>
+      <fieldset disabled={updateMutation.isPending} className="space-y-7 min-w-0">
+      <Section id="market-integration" title={t("settings.general.marketApiKey")} description={t("settings.general.marketApiKeyDesc")}>
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground mb-3">{t("ops.keyHelp")}</p>
+          <Label htmlFor="market_api_key">{t("settings.general.marketApiKey")}</Label>
+          <Input
+            id="market_api_key"
+            type="password"
+            autoComplete="new-password"
+            value={form.market_api_key ?? ""}
+            placeholder={settings?.market_api_key_set ? t("settings.general.marketKeyPlaceholderSet") : t("settings.general.marketKeyPlaceholderEmpty")}
+            onChange={(e) => set("market_api_key", e.target.value || null)}
+          />
+          <p className="text-xs text-muted-foreground">
+            {settings?.market_api_key_set
+              ? t("ops.keyConfigured")
+              : t("ops.keyMissing")}
+          </p>
+        </div>
+      </Section>
+
+      <Section id="bot-processing" title={t("settings.general.botStatus")} description={t("settings.general.botStatusDesc")}>
         <div className="space-y-4">
           <ToggleField
             id="is_active"
@@ -160,12 +179,13 @@ function GeneralTab({ channelId }: { channelId: string }) {
       </Section>
 
       <Section title={t("settings.general.pricing")} description={t("settings.general.pricingDesc")}>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="base_price_multiplier">{t("settings.general.baseMultiplier")}</Label>
             <Input
               id="base_price_multiplier"
               type="number"
+              required
               min={1}
               value={form.base_price_multiplier ?? ""}
               onChange={(e) => set("base_price_multiplier", Number(e.target.value))}
@@ -179,6 +199,7 @@ function GeneralTab({ channelId }: { channelId: string }) {
             <Input
               id="update_prices_period"
               type="number"
+              required
               min={60}
               value={form.update_prices_period ?? ""}
               onChange={(e) => set("update_prices_period", Number(e.target.value))}
@@ -192,6 +213,7 @@ function GeneralTab({ channelId }: { channelId: string }) {
             <Input
               id="market_chance_to_transfer"
               type="number"
+              required
               min={0}
               max={100}
               value={form.market_chance_to_transfer ?? ""}
@@ -229,35 +251,15 @@ function GeneralTab({ channelId }: { channelId: string }) {
         </div>
       </Section>
 
-      <Section title={t("settings.general.marketApiKey")} description={t("settings.general.marketApiKeyDesc")}>
-        <div className="space-y-2">
-          <Label htmlFor="market_api_key">{t("settings.general.marketApiKey")}</Label>
-          <Input
-            id="market_api_key"
-            type="password"
-            placeholder={settings?.market_api_key_set ? t("settings.general.marketKeyPlaceholderSet") : t("settings.general.marketKeyPlaceholderEmpty")}
-            onChange={(e) => set("market_api_key", e.target.value || null)}
-          />
-          <p className="text-xs text-muted-foreground">
-            {settings?.market_api_key_set
-              ? t("settings.general.marketKeySet")
-              : t("settings.general.marketKeyNotSet")}
-          </p>
-        </div>
-      </Section>
 
-      <Button
-        className="gap-2"
-        onClick={() => updateMutation.mutate(form)}
-        disabled={updateMutation.isPending}
-      >
-        <IconSave />
-        {updateMutation.isPending ? t("common.saving") : t("settings.saveChanges")}
-      </Button>
-      {updateMutation.isSuccess && (
-        <p className="text-sm text-emerald-400">{t("settings.general.savedSuccess")}</p>
-      )}
-    </div>
+
+      </fieldset>
+      {updateMutation.isError && <QueryError message={t("ops.saveError")} />}
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background py-4">
+        <p role="status" className="text-xs text-muted-foreground">{t(dirty ? "ops.unsaved" : "ops.noChanges")}</p>
+        <div className="flex gap-2"><Button variant="ghost" disabled={!dirty || updateMutation.isPending} onClick={() => setDraft({})}>{t("ops.discard")}</Button><Button type="submit" className="gap-2" disabled={!dirty || updateMutation.isPending}><IconSave />{updateMutation.isPending ? t("common.saving") : t("settings.saveChanges")}</Button></div>
+      </div>
+    </form>
   );
 }
 
@@ -326,28 +328,29 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["chat-messages", channelId],
     queryFn: () => broadcastersApi.getChatMessages(channelId).then((r) => r.data),
   });
 
+  const [edited, setEdited] = useState(false);
   const [messages, setMessages] = useState<Record<string, Record<string, string>>>({});
   const [activeCategory, setActiveCategory] = useState<string>("orders");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
-    if (data?.messages) {
+    if (data?.messages && !edited) {
       const initial: Record<string, Record<string, string>> = {};
       for (const [cat, catMsgs] of Object.entries(data.messages)) {
         initial[cat] = { ...(catMsgs as Record<string, string>) };
       }
       setMessages(initial);
     }
-  }, [data]);
+  }, [data, edited]);
 
   const updateMutation = useMutation({
     mutationFn: () => broadcastersApi.updateChatMessages(channelId, { messages }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["chat-messages", channelId] }),
+    onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["chat-messages", channelId] }); setEdited(false); toast.success(t("ops.saved")); },
   });
 
   const categories = useMemo(() => {
@@ -367,6 +370,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
   }, [categories, activeCategory]);
 
   const handleMessageChange = (cat: string, msgKey: string, value: string) => {
+    setEdited(true);
     setMessages((prev) => ({
       ...prev,
       [cat]: {
@@ -377,6 +381,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
   };
 
   const handleResetMessage = (cat: string, msgKey: string) => {
+    setEdited(true);
     setMessages((prev) => {
       const nextCat = { ...(prev[cat] || {}) };
       delete nextCat[msgKey];
@@ -388,6 +393,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
   };
 
   const handleResetCategory = (cat: string) => {
+    setEdited(true);
     setMessages((prev) => {
       const nextCat = { ...(prev[cat] || {}) };
       const defaultKeys = Object.keys(data?.default_messages?.[cat] || {});
@@ -498,6 +504,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
   }, [searchQuery, data, messages, activeCategory]);
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
+  if (isError) return <QueryError onRetry={() => refetch()} />;
   if (!data) return null;
 
   const currentCatMeta = getCategoryMeta(activeCategory, t);
@@ -767,8 +774,9 @@ function PermissionsTab({ channelId }: { channelId: string }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [newLogin, setNewLogin] = useState("");
+  const [revokeTarget, setRevokeTarget] = useState<PermissionResponse | null>(null);
 
-  const { data: permissions = [], isLoading } = useQuery({
+  const { data: permissions = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["permissions", channelId],
     queryFn: () => permissionsApi.list(channelId).then((r) => r.data),
   });
@@ -784,7 +792,7 @@ function PermissionsTab({ channelId }: { channelId: string }) {
 
   const revokeMutation = useMutation({
     mutationFn: (userId: string) => permissionsApi.revoke(channelId, userId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["permissions", channelId] }),
+    onSuccess: () => { setRevokeTarget(null); qc.invalidateQueries({ queryKey: ["permissions", channelId] }); },
   });
 
   return (
@@ -793,15 +801,16 @@ function PermissionsTab({ channelId }: { channelId: string }) {
       <Section title={t("settings.permissionsTab.grantTitle")} description={t("settings.permissionsTab.grantDesc")}>
         <div className="flex gap-2">
           <Input
+            aria-label={t("settings.permissionsTab.usernamePlaceholder")}
             placeholder={t("settings.permissionsTab.usernamePlaceholder")}
             value={newLogin}
             onChange={(e) => setNewLogin(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && newLogin && grantMutation.mutate(newLogin)}
+            onKeyDown={(e) => e.key === "Enter" && newLogin.trim() && !grantMutation.isPending && grantMutation.mutate(newLogin.trim())}
           />
           <Button
             className="gap-2 shrink-0"
-            onClick={() => newLogin && grantMutation.mutate(newLogin)}
-            disabled={grantMutation.isPending || !newLogin}
+            onClick={() => newLogin.trim() && grantMutation.mutate(newLogin.trim())}
+            disabled={grantMutation.isPending || !newLogin.trim()}
           >
             <IconPlus />
             {t("settings.permissionsTab.grantBtn")}
@@ -814,9 +823,10 @@ function PermissionsTab({ channelId }: { channelId: string }) {
         )}
       </Section>
 
+      <ConfirmAction open={!!revokeTarget} onClose={() => setRevokeTarget(null)} onConfirm={() => { if (revokeTarget && !revokeMutation.isPending) revokeMutation.mutate(revokeTarget.user_id); }} pending={revokeMutation.isPending} destructive title={t("settings.permissionsTab.revokeConfirm", { login: revokeTarget?.user_login })} description={t("ops.revokeDesc")} label={t("ops.revoke")} />
       {/* Current permissions */}
       <Section title={t("settings.permissionsTab.currentTitle")}>
-        {isLoading ? (
+        {isError ? <QueryError onRetry={() => void refetch()} /> : isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-14 rounded-lg" />
@@ -852,11 +862,10 @@ function PermissionsTab({ channelId }: { channelId: string }) {
                   <Button
                     size="icon"
                     variant="ghost"
+                    aria-label={t("ops.revoke")}
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     onClick={() => {
-                      if (confirm(t("settings.permissionsTab.revokeConfirm", { login: perm.user_login }))) {
-                        revokeMutation.mutate(perm.user_id);
-                      }
+                      setRevokeTarget(perm);
                     }}
                     disabled={revokeMutation.isPending}
                   >
@@ -878,11 +887,12 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
   const qc = useQueryClient();
   const [copied, setCopied] = useState(false);
 
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings, isLoading, isError, refetch } = useQuery({
     queryKey: ["settings", channelId],
     queryFn: () => broadcastersApi.getSettings(channelId).then((r) => r.data),
   });
 
+  const [edited, setEdited] = useState(false);
   const [config, setConfig] = useState<PublicRewardsConfig>({
     enabled: true,
     show_cost_points: true,
@@ -901,7 +911,7 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
   });
 
   useEffect(() => {
-    if (settings?.public_rewards_config) {
+    if (settings?.public_rewards_config && !edited) {
       setConfig({
         enabled: settings.public_rewards_config.enabled ?? true,
         show_cost_points: settings.public_rewards_config.show_cost_points ?? true,
@@ -919,12 +929,12 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
         show_filter_details: settings.public_rewards_config.show_filter_details ?? true,
       });
     }
-  }, [settings]);
+  }, [settings, edited]);
 
   const updateMutation = useMutation({
     mutationFn: (newCfg: PublicRewardsConfig) =>
       broadcastersApi.updateSettings(channelId, { public_rewards_config: newCfg }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["settings", channelId] }),
+    onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["settings", channelId] }); setEdited(false); toast.success(t("ops.saved")); },
   });
 
   const activeLogin = settings?.channel_login || channelLogin || channelId;
@@ -936,8 +946,9 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const setFlag = <K extends keyof PublicRewardsConfig>(key: K, val: boolean) =>
-    setConfig((prev) => ({ ...prev, [key]: val }));
+  const setFlag = <K extends keyof PublicRewardsConfig>(key: K, val: boolean) => {
+    setEdited(true); setConfig((prev) => ({ ...prev, [key]: val }));
+  };
 
   if (isLoading) {
     return (
@@ -948,10 +959,12 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
     );
   }
 
+  if (isError) return <QueryError onRetry={() => refetch()} />;
+
   return (
     <div className="space-y-6">
       {/* Shareable Link Banner */}
-      <div className="p-5 rounded-2xl border border-primary/20 bg-primary/5 space-y-3">
+      <div className="p-5 rounded-xl border border-primary/20 bg-primary/5 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-foreground">
@@ -1148,6 +1161,8 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
 export default function SettingsPage() {
   const { t } = useTranslation();
   const { channelId } = useParams<{ channelId: string }>();
+  const channelRole = useAppStore(state => state.broadcasters.find(b => b.channel_id === channelId)?.role.toUpperCase());
+  const isOwner = channelRole === "OWNER";
 
   const { data: settings } = useQuery({
     queryKey: ["settings", channelId],
@@ -1158,37 +1173,21 @@ export default function SettingsPage() {
 
   if (!channelId) {
     return (
-      <div className="p-8 text-center text-muted-foreground">
+      <div className="page-shell text-center text-muted-foreground">
         {t("settings.noChannel")}
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-4xl">
-      <div className="flex items-center gap-4">
-        {settings?.profile_image_url ? (
-          <img
-            src={settings.profile_image_url}
-            alt={settings.display_name || settings.channel_login}
-            className="w-14 h-14 rounded-2xl object-cover ring-2 ring-primary/20 shrink-0 shadow-sm"
-          />
-        ) : null}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {settings?.display_name ? t("settings.titleWithChannel", { name: settings.display_name }) : t("settings.title")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {settings?.channel_login ? `@${settings.channel_login} · ` : ""}{t("settings.headerSubtitle")}
-          </p>
-        </div>
-      </div>
+    <div className="page-shell settings-workspace space-y-6 max-w-6xl">
+      <PageHeader eyebrow={t("ops.configuration")} title={t("ops.settings")} description={t("ops.settingsDesc")} />
 
       <Tabs defaultValue="general">
-        <TabsList className="mb-6">
+        <TabsList className="mb-7 w-full justify-start bg-transparent border-b border-border rounded-none pb-2">
           <TabsTrigger value="general">{t("settings.tabs.general")}</TabsTrigger>
           <TabsTrigger value="messages">{t("settings.tabs.chatMessages")}</TabsTrigger>
-          <TabsTrigger value="permissions">{t("settings.tabs.permissions")}</TabsTrigger>
+          {isOwner && <TabsTrigger value="permissions">{t("settings.tabs.permissions")}</TabsTrigger>}
           <TabsTrigger value="public">{t("settings.tabs.showcase")}</TabsTrigger>
         </TabsList>
 
@@ -1198,9 +1197,7 @@ export default function SettingsPage() {
         <TabsContent value="messages">
           <ChatMessagesTab channelId={channelId} />
         </TabsContent>
-        <TabsContent value="permissions">
-          <PermissionsTab channelId={channelId} />
-        </TabsContent>
+        {isOwner && <TabsContent value="permissions"><PermissionsTab channelId={channelId} /></TabsContent>}
         <TabsContent value="public">
           <PublicCatalogTab channelId={channelId} channelLogin={settings?.channel_login} />
         </TabsContent>

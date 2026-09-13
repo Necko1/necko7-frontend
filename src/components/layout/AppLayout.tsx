@@ -1,21 +1,21 @@
-import { useState, useEffect, useMemo } from "react";
+import Brand from "./Brand";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { QueryError } from "@/components/common/Page";
+import PanelGuide from "@/components/layout/PanelGuide";
+import { toast } from "sonner";
+import { useState, useEffect, Suspense } from "react";
 import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
+
 import LanguageSwitcher from "./LanguageSwitcher";
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { usersApi, broadcastersApi, authApi } from "@/lib/apiClient";
+import { usersApi, broadcastersApi, authApi, redemptionsApi } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
-import { cn } from "@/lib/utils";
+
 import type { AxiosError } from "axios";
 
 const IconTwitch = () => (
@@ -30,11 +30,6 @@ const IconMenu = () => (
   </svg>
 );
 
-const IconX = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
 
 interface NavItem {
   label: string;
@@ -93,11 +88,6 @@ const IconSwap = () => (
   </svg>
 );
 
-const IconPlus = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-);
 
 const IconTrophy = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -120,500 +110,86 @@ const IconUser = () => (
   </svg>
 );
 
-const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", to: "/dashboard", icon: <IconGrid /> },
-  { label: "Rewards", to: "/rewards", icon: <IconGift /> },
-  { label: "Redemptions", to: "/redemptions", icon: <IconList /> },
-  { label: "Logs", to: "/logs", icon: <IconTerminal /> },
-  { label: "Leaderboard", to: "/leaderboard", icon: <IconTrophy /> },
-  { label: "Chat", to: "/chat", icon: <IconChat /> },
-];
-
 export default function AppLayout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const qc = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const {
-    setCurrentUser,
-    broadcasters,
-    setBroadcasters,
-    selectedBroadcasterId,
-    setSelectedBroadcasterId,
-    getSelectedBroadcaster,
-  } = useAppStore();
-
-  // Close mobile sidebar on route change
+  const { setCurrentUser, broadcasters, setBroadcasters, selectedBroadcasterId, setSelectedBroadcasterId } = useAppStore();
+  const { data: meData, isLoading: meLoading, error: meError, refetch: retrySession } = useQuery({ queryKey: ["me"], queryFn: () => usersApi.me().then(r => r.data), retry: false, staleTime: 300_000 });
+  const { data: channels, isLoading: channelsLoading, isError: channelsError, refetch: retryChannels } = useQuery({ queryKey: ["broadcasters"], queryFn: () => broadcastersApi.list().then(r => r.data), enabled: !!meData, staleTime: 60_000 });
+  const selected = meData ? broadcasters.find(b => b.channel_id === selectedBroadcasterId) : undefined;
+  const role = selected?.role.toUpperCase();
+  const operator = role === "OWNER" || role === "EDITOR";
+  const publicRoute = location.pathname.startsWith("/c/") || location.pathname.startsWith("/r/");
+  const adminRoute = ["/dashboard", "/rewards", "/redemptions", "/logs", "/leaderboard", "/chat", "/broadcasters"].some(p => location.pathname === p || location.pathname.startsWith(p + "/"));
+  const { data: holds } = useQuery({ queryKey: ["redemptions", selectedBroadcasterId, "attention-count"], queryFn: () => redemptionsApi.list(selectedBroadcasterId!, { status: "MANUAL_HOLD", limit: 1 }).then(r => r.data), enabled: operator, refetchInterval: 15_000 });
+  const logout = useMutation({ mutationFn: authApi.logout, onSuccess: () => { setCurrentUser(null); setBroadcasters([]); setSelectedBroadcasterId(null); qc.clear(); navigate("/login"); }, onError: () => toast.error(t("ops.loadError")) });
+  useEffect(() => { setCurrentUser(meData ?? null); }, [meData, setCurrentUser]);
   useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
+    if (!channels) return;
+    setBroadcasters(channels);
+    const pathId = location.pathname.startsWith("/broadcasters/") ? location.pathname.split("/")[2] : null;
+    const publicId = location.pathname.startsWith("/c/") ? location.pathname.split("/")[2]?.toLowerCase() : null;
+    const match = channels.find(b => b.channel_id === pathId || (publicId && (b.channel_id === publicId || b.channel_login.toLowerCase() === publicId)));
+    if (match) setSelectedBroadcasterId(match.channel_id);
+    else if (!channels.some(b => b.channel_id === selectedBroadcasterId)) setSelectedBroadcasterId(channels[0]?.channel_id ?? null);
+  }, [channels, location.pathname, selectedBroadcasterId, setBroadcasters, setSelectedBroadcasterId]);
 
-  // Prevent body scroll when mobile sidebar is open
-  useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [mobileOpen]);
-
-  // Close mobile sidebar on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && mobileOpen) {
-        setMobileOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [mobileOpen]);
-
-  // ── HOOK 1: Auth query ──────────────────────────────────────────────────
-  const {
-    data: meData,
-    isLoading: meLoading,
-    error: meError,
-  } = useQuery({
-    queryKey: ["me"],
-    queryFn: () => usersApi.me().then((r) => r.data),
-    retry: false,
-    staleTime: 5 * 60_000,
-  });
-
-  // ── HOOK 2: Broadcasters query (enabled only when authenticated) ──────────
-  const { data: broadcastersData, isLoading: bcastLoading } = useQuery({
-    queryKey: ["broadcasters"],
-    queryFn: () => broadcastersApi.list().then((r) => r.data),
-    enabled: !!meData,
-    staleTime: 60_000,
-  });
-
-  // ── HOOK 3: Logout mutation ──────────────────────────────────────────────
-  const logoutMutation = useMutation({
-    mutationFn: () => authApi.logout(),
-    onSuccess: () => {
-      setCurrentUser(null);
-      setBroadcasters([]);
-      setSelectedBroadcasterId(null);
-      qc.clear();
-      navigate("/login");
-    },
-  });
-
-  // ── HOOK 4: Sync user into store ─────────────────────────────────────────
-  useEffect(() => {
-    if (meData) {
-      setCurrentUser(meData);
-    } else if (meError) {
-      setCurrentUser(null);
-    }
-  }, [meData, meError, setCurrentUser]);
-
-  // ── HOOK 5: Sync broadcasters into store ─────────────────────────────────
-  useEffect(() => {
-    if (broadcastersData) {
-      setBroadcasters(broadcastersData);
-      if (!selectedBroadcasterId && broadcastersData.length > 0) {
-        setSelectedBroadcasterId(broadcastersData[0].channel_id);
-      }
-    }
-  }, [broadcastersData, selectedBroadcasterId, setBroadcasters, setSelectedBroadcasterId]);
-
-  // Sync selected broadcaster if navigating directly to a /c/:identifier URL
-  useEffect(() => {
-    if (location.pathname.startsWith("/c/")) {
-      const ident = location.pathname.split("/")[2]?.toLowerCase();
-      if (ident && broadcasters.length > 0) {
-        const match = broadcasters.find(
-          (b) =>
-            b.channel_id === ident ||
-            b.channel_login.toLowerCase() === ident
-        );
-        if (match && match.channel_id !== selectedBroadcasterId) {
-          setSelectedBroadcasterId(match.channel_id);
-        }
-      }
-    }
-  }, [location.pathname, broadcasters, selectedBroadcasterId, setSelectedBroadcasterId]);
-
-  const selectedBroadcaster = meData ? getSelectedBroadcaster() : null;
-  const roleUpper = selectedBroadcaster?.role?.toUpperCase();
-  const isViewer = roleUpper === "VIEWER";
-
-  // Route protection for VIEWER role: redirect away from admin pages
-  useEffect(() => {
-    if (isViewer && selectedBroadcaster) {
-      const adminPrefixes = ["/dashboard", "/rewards", "/redemptions", "/logs", "/leaderboard", "/chat", "/broadcasters"];
-      if (adminPrefixes.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`))) {
-        navigate(`/c/${selectedBroadcaster.channel_login}`, { replace: true });
-      }
-    }
-  }, [isViewer, selectedBroadcaster, location.pathname, navigate]);
-
-  const navItems: NavItem[] = useMemo(() => {
-    // 1. Guest viewing public channel route: show Rewards only, no Profile!
-    if (!meData && (location.pathname.startsWith("/c/") || location.pathname.startsWith("/r/"))) {
-      const channelLogin = location.pathname.split("/")[2] || "";
-      return [
-        {
-          label: t("nav.rewards"),
-          to: `/c/${channelLogin}`,
-          icon: <IconGift />,
-          isActive: (pathname: string) => {
-            const lower = pathname.toLowerCase();
-            const target = `/c/${channelLogin.toLowerCase()}`;
-            return lower === target || lower.startsWith(`${target}/rewards`);
-          },
-        },
-      ];
-    }
-
-    if (isViewer && selectedBroadcaster) {
-      return [
-        {
-          label: t("nav.rewards"),
-          to: `/c/${selectedBroadcaster.channel_login}`,
-          icon: <IconGift />,
-          isActive: (pathname: string) => {
-            const lower = pathname.toLowerCase();
-            const target = `/c/${selectedBroadcaster.channel_login.toLowerCase()}`;
-            return lower === target || lower.startsWith(`${target}/rewards`);
-          },
-        },
-        {
-          label: t("nav.profile"),
-          to: `/c/${selectedBroadcaster.channel_login}/profile`,
-          icon: <IconUser />,
-          end: true,
-        },
-      ];
-    }
-    return [
-      { label: t("nav.dashboard"), to: "/dashboard", icon: <IconGrid />, end: true },
-      { label: t("nav.rewards"), to: "/rewards", icon: <IconGift /> },
-      { label: t("nav.redemptions"), to: "/redemptions", icon: <IconList /> },
-      { label: t("nav.logs"), to: "/logs", icon: <IconTerminal /> },
-      { label: t("nav.leaderboard"), to: "/leaderboard", icon: <IconTrophy /> },
-      { label: t("nav.chat"), to: "/chat", icon: <IconChat /> },
-    ];
-  }, [meData, location.pathname, isViewer, selectedBroadcaster, t]);
-
-
-  // While checking auth — show full-screen loader
-  if (meLoading || (!meData && !meError)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen w-full bg-background">
-        <div className="flex flex-col items-center gap-4 text-muted-foreground">
-          <svg
-            className="animate-spin w-8 h-8 text-primary"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none" viewBox="0 0 24 24"
-          >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-          </svg>
-          <p className="text-sm">{t("nav.verifyingSession")}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Auth error handling
+  if (meLoading) return <div className="page-shell"><Skeleton className="h-12 w-48" /><Skeleton className="h-64" /><p role="status" className="text-sm text-muted-foreground">{t("nav.verifyingSession")}</p></div>;
   if (meError) {
-    const status = (meError as AxiosError)?.response?.status;
+    const status = (meError as AxiosError).response?.status;
     if (status === 404) return <Navigate to="/init-bot" replace />;
-    if (!location.pathname.startsWith("/c/") && !location.pathname.startsWith("/r/")) {
-      return <Navigate to="/login" replace />;
-    }
+    if (status !== 401) return <div className="page-shell"><QueryError onRetry={() => void retrySession()} /></div>;
+    if (!publicRoute) return <Navigate to="/login" replace />;
   }
+  if (meData && channelsLoading) return <div className="page-shell"><Skeleton className="h-12 w-48" /><Skeleton className="h-64" /></div>;
+  if (meData && channelsError) return <div className="page-shell"><QueryError onRetry={() => void retryChannels()} /></div>;
+  if (role === "VIEWER" && adminRoute && selected) return <Navigate to={`/c/${selected.channel_login}`} replace />;
+  if (meData && !selected && channels?.length) return <div className="page-shell"><Skeleton className="h-64" /></div>;
+  if (meData && !selected && adminRoute) return <Navigate to="/channels" replace />;
 
-  return (
-    <div className="flex w-full min-h-screen">
-      {/* Mobile Backdrop */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden transition-opacity duration-300"
-          onClick={() => setMobileOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* ── Sidebar ── */}
-      <aside
-        className={cn(
-          "flex flex-col border-r border-sidebar-border bg-sidebar overflow-hidden transition-transform duration-300 ease-in-out",
-          // Desktop: sticky in flex layout
-          "md:static md:translate-x-0 md:w-64 md:h-screen md:sticky md:top-0 md:shrink-0 md:z-auto",
-          // Mobile: slide-over drawer
-          "fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] h-full shadow-2xl",
-          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        )}
-      >
-        {/* Mobile close bar */}
-        <div className="md:hidden flex items-center justify-between px-4 pt-3.5 pb-1 shrink-0">
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Menu
-          </span>
-          <button
-            type="button"
-            onClick={() => setMobileOpen(false)}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
-            aria-label={t("common.close", "Close")}
-          >
-            <IconX />
-          </button>
-        </div>
-
-        {/* Broadcaster section */}
-        {meData ? (
-        <div className="p-4 space-y-2">
-          {bcastLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full rounded-xl" />
-              <Skeleton className="h-7 w-3/4 rounded-lg" />
-            </div>
-          ) : selectedBroadcaster ? (
-            <>
-              {/* Broadcaster profile + settings gear */}
-              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-sidebar-accent group">
-                <Avatar className="h-9 w-9 ring-2 ring-primary/30 shrink-0">
-                  <AvatarImage
-                    src={selectedBroadcaster.profile_image_url ?? undefined}
-                    alt={selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
-                  />
-                  <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">
-                    {(selectedBroadcaster.channel_login || "??").slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-sidebar-foreground truncate" title={selectedBroadcaster.display_name || selectedBroadcaster.channel_login}>
-                    {selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
-                  </p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {isViewer ? t("channels.viewer") : selectedBroadcaster.role}
-                  </p>
-                </div>
-                {!isViewer && (
-                  <Tooltip>
-                    <TooltipTrigger
-                      className="h-7 w-7 flex items-center justify-center rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-sidebar-foreground hover:bg-accent cursor-pointer"
-                      onClick={() => {
-                        setMobileOpen(false);
-                        navigate(`/broadcasters/${selectedBroadcaster.channel_id}/settings`);
-                      }}
-                    >
-                      <IconSettings />
-                    </TooltipTrigger>
-                    <TooltipContent>{t("nav.channelSettings")}</TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-
-              {/* Switch channel button — always shown */}
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileOpen(false);
-                  navigate("/channels");
-                }}
-                className="w-full flex items-center justify-between text-xs h-7.5 px-2.5 rounded-lg border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors group cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <IconSwap />
-                  {t("nav.switchChannel")}
-                </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground font-mono font-medium">
-                  {broadcasters.length}
-                </span>
-              </button>
-            </>
-          ) : (
-            /* No broadcaster selected */
-            <button
-              type="button"
-              onClick={() => {
-                setMobileOpen(false);
-                navigate("/channels");
-              }}
-              className="w-full p-2.5 rounded-xl border border-dashed border-sidebar-border text-center hover:border-primary/50 hover:bg-sidebar-accent/50 transition-colors group cursor-pointer"
-            >
-              <p className="text-xs font-medium text-primary flex items-center justify-center gap-1.5">
-                <IconPlus />
-                {t("nav.selectChannel")}
-              </p>
-            </button>
-          )}
-        </div>
-        ) : null}
-
-        {meData && <Separator className="bg-sidebar-border" />}
-
-        {/* Navigation */}
-        <nav className={cn("flex-1 p-3 space-y-0.5 overflow-y-auto", !meData && "pt-4")}>
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) => {
-                const active = item.isActive ? item.isActive(location.pathname) : isActive;
-                return cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
-                  active
-                    ? "bg-sidebar-accent text-primary font-semibold shadow-sm"
-                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-                );
-              }}
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        <Separator className="bg-sidebar-border" />
-
-        {/* Language switcher directly above user profile */}
-        <div className="px-3 pt-2">
-          <LanguageSwitcher />
-        </div>
-
-        {/* User profile or Guest login at bottom */}
-        <div className="p-3">
-          {!meData ? (
-            <Button
-              onClick={() => {
-                setMobileOpen(false);
-                navigate("/login");
-              }}
-              className="w-full flex items-center justify-center gap-2.5 h-10 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
-            >
-              <IconTwitch />
-              <span>{t("profile.signInWithTwitch", "Log in with Twitch")}</span>
-            </Button>
-          ) : (
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                setMobileOpen(false);
-                navigate("/me");
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setMobileOpen(false);
-                  navigate("/me");
-                }
-              }}
-              className={cn(
-                "w-full flex items-center gap-3 p-2 rounded-xl transition-all cursor-pointer group text-left select-none",
-                location.pathname === "/me"
-                  ? "bg-sidebar-accent border border-primary/30 shadow-xs"
-                  : "hover:bg-sidebar-accent/60"
-              )}
-              title={t("nav.myProfile")}
-            >
-              <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border group-hover:ring-primary/40 transition-all">
-                <AvatarImage src={meData.avatar_url ?? undefined} alt={meData.login} />
-                <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
-                  {(meData.login || "??").slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate group-hover:text-primary transition-colors">
-                  {meData.login}
-                </p>
-                <p className="text-[10px] text-muted-foreground leading-none">
-                  • {t("nav.myProfile")}
-                </p>
-              </div>
-              <Tooltip>
-                <TooltipTrigger
-                  className="h-7 w-7 flex items-center justify-center rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-accent cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    logoutMutation.mutate();
-                  }}
-                  aria-disabled={logoutMutation.isPending}
-                >
-                  <IconLogOut />
-                </TooltipTrigger>
-                <TooltipContent>{t("nav.logout")}</TooltipContent>
-              </Tooltip>
-            </div>
-          )}
-        </div>
-      </aside>
-
-      {/* ── Main area (mobile header + content) ── */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Mobile Header Bar */}
-        <header className="md:hidden sticky top-0 z-30 flex items-center justify-between h-14 px-4 border-b border-sidebar-border bg-sidebar/95 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              className="p-2 -ml-2 rounded-xl text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
-              aria-label="Open menu"
-            >
-              <IconMenu />
-            </button>
-            {selectedBroadcaster ? (
-              <div className="flex items-center gap-2 min-w-0">
-                <Avatar className="h-7 w-7 ring-1 ring-primary/30 shrink-0">
-                  <AvatarImage
-                    src={selectedBroadcaster.profile_image_url ?? undefined}
-                    alt={selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
-                  />
-                  <AvatarFallback className="text-[10px] font-semibold bg-primary text-primary-foreground">
-                    {(selectedBroadcaster.channel_login || "??").slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-xs font-semibold text-foreground truncate max-w-[150px]">
-                  {selectedBroadcaster.display_name || selectedBroadcaster.channel_login}
-                </span>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {meData ? (
-              <button
-                type="button"
-                onClick={() => navigate("/me")}
-                className="p-0.5 rounded-full hover:ring-2 hover:ring-primary/40 transition-all cursor-pointer"
-                title={t("nav.myProfile")}
-              >
-                <Avatar className="h-7 w-7 shrink-0 ring-1 ring-border">
-                  <AvatarImage src={meData.avatar_url ?? undefined} alt={meData.login} />
-                  <AvatarFallback className="text-[10px] bg-secondary text-secondary-foreground">
-                    {(meData.login || "??").slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => navigate("/login")}
-                className="h-8 px-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs gap-1.5 cursor-pointer"
-              >
-                <IconTwitch />
-                <span>{t("profile.signInWithTwitch", "Login")}</span>
-              </Button>
-            )}
-          </div>
-        </header>
-
-        {/* Main page content */}
-        <main className="flex-1 min-w-0 min-h-screen overflow-y-scroll [scrollbar-gutter:stable] bg-background">
-          <Outlet />
-        </main>
-      </div>
+  const catalog = `/c/${selected?.channel_login || location.pathname.split("/")[2] || ""}`;
+  const groups: { label: string; items: NavItem[] }[] = operator ? [
+    { label: t("ops.operations"), items: [
+      { label: t("ops.overview"), to: "/dashboard", icon: <IconGrid /> },
+      { label: t("ops.holds"), to: "/redemptions?status=MANUAL_HOLD", icon: <span className="text-amber-300 text-base w-[18px] text-center">!</span>, isActive: p => p === "/redemptions" && new URLSearchParams(location.search).get("status") === "MANUAL_HOLD" },
+      { label: t("ops.transactions"), to: "/redemptions", icon: <IconList />, isActive: p => p === "/redemptions" && new URLSearchParams(location.search).get("status") !== "MANUAL_HOLD" },
+      { label: t("nav.logs"), to: "/logs", icon: <IconTerminal /> },
+    ] },
+    { label: t("ops.configuration"), items: [
+      { label: t("nav.rewards"), to: "/rewards", icon: <IconGift /> },
+      { label: t("ops.settings"), to: `/broadcasters/${selected!.channel_id}/settings`, icon: <IconSettings /> },
+    ] },
+    { label: t("ops.community"), items: [
+      { label: t("nav.chat"), to: "/chat", icon: <IconChat /> },
+      { label: t("nav.leaderboard"), to: "/leaderboard", icon: <IconTrophy /> },
+      { label: t("ops.publicLink"), to: catalog, icon: <IconGift />, end: true },
+    ] },
+  ] : [{ label: t("ops.community"), items: publicRoute || selected ? [
+    { label: t("nav.rewards"), to: catalog, icon: <IconGift />, end: true },
+    ...(meData ? [{ label: t("nav.profile"), to: `${catalog}/profile`, icon: <IconUser /> }] : []),
+  ] : [] }];
+  const sidebar = (mobile = false) => <div className="flex h-full flex-col">
+    <div className="flex h-24 shrink-0 items-center px-5"><Brand /></div>
+    {meData && <div className="channel-selector"><div className="flex items-center gap-2.5 min-w-0"><Avatar className="size-8"><AvatarImage src={selected?.profile_image_url ?? undefined} /><AvatarFallback>{selected?.channel_login.slice(0, 2).toUpperCase() ?? "–"}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{selected?.display_name || selected?.channel_login || t("nav.selectChannel")}</p><p className="text-xs text-muted-foreground">{role === "OWNER" ? t("settings.permissionsTab.ownerRole") : role === "EDITOR" ? t("settings.permissionsTab.editorRole") : t("channels.viewer")}</p></div></div><NavLink to="/channels" onClick={() => setMobileOpen(false)} className="mt-3 flex items-center justify-between text-xs text-muted-foreground hover:text-primary"><span>{t("nav.switchChannel")}</span><IconSwap /></NavLink></div>}
+    <nav aria-label={t("ops.workspace")} className="min-h-0 flex-1 overflow-y-auto px-3 space-y-6 pb-5">{groups.map((group, groupIndex) => <div key={group.label}><p className="nav-group-label px-3 mb-2"><span>0{groupIndex + 1}</span>{group.label}</p><div className="space-y-1">{group.items.map(item => {
+      const active = item.isActive ? item.isActive(location.pathname) : item.end ? location.pathname === item.to : location.pathname === item.to || location.pathname.startsWith(item.to + "/");
+      const id = item.to.includes("MANUAL_HOLD") ? "holds" : item.to.includes("settings") ? "settings" : item.to.slice(1);
+      return <NavLink key={item.to} to={item.to} end={item.end} aria-current={active ? "page" : false} data-tour={!mobile ? id : undefined} className="workspace-link" onClick={() => setMobileOpen(false)}>{item.icon}<span className="flex-1">{item.label}</span>{id === "holds" && holds && holds.total > 0 && <span className="rounded bg-amber-400/15 text-amber-300 px-1.5 text-xs tabular-nums">{holds.total}</span>}</NavLink>;
+    })}</div></div>)}</nav>
+    <div className="border-t border-border p-3 space-y-2">{operator && meData && selected && <PanelGuide userId={meData.twitch_id} channelId={selected.channel_id} role={role!} mobile={mobile} onStart={() => setMobileOpen(false)} />}
+    <LanguageSwitcher />
+    <div className="flex items-center gap-2 border-t border-border pt-3">{meData ? <><NavLink to="/me" onClick={() => setMobileOpen(false)} className="flex min-w-0 flex-1 items-center gap-2 p-1.5 rounded-md hover:bg-muted"><Avatar className="size-7"><AvatarImage src={meData.avatar_url ?? undefined} /><AvatarFallback>{meData.login.slice(0, 2)}</AvatarFallback></Avatar><span className="text-sm truncate">{meData.login}</span></NavLink><Button aria-label={t("nav.logout")} variant="ghost" size="icon" disabled={logout.isPending} onClick={() => logout.mutate()}><IconLogOut /></Button></> : <Button className="w-full" onClick={() => navigate("/login")}><IconTwitch />{t("profile.signInWithTwitch")}</Button>}</div></div>
+  </div>;
+  return <div className="flex min-h-screen w-full">
+    <a href="#main-content" className="skip-link">{t("ops.skipContent")}</a>
+    <aside className="hidden md:block sticky top-0 h-dvh w-[232px] shrink-0 border-r border-border bg-sidebar">{sidebar()}</aside>
+    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}><SheetContent side="left" className="w-[288px] max-w-[90vw]" ><SheetTitle className="sr-only">{t("ops.workspace")}</SheetTitle>{sidebar(true)}</SheetContent></Sheet>
+    <div className="flex-1 min-w-0">
+      <header data-tour="mobile-header" className="workspace-topbar flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-20"><div className="flex items-center gap-3 min-w-0"><Button variant="ghost" size="icon" className="md:hidden" aria-label={t("ops.openNavigation")} onClick={() => setMobileOpen(true)}><IconMenu /></Button><span className="hidden sm:inline text-xs text-muted-foreground">{t("ops.workspace")}</span><span className="hidden sm:inline text-muted-foreground/50">/</span><span className="text-sm font-medium truncate">{selected?.display_name || selected?.channel_login || "necko7"}</span></div>{operator && <NavLink className="text-xs text-muted-foreground hover:text-primary shrink-0" to={catalog}>{t("ops.publicLink")} ↗</NavLink>}</header>
+      <main id="main-content" tabIndex={-1} className="min-w-0 outline-none"><Suspense fallback={<div className="page-shell"><Skeleton className="h-64" /></div>}><Outlet key={selectedBroadcasterId} /></Suspense></main>
     </div>
-  );
+  </div>;
 }

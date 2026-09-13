@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Navigate, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { usersApi } from "@/lib/apiClient";
@@ -17,6 +18,7 @@ import type { AxiosError } from "axios";
  * App.tsx — so there's no render loop when we Navigate to it from here.
  */
 export default function AuthLayout() {
+  const { t } = useTranslation();
   const { isLoading, data, error } = useQuery({
     queryKey: ["me"],
     queryFn: () => usersApi.me().then((r) => r.data),
@@ -65,23 +67,8 @@ export default function AuthLayout() {
     // 401 = expected unauthenticated state → fall through to render Outlet
   }
 
-  // ── Render auth page (login or init-bot) ──────────────────────────────────
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-animated relative overflow-hidden">
-      {/* Ambient glow orbs */}
-      <div
-        className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-20 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, #2a526a 0%, transparent 70%)" }}
-      />
-      <div
-        className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-15 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, #78c2cc 0%, transparent 70%)" }}
-      />
-
-      {/* Page content */}
-      <div className="relative z-10 w-full max-w-md px-4">
-        <Outlet />
-      </div>
-    </div>
-  );
+  return <div className="min-h-screen w-full grid lg:grid-cols-2 bg-background">
+    <section className="hidden lg:flex flex-col justify-between p-14 xl:p-20 border-r border-border bg-sidebar"><div className="text-xl font-bold tracking-tight">necko<span className="text-primary">7</span><span className="ml-4 text-xs uppercase tracking-widest font-medium text-muted-foreground">Reward control</span></div><div className="max-w-lg"><p className="eyebrow text-primary mb-5">{t("ops.loginEyebrow")}</p><h1 className="text-5xl font-semibold leading-[1.1] tracking-tight">{t("ops.loginIntro")}</h1><p className="text-muted-foreground leading-relaxed mt-6 text-lg">{t("ops.loginBody")}</p><div className="mt-10 space-y-4">{["loginFlow1", "loginFlow2", "loginFlow3"].map((key, i) => <div key={key} className="flex items-center gap-4 border-t border-border pt-4"><span className="text-primary font-mono text-xs">0{i + 1}</span><span className="text-sm">{t(`ops.${key}`)}</span></div>)}</div></div><p className="text-xs text-muted-foreground">Twitch / market.csgo.com</p></section>
+    <div className="flex items-center justify-center p-4 sm:p-8"><div className="w-full max-w-md"><Outlet /></div></div>
+  </div>;
 }

@@ -1,3 +1,4 @@
+import { QueryError } from "@/components/common/Page";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -132,7 +133,7 @@ export default function ChatMessagesPage() {
     setAllMessages([]);
   }, [channelId, timeWindow, debouncedSearch, debouncedChatter]);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: [
       "chat-messages",
       channelId,
@@ -154,7 +155,7 @@ export default function ChatMessagesPage() {
         .then((r) => r.data),
     enabled: !!channelId,
     staleTime: 15_000,
-    placeholderData: (prev) => prev,
+
   });
 
   // Accumulate messages
@@ -212,16 +213,18 @@ export default function ChatMessagesPage() {
     return groups;
   }, [displayMessages, t]);
 
+  if (isError) return <div className="page-shell"><QueryError onRetry={() => void refetch()} /></div>;
+
   if (!channelId) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-96">
+      <div className="page-shell flex items-center justify-center min-h-96">
         <p className="text-muted-foreground">{t("dashboard.selectChannel")}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="page-shell space-y-6 max-w-7xl mx-auto">
       {/* ── Page Header ── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -301,7 +304,7 @@ export default function ChatMessagesPage() {
       </div>
 
       {/* ── Messages Feed ── */}
-      <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-4 sm:p-6 shadow-sm space-y-4">
+      <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm space-y-4">
         {isLoading ? (
           <div className="space-y-3 py-4">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -314,7 +317,7 @@ export default function ChatMessagesPage() {
           </div>
         ) : displayMessages.length === 0 ? (
           <div className="py-16 text-center text-muted-foreground flex flex-col items-center justify-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-muted/40 flex items-center justify-center text-muted-foreground">
+            <div className="w-12 h-12 rounded-xl bg-muted/40 flex items-center justify-center text-muted-foreground">
               <IconMessageSquare />
             </div>
             <p className="text-sm font-medium text-foreground">{t("chat.noMessagesFound")}</p>

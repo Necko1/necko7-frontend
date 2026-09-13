@@ -1,3 +1,4 @@
+import { QueryError } from "@/components/common/Page";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -66,14 +67,14 @@ export default function GlobalProfilePage() {
   const pageSize = 15;
 
   // 1. Global viewer profile
-  const { data: globalProfile, isLoading: isProfileLoading } = useQuery({
+  const { data: globalProfile, isLoading: isProfileLoading, isError: profileError, refetch: retryProfile } = useQuery({
     queryKey: ["viewer-global-profile"],
     queryFn: () => viewerApi.getGlobalProfile().then((r) => r.data),
     staleTime: 30_000,
   });
 
   // 2. Global redemptions history across all channels
-  const { data: globalRedemptions = [], isLoading: isRedemptionsLoading } = useQuery({
+  const { data: globalRedemptions = [], isLoading: isRedemptionsLoading, isError: historyError, refetch: retryHistory } = useQuery({
     queryKey: ["viewer-global-redemptions", page],
     queryFn: () =>
       viewerApi
@@ -82,22 +83,23 @@ export default function GlobalProfilePage() {
     staleTime: 30_000,
   });
 
+  if (profileError || historyError) return <div className="page-shell"><QueryError onRetry={() => { void retryProfile(); void retryHistory(); }} /></div>;
   if (isProfileLoading) {
     return (
-      <div className="p-8 max-w-6xl mx-auto space-y-6">
-        <Skeleton className="h-28 w-full rounded-3xl" />
+      <div className="page-shell max-w-6xl mx-auto space-y-6">
+        <Skeleton className="h-28 w-full rounded-xl" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-44 rounded-2xl" />
-          <Skeleton className="h-44 rounded-2xl" />
+          <Skeleton className="h-44 rounded-xl" />
+          <Skeleton className="h-44 rounded-xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
+    <div className="page-shell max-w-6xl">
       {/* ── Global Header ── */}
-      <div className="rounded-3xl border border-border bg-card p-6 md:p-8 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-6 md:p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20 rounded-full ring-4 ring-primary/20 shrink-0 shadow-sm overflow-hidden">
@@ -131,7 +133,7 @@ export default function GlobalProfilePage() {
       {globalProfile && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Chat Total Stats */}
-          <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
                 <IconChat />
@@ -158,7 +160,7 @@ export default function GlobalProfilePage() {
           </div>
 
           {/* Redemptions Total Stats */}
-          <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
@@ -203,7 +205,7 @@ export default function GlobalProfilePage() {
       )}
 
       {/* ── Active Channels Grid ── */}
-      <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
         <div className="flex items-center gap-2">
           <IconBroadcast />
           <h3 className="text-sm font-bold text-foreground">
@@ -261,7 +263,7 @@ export default function GlobalProfilePage() {
       </div>
 
       {/* ── Global Redemptions Feed ── */}
-      <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
         <h3 className="text-sm font-bold text-foreground">
           {t("profile.allRedemptionsGlobal", "All Redemptions (Across All Channels)")}
         </h3>

@@ -1,3 +1,4 @@
+import { QueryError } from "@/components/common/Page";
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -206,6 +207,7 @@ export default function PublicRewardsPage() {
     data: broadcasterInfo,
     isLoading: isInfoLoading,
     error: infoError,
+    refetch: retryInfo,
   } = useQuery({
     queryKey: ["public-broadcaster", identifier],
     queryFn: () => publicApi.getBroadcasterInfo(identifier!).then((r) => r.data),
@@ -218,6 +220,7 @@ export default function PublicRewardsPage() {
     data: rewards = [],
     isLoading: isRewardsLoading,
     error: rewardsError,
+    refetch: retryRewards,
   } = useQuery({
     queryKey: ["public-rewards", identifier],
     queryFn: () => publicApi.getRewards(identifier!).then((r) => r.data),
@@ -297,21 +300,22 @@ export default function PublicRewardsPage() {
 
   if (isInfoLoading) {
     return (
-      <div className="p-8 max-w-6xl mx-auto space-y-6">
-        <Skeleton className="h-28 w-full rounded-2xl" />
+      <div className="page-shell max-w-6xl mx-auto space-y-6">
+        <Skeleton className="h-28 w-full rounded-xl" />
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 rounded-2xl" />
+            <Skeleton key={i} className="h-56 rounded-xl" />
           ))}
         </div>
       </div>
     );
   }
 
+  if ((infoError && (infoError as AxiosError)?.response?.status !== 404) || (rewardsError && !isAccessDenied)) return <div className="page-shell"><QueryError onRetry={() => { void retryInfo(); void retryRewards(); }} /></div>;
   if (infoError || !broadcasterInfo) {
     return (
       <div className="p-12 max-w-md mx-auto text-center space-y-4">
-        <div className="w-16 h-16 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+        <div className="w-16 h-16 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
           <IconLock />
         </div>
         <h2 className="text-xl font-bold text-foreground">{t("profile.channelNotFound", "Channel Not Found")}</h2>
@@ -326,13 +330,13 @@ export default function PublicRewardsPage() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
+    <div className="page-shell max-w-6xl">
       {/* ── Channel Header ── */}
-      <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/60 backdrop-blur p-6 md:p-8 shadow-sm">
+      <div className="catalog-header">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           {/* Avatar + Name + Badges */}
           <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20 rounded-full ring-4 ring-primary/20 shrink-0 shadow-md">
+            <Avatar className="h-12 w-12 rounded-md shrink-0">
               <AvatarImage
                 src={broadcasterInfo.profile_image_url ?? undefined}
                 alt={broadcasterInfo.display_name || broadcasterInfo.channel_login}
@@ -435,8 +439,8 @@ export default function PublicRewardsPage() {
 
       {/* ── If Showcase is disabled by streamer ── */}
       {isAccessDenied ? (
-        <div className="rounded-3xl border border-dashed border-border bg-card/40 p-12 text-center space-y-4 max-w-xl mx-auto">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+        <div className="rounded-xl border border-dashed border-border bg-card/40 p-12 text-center space-y-4 max-w-xl mx-auto">
+          <div className="w-16 h-16 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
             <IconLock />
           </div>
           <h2 className="text-xl font-bold text-foreground">
@@ -509,11 +513,11 @@ export default function PublicRewardsPage() {
           {isRewardsLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-64 rounded-2xl" />
+                <Skeleton key={i} className="h-64 rounded-xl" />
               ))}
             </div>
           ) : filteredRewards.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-border p-12 text-center space-y-2">
+            <div className="rounded-xl border border-dashed border-border p-12 text-center space-y-2">
               <p className="text-base font-semibold text-foreground">
                 {t("public.noRewardsAvailable", "No rewards available")}
               </p>
@@ -573,18 +577,18 @@ function RewardCard({
       role="button"
       tabIndex={0}
       onClick={onClick}
-      onKeyDown={(e) => e.key === "Enter" && onClick()}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onClick(); } }}
       className={cn(
-        "group relative rounded-2xl border cursor-pointer transition-all duration-200 overflow-hidden flex flex-col justify-between select-none text-left focus:outline-none focus:ring-2 focus:ring-primary/40 min-h-[310px]",
-        "hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
+        "reward-tile public-reward-tile group relative cursor-pointer overflow-hidden flex flex-col select-none text-left",
+        "hover:border-primary/40  hover:shadow-primary/5 ",
         reward.is_paused
-          ? "opacity-65 grayscale-[0.2] border-amber-500/30 bg-muted/20"
+          ? "public-reward-paused"
           : "border-border bg-card"
       )}
     >
       {/* ── Top Visual Media Banner ── */}
       {isFixed && (
-        <div className="relative aspect-[4/3] w-full bg-muted/15 border-b border-border/50 flex items-center justify-center p-4 overflow-hidden">
+        <div className="reward-art w-full flex items-center justify-center p-4 overflow-hidden">
           {reward.market_item_name ? (
             <SkinImage
               marketItemName={reward.market_item_name}
@@ -598,7 +602,7 @@ function RewardCard({
           )}
 
           {reward.is_paused && (
-            <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 backdrop-blur-md border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
+            <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
               <span>{t("public.paused", "Paused")}{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
             </div>
@@ -607,12 +611,12 @@ function RewardCard({
       )}
 
       {isPool && (
-        <div className="relative aspect-[4/3] w-full bg-muted/15 border-b border-border/50 flex items-center justify-center p-4 overflow-hidden">
+        <div className="reward-art w-full flex items-center justify-center p-4 overflow-hidden">
           {reward.pool_items?.[0]?.market_hash_name ? (
             <SkinImage
               marketItemName={reward.pool_items[0].market_hash_name}
               size={300}
-              className="w-full h-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-contain drop-shadow-md transition-transform duration-300"
             />
           ) : (
             <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
@@ -620,13 +624,13 @@ function RewardCard({
             </div>
           )}
 
-          <div className="absolute top-2.5 left-2.5 rounded-lg bg-black/60 backdrop-blur-md px-2.5 py-1 flex items-center gap-1.5 text-[10px] text-white/90 font-medium border border-white/10 shadow-sm">
+          <div className="absolute top-2.5 left-2.5 rounded-lg bg-black/60 px-2.5 py-1 flex items-center gap-1.5 text-[10px] text-white/90 font-medium border border-white/10 shadow-sm">
             <IconPool />
             <span>{t("public.poolSkinsCount", { count: reward.pool_items?.length ?? 0 })}</span>
           </div>
 
           {reward.is_paused && (
-            <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 backdrop-blur-md border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
+            <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
               <span>{t("public.paused", "Paused")}{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
             </div>
@@ -635,8 +639,8 @@ function RewardCard({
       )}
 
       {isFilter && (
-        <div className="relative aspect-[4/3] w-full bg-gradient-to-br from-violet-500/10 via-primary/5 to-cyan-500/10 border-b border-border/50 flex flex-col items-center justify-center gap-2 p-4 overflow-hidden">
-          <div className="rounded-full bg-primary/10 p-3 text-primary group-hover:scale-110 transition-transform duration-300 shadow-sm">
+        <div className="reward-art w-full flex flex-col items-center justify-center gap-2 p-4 overflow-hidden">
+          <div className="rounded-full bg-primary/10 p-3 text-primary transition-transform duration-300 shadow-sm">
             <IconFilter />
           </div>
           {reward.filter_details && (
@@ -646,7 +650,7 @@ function RewardCard({
           )}
 
           {reward.is_paused && (
-            <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 backdrop-blur-md border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
+            <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
               <span>{t("public.paused", "Paused")}{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
             </div>
@@ -655,7 +659,7 @@ function RewardCard({
       )}
 
       {/* ── Bottom Body Content ── */}
-      <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+      <div className="reward-body flex-1 flex flex-col justify-between space-y-3">
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-1 flex-wrap">
             <Badge
@@ -810,7 +814,7 @@ function RewardDetailExpandedView({
       </div>
 
       {/* Main Reward Card Hero */}
-      <div className="rounded-3xl border border-border bg-card p-6 md:p-8 space-y-6">
+      <div className="rounded-xl border border-border bg-card p-6 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
@@ -845,7 +849,7 @@ function RewardDetailExpandedView({
           </div>
 
           {/* Pricing Box - Note: Market Value NOT duplicated here */}
-          <div className="flex flex-row md:flex-col items-baseline md:items-end justify-between w-full md:w-auto p-4 rounded-2xl bg-secondary/30 border border-border/60 shrink-0 gap-1">
+          <div className="flex flex-row md:flex-col items-baseline md:items-end justify-between w-full md:w-auto p-4 rounded-xl bg-secondary/30 border border-border/60 shrink-0 gap-1">
             <span className="text-xs text-muted-foreground font-medium">{t("public.pointsCost", "Channel Points Cost")}</span>
             {reward.cost_points != null ? (
               <span className="text-2xl font-black text-purple-400 font-mono">
@@ -859,7 +863,7 @@ function RewardDetailExpandedView({
 
         {/* ── If FIXED: Large Single Skin Showcase ── */}
         {isFixed && (
-          <div className="p-8 rounded-2xl border border-border/60 bg-background/50 flex flex-col md:flex-row items-center justify-center gap-8 text-center md:text-left">
+          <div className="page-shell rounded-xl border border-border/60 bg-background/50 flex flex-col md:flex-row items-center justify-center gap-8 text-center md:text-left">
             <a
               href={getCsgoMarketUrl(reward.market_item_name)}
               target="_blank"
@@ -903,7 +907,7 @@ function RewardDetailExpandedView({
 
         {/* ── If FILTER: Criteria Box ── */}
         {isFilter && reward.filter_details && (
-          <div className="p-6 rounded-2xl border border-teal-500/20 bg-teal-500/5 space-y-3">
+          <div className="p-6 rounded-xl border border-teal-500/20 bg-teal-500/5 space-y-3">
             <h3 className="text-sm font-bold text-teal-400 flex items-center gap-2">
               <IconSparkles />
               <span>{t("public.filterCriteria", "Filter Criteria")}</span>
@@ -964,7 +968,7 @@ function RewardDetailExpandedView({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-border/60">
             {/* 1. Chat Activity Requirement */}
             {chatReqText && (
-              <div className="p-4 rounded-2xl bg-secondary/20 border border-border/60 space-y-2.5">
+              <div className="p-4 rounded-xl bg-secondary/20 border border-border/60 space-y-2.5">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-violet-400" />
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -979,7 +983,7 @@ function RewardDetailExpandedView({
 
             {/* 2. Twitch Limits & Cooldown */}
             {hasTwitchLimits && (
-              <div className="p-4 rounded-2xl bg-secondary/20 border border-border/60 space-y-2.5">
+              <div className="p-4 rounded-xl bg-secondary/20 border border-border/60 space-y-2.5">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-purple-400" />
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -1011,7 +1015,7 @@ function RewardDetailExpandedView({
 
             {/* 3. Bot Purchase Limits */}
             {hasBotLimits && (
-              <div className="p-4 rounded-2xl bg-secondary/20 border border-border/60 space-y-2.5">
+              <div className="p-4 rounded-xl bg-secondary/20 border border-border/60 space-y-2.5">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-amber-400" />
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -1066,7 +1070,7 @@ function PoolMiniCard({
       target="_blank"
       rel="noopener noreferrer"
       title={`View "${item.market_hash_name}" on CS2 Market`}
-      className="group/pool flex flex-col justify-between p-4 rounded-2xl border border-border/80 bg-background/80 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all space-y-3 cursor-pointer text-left no-underline block"
+      className="group/pool flex flex-col justify-between p-4 rounded-xl border border-border/80 bg-background/80 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all space-y-3 cursor-pointer text-left no-underline block"
     >
       {/* Top: Drop Chance Badge (NO EMOJI) & Price with Deviation */}
       <div className="flex items-center justify-between gap-1.5">

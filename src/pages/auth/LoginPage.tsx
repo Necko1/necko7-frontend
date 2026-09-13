@@ -37,9 +37,9 @@ function AuthButton({ href, variant, icon, title, description }: AuthButtonProps
       href={href}
       className={cn(
         "flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 group",
-        "hover:-translate-y-0.5 active:translate-y-0",
+
         variant === "primary"
-          ? "bg-primary/10 border-primary/30 hover:bg-primary/20 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
+          ? "bg-primary/10 border-primary/30 hover:bg-primary/20 hover:border-primary/50 "
           : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
       )}
     >
@@ -75,7 +75,7 @@ export default function LoginPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="glass rounded-2xl p-8 glow-teal space-y-6">
+    <div className="rounded-lg p-5 sm:p-8 bg-card border border-border space-y-6">
       <div className="flex justify-end -mt-2 -mr-2">
         <LanguageSwitcher variant="compact" className="bg-white/5 border-white/10" />
       </div>
@@ -101,7 +101,7 @@ export default function LoginPage() {
           <div className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center">
-          <span className="px-3 text-xs text-muted-foreground bg-[#201c18]">
+          <span className="px-3 text-xs text-muted-foreground bg-card">
             {t("auth.chooseLoginType")}
           </span>
         </div>

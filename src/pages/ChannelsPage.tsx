@@ -109,9 +109,9 @@ export default function ChannelsPage() {
   };
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="page-shell space-y-8 max-w-7xl mx-auto">
       {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
             {t("channels.title")}
@@ -122,7 +122,7 @@ export default function ChannelsPage() {
         </div>
 
         {/* Search bar & connect action */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative w-full sm:w-64">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
               <IconSearch />
@@ -148,7 +148,7 @@ export default function ChannelsPage() {
       </div>
 
       {/* ── Channels Grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
         {/* ── "Connect to your channel" card — shown first if user is not in list ── */}
         {!isSelfConnected && (
           <div
@@ -156,10 +156,10 @@ export default function ChannelsPage() {
             tabIndex={0}
             onClick={handleConnectChannel}
             onKeyDown={(e) => e.key === "Enter" && handleConnectChannel()}
-            className="group relative flex flex-col justify-between p-6 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-all duration-200 cursor-pointer min-h-56 text-left focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="group relative flex flex-col justify-between p-6 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-all duration-200 cursor-pointer min-h-56 text-left focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <div className="space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-primary/15 border border-primary/20 text-primary flex items-center justify-center group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200 glow-teal">
+              <div className="w-14 h-14 rounded-xl bg-primary/15 border border-primary/20 text-primary flex items-center justify-center group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200 glow-teal">
                 <IconPlus />
               </div>
               <div>
@@ -194,7 +194,7 @@ export default function ChannelsPage() {
               onClick={() => handleSelectChannel(b.channel_id, b.role, b.channel_login)}
               onKeyDown={(e) => e.key === "Enter" && handleSelectChannel(b.channel_id, b.role, b.channel_login)}
               className={cn(
-                "group relative flex flex-col justify-between p-5 rounded-2xl border bg-card transition-all duration-200 cursor-pointer min-h-56 text-left focus:outline-none focus:ring-2 focus:ring-primary/40 hover:shadow-lg hover:shadow-primary/5",
+                "group relative flex flex-col justify-between p-5 rounded-xl border bg-card transition-all duration-200 cursor-pointer min-h-56 text-left focus:outline-none focus:ring-2 focus:ring-primary/40 hover:shadow-lg hover:shadow-primary/5",
                 isSelected
                   ? "border-primary ring-1 ring-primary/40 shadow-sm"
                   : "border-border hover:border-primary/40 hover:-translate-y-0.5"

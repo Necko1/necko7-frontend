@@ -1,27 +1,32 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
+import i18n from "@/i18n";
+import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import AppLayout from "@/components/layout/AppLayout";
 import AuthLayout from "@/components/layout/AuthLayout";
-import LoginPage from "@/pages/auth/LoginPage";
-import InitBotPage from "@/pages/auth/InitBotPage";
-import DashboardPage from "@/pages/DashboardPage";
-import RewardsPage from "@/pages/RewardsPage";
-import RedemptionsPage from "@/pages/RedemptionsPage";
-import ChannelsPage from "@/pages/ChannelsPage";
-import SettingsPage from "@/pages/SettingsPage";
-import ChatPage from "@/pages/ChatPage";
-import ChatMessagesPage from "@/pages/ChatMessagesPage";
-import ChatUserPage from "@/pages/ChatUserPage";
-import LogsPage from "@/pages/LogsPage";
-import PublicRewardsPage from "@/pages/PublicRewardsPage";
-import ChannelProfilePage from "@/pages/ChannelProfilePage";
-import GlobalProfilePage from "@/pages/GlobalProfilePage";
-import ShortRewardRedirect from "@/pages/ShortRewardRedirect";
+const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
+const InitBotPage = lazy(() => import("@/pages/auth/InitBotPage"));
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+const RewardsPage = lazy(() => import("@/pages/RewardsPage"));
+const RedemptionsPage = lazy(() => import("@/pages/RedemptionsPage"));
+const ChannelsPage = lazy(() => import("@/pages/ChannelsPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const ChatPage = lazy(() => import("@/pages/ChatPage"));
+const ChatMessagesPage = lazy(() => import("@/pages/ChatMessagesPage"));
+const ChatUserPage = lazy(() => import("@/pages/ChatUserPage"));
+const LogsPage = lazy(() => import("@/pages/LogsPage"));
+const PublicRewardsPage = lazy(() => import("@/pages/PublicRewardsPage"));
+const ChannelProfilePage = lazy(() => import("@/pages/ChannelProfilePage"));
+const GlobalProfilePage = lazy(() => import("@/pages/GlobalProfilePage"));
+const ShortRewardRedirect = lazy(() => import("@/pages/ShortRewardRedirect"));
 
 const queryClient = new QueryClient({
+  mutationCache: new MutationCache({ onError: (_error, _variables, _context, mutation) => {
+    if (!mutation.options.onError) toast.error(i18n.t("ops.saveError"));
+  } }),
   defaultOptions: {
     queries: {
       retry: 1,
@@ -36,6 +41,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <BrowserRouter>
+            <Suspense fallback={<div role="status" className="page-shell text-muted-foreground">{i18n.t("common.loading")}</div>}>
             <Routes>
               {/* Public / auth routes */}
               <Route element={<AuthLayout />}>
@@ -74,6 +80,7 @@ export default function App() {
               {/* Catch-all */}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
           <Toaster richColors position="top-right" />
         </TooltipProvider>
