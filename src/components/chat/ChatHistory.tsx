@@ -1,4 +1,5 @@
-import { useState } from "react";
+import Segments from "@/components/common/Segments";
+import { useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { chatApi } from "@/lib/apiClient";
@@ -36,51 +37,77 @@ function MessageText({ text, search }: { text: string; search: string }) {
   );
 }
 
+const authorPalette = [
+  "#d6eb98",
+  "#91cbe3",
+  "#e3b48f",
+  "#c8acf0",
+  "#89d6be",
+  "#edabc6",
+];
+function authorColor(identity: string) {
+  let hash = 0;
+  for (const letter of identity)
+    hash = (hash * 31 + letter.charCodeAt(0)) >>> 0;
+  return authorPalette[hash % authorPalette.length];
+}
 export function MessageStream({
   messages,
   search = "",
   onFilter,
+  groupConsecutive = true,
 }: {
   messages: ChatMessage[];
   search?: string;
   onFilter?: (login: string) => void;
+  groupConsecutive?: boolean;
 }) {
   const c = useCopy();
   return (
-    <ol className="message-stream">
+    <ol className="conversation-stream message-stream">
       {messages.map((message, index) => {
-        const day = new Date(message.sent_at).toLocaleDateString(undefined, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
-        const startDay =
-          index === 0 ||
-          new Date(messages[index - 1].sent_at).toLocaleDateString(undefined, {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          }) !== day;
+        const date = new Date(message.sent_at);
         const previous = messages[index - 1];
+        const startDay =
+          !previous ||
+          new Date(previous.sent_at).toDateString() !== date.toDateString();
         const continuation =
+          groupConsecutive &&
           !startDay &&
           previous?.chatter_user_id === message.chatter_user_id &&
-          Math.abs(Date.parse(previous.sent_at) - Date.parse(message.sent_at)) <
-            120_000;
+          Math.abs(Date.parse(previous.sent_at) - date.getTime()) < 120000;
         return (
           <li key={message.message_id || message.id}>
-            {startDay && <div className="message-day">{day}</div>}
-            <article className="message-entry" data-continuation={continuation}>
-              <time title={new Date(message.sent_at).toLocaleString()}>
-                {new Date(message.sent_at).toLocaleTimeString([], {
+            {startDay && (
+              <div className="message-day">
+                {date.toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </div>
+            )}
+            <article
+              className="conversation-line"
+              data-continuation={continuation}
+            >
+              <time dateTime={message.sent_at} title={date.toLocaleString()}>
+                {date.toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
-                  second: "2-digit",
+                  hour12: false,
                 })}
               </time>
-              <div className="min-w-0">
-                {!continuation && (
-                  <div className="message-author">
+              <div className="conversation-content">
+                {continuation ? (
+                  <span className="sr-only">
+                    {message.chatter_user_login}:{" "}
+                  </span>
+                ) : (
+                  <span
+                    className="conversation-author"
+                    style={{ color: authorColor(message.chatter_user_id) }}
+                  >
                     <Link to={`/chat/users/${message.chatter_user_id}`}>
                       @{message.chatter_user_login}
                     </Link>
@@ -89,27 +116,44 @@ export function MessageStream({
                     )}
                     {onFilter && (
                       <button
+                        type="button"
+                        className="author-filter"
                         onClick={() => onFilter(message.chatter_user_login)}
+                        title={c("Filter this author", "Фильтр по автору")}
                         aria-label={c(
                           `Filter messages by ${message.chatter_user_login}`,
                           `Сообщения ${message.chatter_user_login}`,
                         )}
                       >
-                        ↳ {c("Only this viewer", "Только этот зритель")}
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          stroke="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path d="M2 3h12L9 8v5l-2-1V8Z" />
+                        </svg>
                       </button>
                     )}
-                  </div>
+                    <span aria-hidden="true" className="author-colon">
+                      :{" "}
+                    </span>
+                  </span>
                 )}
-                <p className="message-body">
+                <span className="message-body">
                   {message.message_text ? (
                     <MessageText text={message.message_text} search={search} />
                   ) : (
-                    c(
-                      "Message content unavailable",
-                      "Содержимое сообщения недоступно",
-                    )
+                    <em>
+                      {c(
+                        "Message content unavailable",
+                        "Содержимое сообщения недоступно",
+                      )}
+                    </em>
                   )}
-                </p>
+                </span>
               </div>
             </article>
           </li>
@@ -147,6 +191,7 @@ function ChatHistoryView({
   const [search, setSearch] = useState(params.get("q") || "");
   const [login, setLogin] = useState(params.get("chatter") || "");
   const [live, setLive] = useState(false);
+  const liveStatusId = useId();
   const page = Math.max(0, Number(params.get("chatPage")) || 0);
   const hours = Number(params.get("hours")) || null;
   const q = params.get("q") || "";
@@ -205,27 +250,50 @@ function ChatHistoryView({
             />
           </label>
         )}
-        <label>
-          <span>{c("Period", "Период")}</span>
-          <select
-            value={hours || ""}
-            onChange={(e) => update({ hours: e.target.value })}
-          >
-            <option value="">{c("All time", "За всё время")}</option>
-            <option value="24">24h</option>
-            <option value="168">7d</option>
-            <option value="720">30d</option>
-          </select>
-        </label>
         <Button type="submit">{c("Search", "Найти")}</Button>
       </form>
+      <div className="chat-reading-controls">
+        <Segments
+          label={c("Period", "Период")}
+          value={String(hours || "")}
+          options={[
+            { value: "", label: c("All time", "Всё время") },
+            { value: "24", label: "24h" },
+            { value: "168", label: "7d" },
+            { value: "720", label: "30d" },
+          ]}
+          onChange={(value) => update({ hours: value })}
+        />
+        <Segments
+          label={c("Read this page", "Порядок на странице")}
+          value={params.get("direction") || "desc"}
+          options={[
+            { value: "desc", label: c("Newest first", "Сначала новые") },
+            { value: "asc", label: c("Oldest first", "Сначала старые") },
+          ]}
+          onChange={(value) =>
+            setParams((previous) => {
+              const next = new URLSearchParams(previous);
+              next.set("direction", value);
+              return next;
+            })
+          }
+        />
+      </div>
       <div className="history-toolbar">
         <span>
           {query.data
             ? `${query.data.total.toLocaleString()} ${c("messages", "сообщений")}`
             : "…"}{" "}
-          · {c("Newest first", "Сначала новые")}
-          {q && <span className="ml-2">{c("Matching", "Поиск")}: “{q}”</span>}
+          ·{" "}
+          {params.get("direction") === "asc"
+            ? c("Oldest first on this page", "Сначала старые на этой странице")
+            : c("Newest first", "Сначала новые")}
+          {q && (
+            <span className="ml-2">
+              {c("Matching", "Поиск")}: “{q}”
+            </span>
+          )}
         </span>
         <div className="flex gap-3 items-center">
           {(q || chatter || hours) && (
@@ -240,18 +308,15 @@ function ChatHistoryView({
               {c("Clear filters", "Сбросить фильтры")}
             </Button>
           )}
-          <label className="flex gap-2">
+          <label className="intentional-toggle">
             <input
               type="checkbox"
+              role="switch"
+              aria-describedby={liveStatusId}
               checked={live}
               onChange={(e) => setLive(e.target.checked)}
             />
-            {page > 0 && live
-              ? c(
-                  "Updates paused on older pages",
-                  "Обновления приостановлены на старых страницах",
-                )
-              : c("Follow latest", "Следить за новыми")}
+            {c("Follow latest", "Следить за новыми")}
           </label>
           <Button
             variant="ghost"
@@ -261,6 +326,39 @@ function ChatHistoryView({
             {c("Refresh", "Обновить")}
           </Button>
         </div>
+      </div>
+      <div className="chat-live-status" data-paused={live && page > 0}>
+        <span id={liveStatusId} role="status">
+          {!live
+            ? c(
+                "Manual refresh · automatic updates are off",
+                "Ручное обновление · автообновление выключено",
+              )
+            : page > 0
+              ? c(
+                  "Paused while reading older messages. Resumes on the latest page.",
+                  "Пауза при чтении старых сообщений. Обновления продолжатся на последней странице.",
+                )
+              : c(
+                  "Live · checks for new messages every 10 seconds",
+                  "Включено · проверка новых сообщений каждые 10 секунд",
+                )}
+        </span>
+        {live && page > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setParams((previous) => {
+                const next = new URLSearchParams(previous);
+                next.delete("chatPage");
+                return next;
+              })
+            }
+          >
+            {c("Return to latest", "К новым сообщениям")} ↑
+          </Button>
+        )}
       </div>
       {query.isError ? (
         <QueryError onRetry={() => query.refetch()} />
@@ -276,7 +374,12 @@ function ChatHistoryView({
         />
       ) : (
         <MessageStream
-          messages={query.data.items}
+          groupConsecutive={!userId && !chatter && !q}
+          messages={
+            params.get("direction") === "asc"
+              ? [...query.data.items].reverse()
+              : query.data.items
+          }
           search={q}
           onFilter={
             userId

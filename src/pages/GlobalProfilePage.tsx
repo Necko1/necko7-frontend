@@ -1,10 +1,11 @@
+import ProfileIdentity from "@/components/profiles/ProfileIdentity";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { viewerApi } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import { useCopy } from "@/lib/useCopy";
-import { PageHeader, QueryError } from "@/components/common/Page";
+import { QueryError } from "@/components/common/Page";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import ViewerHistory from "@/components/profiles/ViewerHistory";
@@ -36,10 +37,12 @@ export default function GlobalProfilePage() {
         b.messages_count - a.messages_count,
     );
   return (
-    <div className="page-shell space-y-7">
-      <PageHeader
-        eyebrow={c("Your account · all channels", "Ваш аккаунт · все каналы")}
-        title={user?.login || c("Your profile", "Ваш профиль")}
+    <div className="page-shell profile-shell space-y-7">
+      <ProfileIdentity
+        avatar={user?.avatar_url}
+        login={user?.login}
+        context={c("Your account · all channels", "Ваш аккаунт · все каналы")}
+        name={user?.login || c("Your profile", "Ваш профиль")}
         description={c(
           "Your communities and reward history in one place. Channel Points and eligibility belong to each channel.",
           "Ваши сообщества и история наград. Баллы и доступность наград относятся к конкретному каналу.",

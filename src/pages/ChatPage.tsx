@@ -1,3 +1,4 @@
+import Segments from "@/components/common/Segments";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
@@ -15,6 +16,9 @@ export default function ChatPage() {
   const [params, setParams] = useSearchParams();
   const hours =
     params.get("hours") === "all" ? null : Number(params.get("hours")) || 168;
+  const interval = [1, 6, 24].includes(Number(params.get("step")))
+    ? Number(params.get("step"))
+    : 6;
   const sort = params.get("sort") === "characters" ? "characters" : "messages";
   const page = Math.max(0, Number(params.get("page")) || 0);
   const search = params.get("search") || "";
@@ -76,7 +80,22 @@ export default function ChatPage() {
           </button>
         ))}
       </nav>
-      <ChatDashboardWidget channelId={id} compact={false} hours={hours} />
+      <Segments
+        label={c("Aggregation step", "Шаг агрегации")}
+        value={String(interval)}
+        options={[
+          { value: "1", label: "1h" },
+          { value: "6", label: "6h" },
+          { value: "24", label: "24h" },
+        ]}
+        onChange={(value) => set("step", value)}
+      />
+      <ChatDashboardWidget
+        channelId={id}
+        compact={false}
+        hours={hours}
+        interval={interval}
+      />
       <section className="space-y-4">
         <div className="section-heading">
           <h2>{c("Participating viewers", "Участники чата")}</h2>
@@ -101,13 +120,15 @@ export default function ChatPage() {
           <Button type="submit" variant="outline">
             {c("Search", "Найти")}
           </Button>
-          <label className="flex gap-2 items-center text-sm">
-            {c("Rank by", "Рейтинг по")}
-            <select value={sort} onChange={(e) => set("sort", e.target.value)}>
-              <option value="messages">{c("Messages", "Сообщения")}</option>
-              <option value="characters">{c("Characters", "Символы")}</option>
-            </select>
-          </label>
+          <Segments
+            label={c("Rank by", "Рейтинг по")}
+            value={sort}
+            onChange={(value) => set("sort", value)}
+            options={[
+              { value: "messages", label: c("Messages", "Сообщения") },
+              { value: "characters", label: c("Characters", "Символы") },
+            ]}
+          />
         </form>
         {query.isError ? (
           <QueryError onRetry={() => query.refetch()} />
@@ -127,6 +148,9 @@ export default function ChatPage() {
             {query.data.items.map((viewer, index) => (
               <Link
                 key={viewer.chatter_user_id}
+                data-rank={
+                  !search && page === 0 && index < 3 ? index + 1 : undefined
+                }
                 to={`/chat/users/${viewer.chatter_user_id}`}
               >
                 <span>{search ? "—" : page * 25 + index + 1}</span>

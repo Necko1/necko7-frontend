@@ -1,9 +1,10 @@
+import ProfileIdentity from "@/components/profiles/ProfileIdentity";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { chatApi, redemptionsApi } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import { useCopy } from "@/lib/useCopy";
-import { PageHeader, QueryError } from "@/components/common/Page";
+import { QueryError } from "@/components/common/Page";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ViewerLimits } from "@/components/profiles/ViewerHistory";
@@ -42,13 +43,15 @@ export default function ChatUserPage() {
   const select = (view: string, state = "") =>
     setParams({ view, ...(state ? { state } : {}) });
   return (
-    <div className="page-shell space-y-6">
-      <PageHeader
-        eyebrow={c(
+    <div className="page-shell profile-shell space-y-6">
+      <ProfileIdentity
+        avatar={user?.profile_image_url}
+        login={user?.user_login}
+        context={c(
           `Viewer casebook · ${channel?.channel_login || ""}`,
           `Профиль зрителя · ${channel?.channel_login || ""}`,
         )}
-        title={user?.display_name || user?.user_login || userId}
+        name={user?.display_name || user?.user_login || userId}
         description={c(
           "Review this viewer's activity, eligibility and unresolved purchases on the current channel.",
           "Проверьте активность зрителя, ограничения и нерешённые покупки на текущем канале.",
@@ -57,18 +60,6 @@ export default function ChatUserPage() {
       />
       {identity.isError && <QueryError onRetry={() => identity.refetch()} />}
       <div className="viewer-context-bar">
-        <span className="text-xs text-muted-foreground">
-          Twitch ID: {userId}
-        </span>
-        {user?.user_login && (
-          <a
-            href={`https://www.twitch.tv/${user.user_login}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            @{user.user_login} ↗
-          </a>
-        )}
         {holds.isError ? (
           <QueryError onRetry={() => holds.refetch()} />
         ) : (

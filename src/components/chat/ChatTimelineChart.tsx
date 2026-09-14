@@ -1,3 +1,4 @@
+import Segments from "@/components/common/Segments";
 import { useMemo, useRef, useState } from "react";
 import type { ChatTimelinePoint } from "@/types/api";
 import { useCopy } from "@/lib/useCopy";
@@ -24,7 +25,9 @@ export default function ChatTimelineChart({
     const available = timeline
       .filter((p) => Number.isFinite(Date.parse(p.bucket_start)))
       .sort((a, b) => a.bucket_start.localeCompare(b.bucket_start));
-    if (!available.length || activeOnly) return available;
+    if (!available.length) return available;
+    if (activeOnly)
+      return available.filter((point) => point.message_count > 0).slice(-350);
     const end = Math.max(
       Math.floor(asOf / step) * step,
       Math.floor(
@@ -80,24 +83,23 @@ export default function ChatTimelineChart({
           </p>
         </div>
         <div>
-          <label>
-            {c("Measure", "Показатель")}
-            <select
-              value={metric}
-              onChange={(event) => setMetric(event.target.value as Metric)}
-            >
-              <option value="message_count">
-                {c("Messages", "Сообщения")}
-              </option>
-              <option value="char_count">{c("Characters", "Символы")}</option>
-              <option value="unique_chatters">
-                {c("Distinct viewers", "Уникальные зрители")}
-              </option>
-            </select>
-          </label>
-          <label className="flex gap-2 items-center">
+          <Segments
+            label={c("Measure", "Показатель")}
+            value={metric}
+            onChange={(value) => setMetric(value as Metric)}
+            options={[
+              { value: "message_count", label: c("Messages", "Сообщения") },
+              { value: "char_count", label: c("Characters", "Символы") },
+              {
+                value: "unique_chatters",
+                label: c("Distinct viewers", "Зрители"),
+              },
+            ]}
+          />
+          <label className="intentional-toggle">
             <input
               type="checkbox"
+              role="switch"
               checked={activeOnly}
               onChange={(event) => {
                 setActiveOnly(event.target.checked);

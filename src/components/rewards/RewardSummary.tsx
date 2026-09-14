@@ -87,11 +87,21 @@ export default function RewardSummary({
           {value.market_item_name || c("No item selected", "Предмет не выбран")}
         </p>
       )}
+      {type === "POOL" && pool.length > 4 && (
+        <p>
+          {c(
+            `${pool.length} items configured · showing first 4`,
+            `${pool.length} предметов · показаны первые 4`,
+          )}
+        </p>
+      )}
       {type === "POOL" && (
         <ul className="preview-pool">
-          {pool.map((item, index) => (
+          {pool.slice(0, 4).map((item, index) => (
             <li key={index}>
-              <span>{item.market_hash_name || "—"}</span>
+              <span title={item.market_hash_name}>
+                {item.market_hash_name || "—"}
+              </span>
               <strong>
                 {weight > 0 ? ((item.weight / weight) * 100).toFixed(1) : "0"}%
               </strong>
@@ -118,8 +128,14 @@ export default function RewardSummary({
         <div>
           <dt>{c("Price protection", "Защита цены")}</dt>
           <dd>
-            {value.permissible_market_price_deviation ?? 10}%{" "}
-            {c("maximum deviation", "максимальное отклонение")}
+            {type === "POOL"
+              ? c(
+                  "Individual tolerance per pool item",
+                  "Отклонение задано для каждого предмета",
+                )
+              : type === "FILTER"
+                ? c("Filter price range", "Диапазон цены фильтра")
+                : `${value.permissible_market_price_deviation ?? 10}% ${c("maximum deviation", "максимальное отклонение")}`}
             {(value.min_market_price != null ||
               value.max_market_price != null) && (
               <small className="block">

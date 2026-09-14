@@ -1,3 +1,5 @@
+import SkinImage from "@/components/common/SkinImage";
+import { uuidToBase64Url } from "@/lib/shortUrl";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -137,6 +139,12 @@ export default function ViewerHistory({ channelId }: { channelId?: string }) {
                 className="viewer-history-row"
               >
                 <summary>
+                  <span className="history-art">
+                    <SkinImage
+                      key={r.market_item_name}
+                      marketItemName={r.market_item_name}
+                    />
+                  </span>
                   <span className="history-status" data-status={status}>
                     {t(`redemptions.statuses.${labels[status]}`, status)}
                   </span>
@@ -178,36 +186,53 @@ export default function ViewerHistory({ channelId }: { channelId?: string }) {
                               "Последний зафиксированный результат указан выше.",
                             ))}
                   </p>
-                  <dl className="preview-facts">
-                    <div>
-                      <dt>
-                        {c("Market amount recorded", "Сумма покупки в записи")}
-                      </dt>
-                      <dd>
-                        {r.market_paid_price == null
-                          ? "—"
-                          : formatMinorCurrency(
-                              r.market_paid_price,
-                              r.currency,
-                            )}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>{c("Last update", "Последнее обновление")}</dt>
-                      <dd>{new Date(r.updated_at).toLocaleString()}</dd>
-                    </div>
-                    <div>
-                      <dt>
-                        {c(
-                          "Reference for the channel team",
-                          "Номер для команды канала",
-                        )}
-                      </dt>
-                      <dd className="font-mono text-xs">
-                        {r.twitch_redemption_id}
-                      </dd>
-                    </div>
-                  </dl>
+                  <Link
+                    className="history-reward-link"
+                    to={`/c/${"channel_login" in r ? r.channel_login : channelId}/rewards/${uuidToBase64Url(r.twitch_reward_id)}`}
+                  >
+                    {c("View reward", "Открыть награду")} →
+                  </Link>
+                  <details className="history-references">
+                    <summary>
+                      {c(
+                        "Purchase record & reference",
+                        "Запись покупки и номер обращения",
+                      )}
+                    </summary>
+                    <dl className="preview-facts">
+                      <div>
+                        <dt>
+                          {c(
+                            "Market amount recorded",
+                            "Сумма покупки в записи",
+                          )}
+                        </dt>
+                        <dd>
+                          {r.market_paid_price == null
+                            ? "—"
+                            : formatMinorCurrency(
+                                r.market_paid_price,
+                                r.currency,
+                              )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{c("Last update", "Последнее обновление")}</dt>
+                        <dd>{new Date(r.updated_at).toLocaleString()}</dd>
+                      </div>
+                      <div>
+                        <dt>
+                          {c(
+                            "Reference for the channel team",
+                            "Номер для команды канала",
+                          )}
+                        </dt>
+                        <dd className="font-mono text-xs">
+                          {r.twitch_redemption_id}
+                        </dd>
+                      </div>
+                    </dl>
+                  </details>
                 </div>
               </details>
             );

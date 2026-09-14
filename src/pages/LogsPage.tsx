@@ -1,3 +1,5 @@
+import Segments from "@/components/common/Segments";
+import { toast } from "sonner";
 import { QueryError } from "@/components/common/Page";
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -64,29 +66,34 @@ const IconRefresh = ({ spinning }: { spinning: boolean }) => (
 );
 
 const IconSearch = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <circle cx="11" cy="11" r="8" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
 
 const IconX = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-
-const IconCopy = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-  </svg>
-);
-
-const IconCheck = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
@@ -98,40 +105,6 @@ function formatLogTimestamp(dateStr: string): string {
     return format(d, "yyyy-MM-dd HH:mm:ss.SSS");
   } catch {
     return dateStr;
-  }
-}
-
-function getLevelBadgeStyle(level: ChannelLogLevel) {
-  switch (level) {
-    case "ERROR":
-      return "text-rose-400 bg-rose-500/10 border-rose-500/20";
-    case "WARN":
-      return "text-amber-400 bg-amber-500/10 border-amber-500/20";
-    case "INFO":
-      return "text-sky-400 bg-sky-500/10 border-sky-500/20";
-    case "DEBUG":
-      return "text-zinc-400 bg-zinc-500/10 border-zinc-500/20";
-    default:
-      return "text-muted-foreground bg-muted/20 border-border";
-  }
-}
-
-function getCategoryBadgeStyle(category: ChannelLogCategory) {
-  switch (category) {
-    case "MARKET":
-      return "text-teal-400 bg-teal-500/10 border-teal-500/20";
-    case "REDEMPTION":
-      return "text-violet-400 bg-violet-500/10 border-violet-500/20";
-    case "REWARD":
-      return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-    case "BOT":
-      return "text-cyan-400 bg-cyan-500/10 border-cyan-500/20";
-    case "AUTH":
-      return "text-pink-400 bg-pink-500/10 border-pink-500/20";
-    case "SYSTEM":
-      return "text-orange-400 bg-orange-500/10 border-orange-500/20";
-    default:
-      return "text-muted-foreground bg-muted/20 border-border";
   }
 }
 
@@ -158,9 +131,13 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
       solution_hint: log.solution_hint,
       details: log.details,
     };
-    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    navigator.clipboard
+      .writeText(JSON.stringify(payload, null, 2))
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => toast.error(t("common.error", "Could not copy")));
   };
 
   const hasDetails = log.details && Object.keys(log.details).length > 0;
@@ -169,142 +146,60 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
     typeof log.details?.tradeoffer_url === "string"
       ? (log.details.tradeoffer_url as string)
       : typeof log.details?.trade_offer_url === "string"
-      ? (log.details.trade_offer_url as string)
-      : undefined;
+        ? (log.details.trade_offer_url as string)
+        : undefined;
 
   return (
-    <div
-      className={cn(
-        "group border-b border-white/[0.04] transition-colors",
-        isExpanded ? "bg-white/[0.03]" : "hover:bg-white/[0.02]"
-      )}
+    <article
+      className="terminal-record"
+      data-level={log.level}
+      data-expanded={isExpanded}
     >
-      {/* Main Single-Line Console Row */}
-      <div
+      <button
+        type="button"
+        className="terminal-line"
         onClick={onToggle}
-        role="button" tabIndex={0} aria-expanded={isExpanded}
-        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
-        className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-xs cursor-pointer select-text"
+        aria-expanded={isExpanded}
+        aria-controls={`log-record-${log.id}`}
       >
-        {/* Timestamp */}
-        <span className="text-muted-foreground shrink-0 tabular-nums select-none">
+        <span className="terminal-index">
+          {isExpanded ? "−" : "+"} {log.id}
+        </span>
+        <time dateTime={log.created_at}>
           {formatLogTimestamp(log.created_at)}
-        </span>
-
-        {/* Level Tag */}
-        <span
-          className={cn(
-            "px-1.5 py-0.2 rounded text-[11px] font-semibold tracking-wide border shrink-0 select-none",
-            getLevelBadgeStyle(log.level)
-          )}
-        >
-          {log.level.padEnd(5, " ")}
-        </span>
-
-        {/* Category Tag */}
-        <span
-          className={cn(
-            "px-1.5 py-0.2 rounded text-[10px] font-medium uppercase tracking-wider border shrink-0 select-none",
-            getCategoryBadgeStyle(log.category)
-          )}
-        >
-          [{log.category}]
-        </span>
-
-        {/* Event Type */}
-        <span className="text-muted-foreground hidden xl:inline select-none text-xs">
-          {log.event_type}
-        </span>
-
-        {/* Message */}
-        <span className="text-foreground w-full xl:w-auto xl:flex-1 min-w-0 break-words text-sm">
-          {log.message}
-        </span>
-
-        {/* Expand indicator on hover */}
-        {(hasDetails || hasSolution) && (
-          <span className="text-[10px] text-muted-foreground transition-opacity shrink-0 select-none">
-            {isExpanded ? t("logs.collapseAll") : t("logs.expandAll")}
-          </span>
-        )}
-      </div>
-
-      {/* Expanded Console Details (Indented, No tree symbols/chevrons) */}
+        </time>
+        <span className="terminal-level">{log.level}</span>
+        <span className="terminal-source">{log.category}</span>
+        <span className="terminal-message">{log.message}</span>
+      </button>
       {isExpanded && (
-        <div className="px-4 sm:pl-8 pb-3 pt-3 text-xs font-mono space-y-2 select-text border-t border-white/[0.02]">
-          {/* event_type line */}
-          <div className="flex items-baseline gap-2">
-            <span className="text-muted-foreground/70 w-32 shrink-0">event_type:</span>
-            <span className="text-primary font-medium">{log.event_type}</span>
+        <div className="terminal-detail" id={`log-record-${log.id}`}>
+          <div className="terminal-event">
+            <span>event</span>
+            <strong>{log.event_type}</strong>
+            <Button size="sm" variant="ghost" onClick={copyDetails}>
+              {copied ? t("logs.copied") : t("logs.copyJson")}
+            </Button>
           </div>
-
-          {/* solution_hint line if present */}
           {hasSolution && (
-            <div className="flex items-baseline gap-2 text-amber-300">
-              <span className="text-amber-400/80 w-32 shrink-0 font-semibold">solution_hint:</span>
-              <span className="bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20 text-amber-200 break-words flex-1">
-                {log.solution_hint}
-              </span>
+            <div className="terminal-hint">
+              <span>hint</span>
+              <p>{log.solution_hint}</p>
             </div>
           )}
-
-          {/* Steam Trade Offer action button if present in details */}
-          {Boolean(tradeOfferUrl) && (
-            <div className="flex items-center gap-3 py-1.5 px-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <a
-                href={tradeOfferUrl!}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-sans text-xs font-medium shadow-xs transition-colors shrink-0"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-                {t("logs.openSteamTrade", "Открыть обмен в Steam ↗")}
+          {tradeOfferUrl &&
+            /^https:\/\/steamcommunity\.com\//.test(tradeOfferUrl) && (
+              <a href={tradeOfferUrl} target="_blank" rel="noreferrer">
+                {t("logs.openSteamTrade", "Open Steam trade")} ↗
               </a>
-              <span className="text-[11px] text-muted-foreground truncate font-mono">
-                {tradeOfferUrl || (log.details?.tradeoffer_url as string)}
-              </span>
-            </div>
-          )}
-
-          {/* details formatted as pretty JSON */}
-          {hasDetails && (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground/70 w-32 shrink-0">details:</span>
-                <button
-                  type="button"
-                  onClick={copyDetails}
-                  className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-0.5 rounded border border-border bg-card hover:bg-muted/40 transition-colors"
-                >
-                  {copied ? <IconCheck /> : <IconCopy />}
-                  {copied ? t("logs.copied") : t("logs.copyJson")}
-                </button>
-              </div>
-              <pre className="p-3 rounded-lg bg-black/40 border border-border/40 text-foreground/90 overflow-x-auto text-[11px] leading-relaxed">
-                {JSON.stringify(log.details, null, 2)}
-              </pre>
-            </div>
-          )}
-
-          {/* Log metadata & ID */}
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground/50 pt-1">
-            <span>Log ID: #{log.id} · Broadcaster ID: {log.broadcaster_id}</span>
-            <button
-              type="button"
-              onClick={copyDetails}
-              className="hover:text-foreground transition-colors underline"
-            >
-              {t("logs.copyJson")}
-            </button>
-          </div>
+            )}
+          {hasDetails && <pre>{JSON.stringify(log.details, null, 2)}</pre>}
+          <small>
+            channel {log.broadcaster_id} / record {log.id}
+          </small>
         </div>
       )}
-    </div>
+    </article>
   );
 }
 
@@ -318,14 +213,18 @@ export default function LogsPage() {
 
   // Filters state
   const initialLevel = (searchParams.get("level") as ChannelLogLevel) || "";
-  const [levelFilter, setLevelFilter] = useState<ChannelLogLevel | "">(initialLevel);
-  const [categoryFilter, setCategoryFilter] = useState<ChannelLogCategory | "">("");
+  const [levelFilter, setLevelFilter] = useState<ChannelLogLevel | "">(
+    initialLevel,
+  );
+  const [categoryFilter, setCategoryFilter] = useState<ChannelLogCategory | "">(
+    "",
+  );
   const [searchInput, setSearchInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
 
   // Time filters: presets directly update fromInput & toInput
   const [fromInput, setFromInput] = useState<string>(() =>
-    format(subHours(new Date(), 24), "yyyy-MM-dd'T'HH:mm")
+    format(subHours(new Date(), 24), "yyyy-MM-dd'T'HH:mm"),
   );
   const [toInput, setToInput] = useState<string>("");
 
@@ -370,7 +269,7 @@ export default function LogsPage() {
       limit: pageSize,
       offset: page * pageSize,
     }),
-    [levelFilter, categoryFilter, activeSearch, fromIso, toIso, pageSize, page]
+    [levelFilter, categoryFilter, activeSearch, fromIso, toIso, pageSize, page],
   );
 
   const {
@@ -464,14 +363,27 @@ export default function LogsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("logs.title")}</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            {t("logs.title")}
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {t("logs.subtitle")}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground flex items-center gap-2">{t("ops.autoRefresh")}<select className="h-8 border border-border bg-background px-2 rounded" value={refreshInterval ?? 0} onChange={e => setRefreshInterval(Number(e.target.value) || null)}><option value={0}>{t("ops.off")}</option><option value={5000}>5s</option><option value={15000}>15s</option><option value={30000}>30s</option></select></label>
+          <Segments
+            label={t("ops.autoRefresh")}
+            value={String(refreshInterval || 0)}
+            options={[
+              { value: "0", label: t("ops.off") },
+              { value: "5000", label: "5s" },
+              { value: "15000", label: "15s" },
+              { value: "30000", label: "30s" },
+            ]}
+            onChange={(value) => setRefreshInterval(Number(value) || null)}
+          />
+
           <Button
             variant="outline"
             size="sm"
@@ -509,7 +421,7 @@ export default function LogsPage() {
                     "px-2.5 py-1 rounded-lg text-xs font-semibold font-mono transition-all select-none",
                     levelFilter === lvl.value
                       ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {lvl.value ? lvl.label : t("common.all")}
@@ -538,7 +450,7 @@ export default function LogsPage() {
                     "px-2.5 py-1 rounded-lg text-xs font-semibold font-mono transition-all select-none",
                     categoryFilter === cat.value
                       ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {cat.value ? cat.label : t("common.all")}
@@ -563,14 +475,24 @@ export default function LogsPage() {
                 onClick={() => applyPreset(p.hours)}
                 className="px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all select-none"
               >
-                {p.hours === 1 ? t("logs.preset1h") : p.hours === 6 ? t("logs.preset6h") : p.hours === 24 ? t("logs.preset24h") : p.hours === 168 ? t("logs.preset7d") : t("logs.presetAll")}
+                {p.hours === 1
+                  ? t("logs.preset1h")
+                  : p.hours === 6
+                    ? t("logs.preset6h")
+                    : p.hours === 24
+                      ? t("logs.preset24h")
+                      : p.hours === 168
+                        ? t("logs.preset7d")
+                        : t("logs.presetAll")}
               </button>
             ))}
           </div>
 
           {/* From Input */}
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground font-mono">From:</span>
+            <span className="text-xs text-muted-foreground font-mono">
+              From:
+            </span>
             <input
               type="datetime-local"
               value={fromInput}
@@ -612,7 +534,10 @@ export default function LogsPage() {
         {/* Line 3: Search (wider) + Expand/Collapse + Rows per page + Reset */}
         <div className="flex flex-wrap items-center gap-3 justify-between pt-1 border-t border-border/40">
           {/* Substring Search Form (wider max-w-xl) */}
-          <form onSubmit={handleApplySearch} className="flex items-center gap-2 flex-1 max-w-xl">
+          <form
+            onSubmit={handleApplySearch}
+            className="flex items-center gap-2 flex-1 max-w-xl"
+          >
             <div className="relative flex-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
                 <IconSearch />
@@ -664,7 +589,9 @@ export default function LogsPage() {
             </div>
 
             <div className="flex items-center gap-1.5 border-l border-border pl-3">
-              <span className="text-xs text-muted-foreground">{t("common.perPage")}</span>
+              <span className="text-xs text-muted-foreground">
+                {t("common.perPage")}
+              </span>
               <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 p-0.5">
                 {PAGE_SIZES.map((s) => (
                   <button
@@ -678,7 +605,7 @@ export default function LogsPage() {
                       "px-2 py-0.5 rounded text-xs font-medium transition-all select-none",
                       pageSize === s
                         ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {s}
@@ -703,12 +630,12 @@ export default function LogsPage() {
       </div>
 
       {/* Terminal Console Stream Container */}
-      <div className="log-register overflow-hidden w-full">
+      <div className="log-register terminal-register overflow-hidden w-full">
         {/* Terminal Header Bar */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-mono select-none">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground/80 font-medium ml-2">
-              {t("nav.logs")}
+              {`channel/${channelId} › events`}
             </span>
           </div>
 
@@ -725,7 +652,11 @@ export default function LogsPage() {
 
         {/* Log Stream Body */}
         <div className="min-h-48 overflow-x-auto">
-          {logsError ? <div className="p-4"><QueryError onRetry={() => void refetchLogs()} /></div> : logsLoading ? (
+          {logsError ? (
+            <div className="p-4">
+              <QueryError onRetry={() => void refetchLogs()} />
+            </div>
+          ) : logsLoading ? (
             <div className="p-4 space-y-3 font-mono text-xs">
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="flex items-center gap-3 animate-pulse">
@@ -738,9 +669,16 @@ export default function LogsPage() {
             </div>
           ) : !logsData?.items || logsData.items.length === 0 ? (
             <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-3 font-mono text-xs text-muted-foreground p-8">
-              <p className="text-sm font-medium text-foreground">{t("logs.noLogsFound")}</p>
+              <p className="text-sm font-medium text-foreground">
+                {t("logs.noLogsFound")}
+              </p>
               {hasActiveFilters && (
-                <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2 text-xs">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="mt-2 text-xs"
+                >
                   {t("common.clear")}
                 </Button>
               )}
@@ -764,9 +702,18 @@ export default function LogsPage() {
       {totalLogs > 0 && (
         <div className="flex items-center justify-between flex-wrap gap-4 text-xs text-muted-foreground">
           <div>
-            <span className="font-semibold text-foreground tabular-nums">{startRecord}</span>–
-            <span className="font-semibold text-foreground tabular-nums">{endRecord}</span> /{" "}
-            <span className="font-semibold text-foreground tabular-nums">{totalLogs.toLocaleString()}</span> {t("common.total")}
+            <span className="font-semibold text-foreground tabular-nums">
+              {startRecord}
+            </span>
+            –
+            <span className="font-semibold text-foreground tabular-nums">
+              {endRecord}
+            </span>{" "}
+            /{" "}
+            <span className="font-semibold text-foreground tabular-nums">
+              {totalLogs.toLocaleString()}
+            </span>{" "}
+            {t("common.total")}
           </div>
 
           <div className="flex items-center gap-1.5">

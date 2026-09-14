@@ -1,3 +1,4 @@
+import ItemArtwork from "@/components/common/SkinImage";
 import RedemptionCase from "./RedemptionCase";
 import ConfirmAction from "@/components/common/ConfirmAction";
 import { EmptyState, QueryError } from "@/components/common/Page";
@@ -240,7 +241,7 @@ function RedemptionRow({
     <div className="ledger-row">
       <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={`detail-${redemption.twitch_redemption_id}`} className="ledger-summary">
         <span className="ledger-status"><Badge className={cn("text-xs rounded px-2 py-1 font-medium", STATUS_CLASSES[redemption.status] || "status-pending")}>{getStatusLabel(redemption.status)}</Badge></span>
-        <span className="ledger-person min-w-0"><span className="block text-sm font-semibold truncate">{redemption.market_item_name || t("ops.unknownItem")}</span><span className="mt-1 block text-xs text-muted-foreground truncate">@{redemption.user_login}{redemption.retry_count > 0 && ` · ${redemption.retry_count} ${t("redemptions.retriesMany")}`}</span>{isManualHold && redemption.fail_cause && <span className="mt-1 block text-xs text-amber-300 truncate">{FAIL_CAUSE_I18N_KEYS[redemption.fail_cause] ? t(FAIL_CAUSE_I18N_KEYS[redemption.fail_cause]) : formatFailCause(redemption.fail_cause)}</span>}</span>
+        <span className="ledger-person min-w-0"><span className="ledger-art"><ItemArtwork key={redemption.market_item_name} marketItemName={redemption.market_item_name}/></span><span className="block text-sm font-semibold truncate">{redemption.market_item_name || t("ops.unknownItem")}</span><span className="mt-1 block text-xs text-muted-foreground truncate">@{redemption.user_login}{redemption.retry_count > 0 && ` · ${redemption.retry_count} ${t("redemptions.retriesMany")}`}</span>{isManualHold && redemption.fail_cause && <span className="mt-1 block text-xs text-amber-300 truncate">{FAIL_CAUSE_I18N_KEYS[redemption.fail_cause] ? t(FAIL_CAUSE_I18N_KEYS[redemption.fail_cause]) : formatFailCause(redemption.fail_cause)}</span>}</span>
         <span className="ledger-date text-xs text-muted-foreground">{format(new Date(redemption.created_at), "dd MMM HH:mm")}</span>
         <span className="ledger-points text-xs tabular-nums text-right">{redemption.twitch_points_cost.toLocaleString()} <span className="text-muted-foreground">{t("common.pts")}</span></span>
         <span className="ledger-chevron"><IconChevron open={open} /></span>

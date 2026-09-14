@@ -1,3 +1,4 @@
+import RewardShowcase from "@/components/rewards/RewardShowcase";
 import { QueryError } from "@/components/common/Page";
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -5,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { publicApi, broadcastersApi, authApi } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
-import type { PublicRewardResponse, PublicPoolItem } from "@/types/api";
+import type { PublicRewardResponse } from "@/types/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,13 +16,23 @@ import SkinImage from "@/components/common/SkinImage";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
-import { getShortRewardUrl, base64UrlToUuid, uuidToBase64Url } from "@/lib/shortUrl";
+import { getShortRewardUrl, base64UrlToUuid } from "@/lib/shortUrl";
 import type { AxiosError } from "axios";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 const IconSearch = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
 
@@ -31,64 +42,125 @@ const IconTwitch = () => (
   </svg>
 );
 
-const IconPin = () => <HugeiconsIcon icon={PinIcon} size={15} strokeWidth={2} />;
+const IconPin = () => (
+  <HugeiconsIcon icon={PinIcon} size={15} strokeWidth={2} />
+);
 
-const IconPinOff = () => <HugeiconsIcon icon={PinOffIcon} size={15} strokeWidth={2} />;
-
-const IconArrowLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-  </svg>
+const IconPinOff = () => (
+  <HugeiconsIcon icon={PinOffIcon} size={15} strokeWidth={2} />
 );
 
 const IconExternal = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-    <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" y1="14" x2="21" y2="3" />
   </svg>
 );
 
 const IconShare = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="18" cy="5" r="3" />
+    <circle cx="6" cy="12" r="3" />
+    <circle cx="18" cy="19" r="3" />
+    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
   </svg>
 );
 
 const IconCheck = ({ className }: { className?: string } = {}) => (
-  <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className={className}
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
-const IconLink = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-);
-
 const IconLock = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
   </svg>
 );
 
 const IconUser = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
   </svg>
 );
 
 const IconSparkles = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
   </svg>
 );
 
 const IconExternalLink = ({ className }: { className?: string } = {}) => (
-  <svg className={cn("shrink-0", className)} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className={cn("shrink-0", className)}
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
     <polyline points="15 3 21 3 21 9" />
     <line x1="10" y1="14" x2="21" y2="3" />
@@ -96,7 +168,17 @@ const IconExternalLink = ({ className }: { className?: string } = {}) => (
 );
 
 const IconPool = ({ className }: { className?: string } = {}) => (
-  <svg className={cn("shrink-0", className)} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className={cn("shrink-0", className)}
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polygon points="12 2 2 7 12 12 22 7 12 2" />
     <polyline points="2 17 12 22 22 17" />
     <polyline points="2 12 12 17 22 12" />
@@ -104,7 +186,17 @@ const IconPool = ({ className }: { className?: string } = {}) => (
 );
 
 const IconFilter = ({ className }: { className?: string } = {}) => (
-  <svg className={cn("shrink-0", className)} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className={cn("shrink-0", className)}
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
   </svg>
 );
@@ -117,7 +209,7 @@ function getCsgoMarketUrl(marketHashName?: string | null): string {
 function formatPriceWithDeviation(
   price: number | null | undefined,
   deviationPercent: number | null | undefined,
-  currency: string | null | undefined
+  currency: string | null | undefined,
 ): string | null {
   if (price == null) return null;
   const curr = currency ? `${currency} ` : "";
@@ -128,72 +220,16 @@ function formatPriceWithDeviation(
   return `${curr}${price.toFixed(2)}`;
 }
 
-function formatCooldown(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const mins = Math.floor(seconds / 60);
-  const rem = seconds % 60;
-  if (rem === 0) return `${mins} min`;
-  return `${mins}m ${rem}s`;
-}
-
-function renderChatRequirementText(
-  req: {
-    min_messages?: number | null;
-    min_characters?: number | null;
-    time_window_hours?: number | null;
-    logical_operator?: string | null;
-  },
-  t: (key: string, opts?: any) => string
-) {
-  const minMsgs = req.min_messages ?? 0;
-  const minChars = req.min_characters ?? 0;
-  const op = (req.logical_operator ?? "AND").toUpperCase();
-  const isOr = op === "OR";
-
-  const isAllTime = !req.time_window_hours || req.time_window_hours === 0;
-  const windowStr = isAllTime
-    ? t("public.reqAllTime", "all-time")
-    : t("public.reqLastHours", { hours: req.time_window_hours, defaultValue: `in the last ${req.time_window_hours} hours` });
-
-  if (minMsgs > 0 && minChars > 0) {
-    return (
-      <span>
-        {t("public.reqMustSend", "Viewer must have sent at least")}{" "}
-        <strong className="font-semibold text-primary">{t("public.reqMessages", { count: minMsgs, defaultValue: `${minMsgs.toLocaleString()} messages` })}</strong>
-        <span className="font-bold text-amber-500 mx-1.5">{isOr ? t("public.or", "OR") : t("public.and", "AND")}</span>
-        <strong className="font-semibold text-primary">{t("public.reqCharacters", { count: minChars, defaultValue: `${minChars.toLocaleString()} characters` })}</strong>{" "}
-        {windowStr} {t("public.reqToRedeem", "to redeem this reward.")}
-      </span>
-    );
-  }
-
-  if (minMsgs > 0) {
-    return (
-      <span>
-        {t("public.reqMustSend", "Viewer must have sent at least")}{" "}
-        <strong className="font-semibold text-primary">{t("public.reqMessages", { count: minMsgs, defaultValue: `${minMsgs.toLocaleString()} messages` })}</strong>{" "}
-        {windowStr} {t("public.reqToRedeem", "to redeem this reward.")}
-      </span>
-    );
-  }
-
-  if (minChars > 0) {
-    return (
-      <span>
-        {t("public.reqMustSend", "Viewer must have sent at least")}{" "}
-        <strong className="font-semibold text-primary">{t("public.reqCharacters", { count: minChars, defaultValue: `${minChars.toLocaleString()} characters` })}</strong>{" "}
-        {windowStr} {t("public.reqToRedeem", "to redeem this reward.")}
-      </span>
-    );
-  }
-
-  return null;
-}
-
 export default function PublicRewardsPage() {
   const { t } = useTranslation();
-  const { identifier, rewardId: rawRewardId } = useParams<{ identifier: string; rewardId?: string }>();
-  const rewardId = useMemo(() => (rawRewardId ? base64UrlToUuid(rawRewardId) : undefined), [rawRewardId]);
+  const { identifier, rewardId: rawRewardId } = useParams<{
+    identifier: string;
+    rewardId?: string;
+  }>();
+  const rewardId = useMemo(
+    () => (rawRewardId ? base64UrlToUuid(rawRewardId) : undefined),
+    [rawRewardId],
+  );
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { currentUser, broadcasters } = useAppStore();
@@ -210,7 +246,8 @@ export default function PublicRewardsPage() {
     refetch: retryInfo,
   } = useQuery({
     queryKey: ["public-broadcaster", identifier],
-    queryFn: () => publicApi.getBroadcasterInfo(identifier!).then((r) => r.data),
+    queryFn: () =>
+      publicApi.getBroadcasterInfo(identifier!).then((r) => r.data),
     enabled: !!identifier,
     staleTime: 60_000,
   });
@@ -234,7 +271,8 @@ export default function PublicRewardsPage() {
     return broadcasters.some(
       (b) =>
         b.channel_id === broadcasterInfo.channel_id ||
-        b.channel_login.toLowerCase() === broadcasterInfo.channel_login.toLowerCase()
+        b.channel_login.toLowerCase() ===
+          broadcasterInfo.channel_login.toLowerCase(),
     );
   }, [broadcasterInfo, currentUser, broadcasters]);
 
@@ -254,17 +292,28 @@ export default function PublicRewardsPage() {
   });
 
   // 3. Direct single reward query (if opened directly via /rewards/:rewardId)
-  const { data: singleReward } = useQuery({
+  const {
+    data: singleReward,
+    isFetching: singleLoading,
+    error: singleError,
+    refetch: retrySingle,
+  } = useQuery({
     queryKey: ["public-reward", identifier, rewardId],
-    queryFn: () => publicApi.getRewardById(identifier!, rewardId!).then((r) => r.data),
-    enabled: !!identifier && !!rewardId && broadcasterInfo?.public_rewards_enabled !== false,
+    queryFn: () =>
+      publicApi.getRewardById(identifier!, rewardId!).then((r) => r.data),
+    enabled:
+      !!identifier &&
+      !!rewardId &&
+      broadcasterInfo?.public_rewards_enabled !== false,
     staleTime: 30_000,
   });
 
   // Selected reward for expanded detail view (from direct query or catalog list)
   const selectedReward = useMemo(() => {
     if (!rewardId) return null;
-    return singleReward ?? rewards.find((r) => r.twitch_id === rewardId) ?? null;
+    return (
+      singleReward ?? rewards.find((r) => r.twitch_id === rewardId) ?? null
+    );
   }, [rewardId, singleReward, rewards]);
 
   // Filter rewards for catalog grid
@@ -273,22 +322,26 @@ export default function PublicRewardsPage() {
       const matchSearch =
         !search.trim() ||
         r.twitch_title.toLowerCase().includes(search.toLowerCase().trim()) ||
-        (r.market_item_name ?? "").toLowerCase().includes(search.toLowerCase().trim()) ||
+        (r.market_item_name ?? "")
+          .toLowerCase()
+          .includes(search.toLowerCase().trim()) ||
         (r.pool_items ?? []).some((item) =>
-          item.market_hash_name.toLowerCase().includes(search.toLowerCase().trim())
+          item.market_hash_name
+            .toLowerCase()
+            .includes(search.toLowerCase().trim()),
         );
 
-      const matchType =
-        typeFilter === "ALL" || r.reward_type === typeFilter;
+      const matchType = typeFilter === "ALL" || r.reward_type === typeFilter;
 
       return matchSearch && matchType;
     });
   }, [rewards, search, typeFilter]);
 
   const handleCopyLink = () => {
-    const url = selectedReward && identifier
-      ? getShortRewardUrl(identifier, selectedReward.twitch_id)
-      : window.location.href;
+    const url =
+      selectedReward && identifier
+        ? getShortRewardUrl(identifier, selectedReward.twitch_id)
+        : window.location.href;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -311,18 +364,40 @@ export default function PublicRewardsPage() {
     );
   }
 
-  if ((infoError && (infoError as AxiosError)?.response?.status !== 404) || (rewardsError && !isAccessDenied)) return <div className="page-shell"><QueryError onRetry={() => { void retryInfo(); void retryRewards(); }} /></div>;
+  if (
+    (infoError && (infoError as AxiosError)?.response?.status !== 404) ||
+    (rewardsError && !isAccessDenied)
+  )
+    return (
+      <div className="page-shell">
+        <QueryError
+          onRetry={() => {
+            void retryInfo();
+            void retryRewards();
+          }}
+        />
+      </div>
+    );
   if (infoError || !broadcasterInfo) {
     return (
       <div className="p-12 max-w-md mx-auto text-center space-y-4">
         <div className="w-16 h-16 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
           <IconLock />
         </div>
-        <h2 className="text-xl font-bold text-foreground">{t("profile.channelNotFound", "Channel Not Found")}</h2>
+        <h2 className="text-xl font-bold text-foreground">
+          {t("profile.channelNotFound", "Channel Not Found")}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          {t("public.channelNotFoundDesc", "We couldn't find a broadcaster matching this address. Please check the link or search again.")}
+          {t(
+            "public.channelNotFoundDesc",
+            "We couldn't find a broadcaster matching this address. Please check the link or search again.",
+          )}
         </p>
-        <Button onClick={() => navigate("/channels")} variant="outline" className="text-xs">
+        <Button
+          onClick={() => navigate("/channels")}
+          variant="outline"
+          className="text-xs"
+        >
           {t("profile.browseChannels", "Browse Channels")}
         </Button>
       </div>
@@ -339,7 +414,9 @@ export default function PublicRewardsPage() {
             <Avatar className="h-12 w-12 rounded-md shrink-0">
               <AvatarImage
                 src={broadcasterInfo.profile_image_url ?? undefined}
-                alt={broadcasterInfo.display_name || broadcasterInfo.channel_login}
+                alt={
+                  broadcasterInfo.display_name || broadcasterInfo.channel_login
+                }
               />
               <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground rounded-full">
                 {broadcasterInfo.channel_login.slice(0, 2).toUpperCase()}
@@ -378,7 +455,9 @@ export default function PublicRewardsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/c/${broadcasterInfo.channel_login}/profile`)}
+                  onClick={() =>
+                    navigate(`/c/${broadcasterInfo.channel_login}/profile`)
+                  }
                   className="gap-2 text-xs h-9 border-border/80 hover:border-primary/40"
                 >
                   <IconUser />
@@ -420,7 +499,9 @@ export default function PublicRewardsPage() {
                 className="gap-2 text-xs h-9 bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
               >
                 <IconTwitch />
-                <span>{t("profile.signInWithTwitch", "Log in with Twitch")}</span>
+                <span>
+                  {t("profile.signInWithTwitch", "Log in with Twitch")}
+                </span>
               </Button>
             )}
 
@@ -431,7 +512,11 @@ export default function PublicRewardsPage() {
               className="h-9 w-9 text-muted-foreground hover:text-foreground"
               title={t("public.copyLinkShowcase", "Copy link to this showcase")}
             >
-              {copied ? <IconCheck className="text-emerald-400" /> : <IconShare />}
+              {copied ? (
+                <IconCheck className="text-emerald-400" />
+              ) : (
+                <IconShare />
+              )}
             </Button>
           </div>
         </div>
@@ -444,10 +529,16 @@ export default function PublicRewardsPage() {
             <IconLock />
           </div>
           <h2 className="text-xl font-bold text-foreground">
-            {t("public.catalogDisabledTitle", "Public Rewards Catalog is Disabled")}
+            {t(
+              "public.catalogDisabledTitle",
+              "Public Rewards Catalog is Disabled",
+            )}
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            {t("public.catalogDisabledDesc", { channel: broadcasterInfo.display_name || broadcasterInfo.channel_login })}
+            {t("public.catalogDisabledDesc", {
+              channel:
+                broadcasterInfo.display_name || broadcasterInfo.channel_login,
+            })}
           </p>
           <a
             href={`https://twitch.tv/${broadcasterInfo.channel_login}`}
@@ -462,11 +553,33 @@ export default function PublicRewardsPage() {
         </div>
       ) : selectedReward ? (
         /* ── Full Content Detail View (Expanded) ── */
-        <RewardDetailExpandedView
+        <RewardShowcase
           reward={selectedReward}
           identifier={identifier!}
           onBack={() => navigate(`/c/${identifier}`)}
         />
+      ) : rewardId ? (
+        singleLoading ? (
+          <Skeleton className="h-48" />
+        ) : singleError &&
+          (singleError as AxiosError)?.response?.status !== 404 ? (
+          <QueryError onRetry={() => retrySingle()} />
+        ) : (
+          <div className="empty-state">
+            <h2>
+              {t(
+                "public.rewardUnavailable",
+                "This reward is no longer publicly available",
+              )}
+            </h2>
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/c/${identifier}`)}
+            >
+              {t("public.backToAll", "Back to all rewards")}
+            </Button>
+          </div>
+        )
       ) : (
         /* ── Catalog Overview (Cards Grid) ── */
         <div className="space-y-6">
@@ -487,7 +600,7 @@ export default function PublicRewardsPage() {
                     "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all select-none cursor-pointer",
                     typeFilter === tab.id
                       ? "bg-card text-foreground shadow-xs font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {tab.label}
@@ -501,7 +614,10 @@ export default function PublicRewardsPage() {
               </span>
               <Input
                 type="search"
-                placeholder={t("public.searchPlaceholder", "Search skins or rewards…")}
+                placeholder={t(
+                  "public.searchPlaceholder",
+                  "Search skins or rewards…",
+                )}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 h-9 text-xs bg-card"
@@ -522,7 +638,15 @@ export default function PublicRewardsPage() {
                 {t("public.noRewardsAvailable", "No rewards available")}
               </p>
               <p className="text-xs text-muted-foreground">
-                {search ? t("public.noRewardsMatch", "No rewards match your search criteria.") : t("public.noRewardsPublished", "This streamer hasn't published any rewards yet.")}
+                {search
+                  ? t(
+                      "public.noRewardsMatch",
+                      "No rewards match your search criteria.",
+                    )
+                  : t(
+                      "public.noRewardsPublished",
+                      "This streamer hasn't published any rewards yet.",
+                    )}
               </p>
             </div>
           ) : (
@@ -531,7 +655,9 @@ export default function PublicRewardsPage() {
                 <RewardCard
                   key={reward.twitch_id}
                   reward={reward}
-                  onClick={() => navigate(`/c/${identifier}/rewards/${reward.twitch_id}`)}
+                  onClick={() =>
+                    navigate(`/c/${identifier}/rewards/${reward.twitch_id}`)
+                  }
                 />
               ))}
             </div>
@@ -566,24 +692,30 @@ function RewardCard({
       ? formatPriceWithDeviation(
           reward.market_price,
           reward.permissible_market_price_deviation,
-          reward.currency
+          reward.currency,
         )
       : isPool && reward.pool_items?.[0]?.current_market_price != null
-      ? `${t("public.priceFrom", "from")} ${reward.currency ?? ""} ${reward.pool_items[0].current_market_price.toFixed(2)}`
-      : null;
+        ? `${t("public.priceFrom", "from")} ${reward.currency ?? ""} ${reward.pool_items[0].current_market_price.toFixed(2)}`
+        : null;
 
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={onClick}
-      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onClick(); } }}
+      onKeyDown={(e) => {
+        if (
+          e.target === e.currentTarget &&
+          (e.key === "Enter" || e.key === " ")
+        ) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={cn(
         "reward-tile public-reward-tile group relative cursor-pointer overflow-hidden flex flex-col select-none text-left",
         "hover:border-primary/40  hover:shadow-primary/5 ",
-        reward.is_paused
-          ? "public-reward-paused"
-          : "border-border bg-card"
+        reward.is_paused ? "public-reward-paused" : "border-border bg-card",
       )}
     >
       {/* ── Top Visual Media Banner ── */}
@@ -604,7 +736,10 @@ function RewardCard({
           {reward.is_paused && (
             <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>{t("public.paused", "Paused")}{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
+              <span>
+                {t("public.paused", "Paused")}
+                {reward.pause_reason ? ` (${reward.pause_reason})` : ""}
+              </span>
             </div>
           )}
         </div>
@@ -626,13 +761,20 @@ function RewardCard({
 
           <div className="absolute top-2.5 left-2.5 rounded-lg bg-black/60 px-2.5 py-1 flex items-center gap-1.5 text-[10px] text-white/90 font-medium border border-white/10 shadow-sm">
             <IconPool />
-            <span>{t("public.poolSkinsCount", { count: reward.pool_items?.length ?? 0 })}</span>
+            <span>
+              {t("public.poolSkinsCount", {
+                count: reward.pool_items?.length ?? 0,
+              })}
+            </span>
           </div>
 
           {reward.is_paused && (
             <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>{t("public.paused", "Paused")}{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
+              <span>
+                {t("public.paused", "Paused")}
+                {reward.pause_reason ? ` (${reward.pause_reason})` : ""}
+              </span>
             </div>
           )}
         </div>
@@ -645,14 +787,18 @@ function RewardCard({
           </div>
           {reward.filter_details && (
             <span className="text-xs text-muted-foreground font-mono font-medium">
-              {reward.filter_details.min_price ?? 0} – {reward.filter_details.max_price ?? "∞"} {reward.currency ?? ""}
+              {reward.filter_details.min_price ?? 0} –{" "}
+              {reward.filter_details.max_price ?? "∞"} {reward.currency ?? ""}
             </span>
           )}
 
           {reward.is_paused && (
             <div className="absolute top-2.5 right-2.5 rounded-lg bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 shadow-sm flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>{t("public.paused", "Paused")}{reward.pause_reason ? ` (${reward.pause_reason})` : ""}</span>
+              <span>
+                {t("public.paused", "Paused")}
+                {reward.pause_reason ? ` (${reward.pause_reason})` : ""}
+              </span>
             </div>
           )}
         </div>
@@ -666,16 +812,26 @@ function RewardCard({
               variant="secondary"
               className={cn(
                 "text-[10px] font-semibold px-2 py-0.5",
-                reward.reward_type === "FIXED" && "bg-blue-500/10 text-blue-500 border-blue-500/20",
-                reward.reward_type === "POOL" && "bg-purple-500/10 text-purple-500 border-purple-500/20",
-                reward.reward_type === "FILTER" && "bg-teal-500/10 text-teal-500 border-teal-500/20"
+                reward.reward_type === "FIXED" &&
+                  "bg-blue-500/10 text-blue-500 border-blue-500/20",
+                reward.reward_type === "POOL" &&
+                  "bg-purple-500/10 text-purple-500 border-purple-500/20",
+                reward.reward_type === "FILTER" &&
+                  "bg-teal-500/10 text-teal-500 border-teal-500/20",
               )}
             >
-              {reward.reward_type === "FIXED" ? t("public.typeFixed", "Fixed") : reward.reward_type === "POOL" ? `${t("public.typePool", "Skin Pool")} (${reward.pool_items?.length ?? 0})` : t("public.typeFilter", "Filter")}
+              {reward.reward_type === "FIXED"
+                ? t("public.typeFixed", "Fixed")
+                : reward.reward_type === "POOL"
+                  ? `${t("public.typePool", "Skin Pool")} (${reward.pool_items?.length ?? 0})`
+                  : t("public.typeFilter", "Filter")}
             </Badge>
 
             {hasLimits && (
-              <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-500 bg-amber-500/10">
+              <Badge
+                variant="outline"
+                className="text-[10px] border-amber-500/30 text-amber-500 bg-amber-500/10"
+              >
                 {t("public.limits", "Limits")}
               </Badge>
             )}
@@ -702,9 +858,19 @@ function RewardCard({
                 <IconExternalLink />
               </a>
             ) : reward.reward_type === "POOL" ? (
-              <span>{t("public.skinsInDropPool", { count: reward.pool_items?.length ?? 0 })}</span>
+              <span>
+                {t("public.skinsInDropPool", {
+                  count: reward.pool_items?.length ?? 0,
+                })}
+              </span>
             ) : reward.reward_type === "FILTER" ? (
-              <span>{reward.filter_details?.name_contains ? t("public.containsText", { text: reward.filter_details.name_contains }) : t("public.autoMarketFilter", "Automatic market filter")}</span>
+              <span>
+                {reward.filter_details?.name_contains
+                  ? t("public.containsText", {
+                      text: reward.filter_details.name_contains,
+                    })
+                  : t("public.autoMarketFilter", "Automatic market filter")}
+              </span>
             ) : null}
           </div>
         </div>
@@ -712,18 +878,24 @@ function RewardCard({
         {/* Price & points footer */}
         <div className="pt-2 border-t border-border/50 flex items-center justify-between text-xs gap-2">
           <div>
-            <span className="text-[10px] text-muted-foreground block font-medium">{t("public.channelPoints", "Channel Points")}</span>
+            <span className="text-[10px] text-muted-foreground block font-medium">
+              {t("public.channelPoints", "Channel Points")}
+            </span>
             {reward.cost_points != null ? (
               <span className="font-mono font-bold text-purple-400 text-xs">
                 {reward.cost_points.toLocaleString()} {t("common.pts", "pts")}
               </span>
             ) : (
-              <span className="text-[10px] text-muted-foreground italic">{t("public.pointsHidden", "Points hidden")}</span>
+              <span className="text-[10px] text-muted-foreground italic">
+                {t("public.pointsHidden", "Points hidden")}
+              </span>
             )}
           </div>
 
           <div className="text-right">
-            <span className="text-[10px] text-muted-foreground block font-medium">{t("public.marketEst", "Market Est.")}</span>
+            <span className="text-[10px] text-muted-foreground block font-medium">
+              {t("public.marketEst", "Market Est.")}
+            </span>
             {formattedCardPrice ? (
               <span className="font-mono font-semibold text-foreground/90 text-xs">
                 {formattedCardPrice}
@@ -735,380 +907,5 @@ function RewardCard({
         </div>
       </div>
     </div>
-  );
-}
-
-// ── Full Content Detail View (Expanded) ────────────────────────────────────
-function RewardDetailExpandedView({
-  reward,
-  identifier,
-  onBack,
-}: {
-  reward: PublicRewardResponse;
-  identifier: string;
-  onBack: () => void;
-}) {
-  const { t } = useTranslation();
-  const [shortCopied, setShortCopied] = useState(false);
-  const shortUrl = useMemo(
-    () => getShortRewardUrl(identifier, reward.twitch_id),
-    [identifier, reward.twitch_id]
-  );
-  const shortSlug = `/r/${identifier}/${uuidToBase64Url(reward.twitch_id)}`;
-
-  const handleCopyShort = () => {
-    navigator.clipboard.writeText(shortUrl);
-    setShortCopied(true);
-    setTimeout(() => setShortCopied(false), 2000);
-  };
-
-  const isPool = reward.reward_type === "POOL";
-  const isFilter = reward.reward_type === "FILTER";
-  const isFixed = reward.reward_type === "FIXED";
-
-  const hasTwitchLimits =
-    (reward.max_redemptions_per_stream != null && reward.max_redemptions_per_stream > 0) ||
-    (reward.max_redemptions_per_user_per_stream != null && reward.max_redemptions_per_user_per_stream > 0) ||
-    (reward.global_cooldown_seconds != null && reward.global_cooldown_seconds > 0);
-
-  const hasBotLimits =
-    (reward.purchase_limits?.global?.length ?? 0) > 0 ||
-    (reward.purchase_limits?.user?.length ?? 0) > 0;
-
-  const chatReqText = reward.chat_requirements
-    ? renderChatRequirementText(reward.chat_requirements, t)
-    : null;
-
-  return (
-    <div className="space-y-6">
-      {/* Top navigation & action bar */}
-      <div className="flex items-center justify-between gap-4 flex-wrap pb-2 border-b border-border">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="gap-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <IconArrowLeft />
-          <span>{t("public.backToAll", "Back to all rewards")}</span>
-        </Button>
-
-        <div className="flex items-center gap-2">
-          {/* Compact short link button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopyShort}
-            className="gap-1.5 text-xs font-mono h-8 border-border/80 hover:border-primary/40 text-muted-foreground hover:text-foreground"
-            title={t("public.shortLinkHint", "Compact link for Twitch reward description (under 200 chars)")}
-          >
-            {shortCopied ? <IconCheck className="text-emerald-400" /> : <IconLink />}
-            <span className="hidden sm:inline">
-              {shortCopied ? t("public.shortLinkCopied", "Short link copied!") : shortSlug}
-            </span>
-            <span className="sm:hidden">
-              {shortCopied ? t("common.copied", "Copied!") : t("public.copyShortLink", "Short Link")}
-            </span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Main Reward Card Hero */}
-      <div className="rounded-xl border border-border bg-card p-6 md:p-8 space-y-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge
-                variant="secondary"
-                className={cn(
-                  "text-xs font-semibold px-2 py-0.5",
-                  isFixed && "bg-blue-500/10 text-blue-500 border-blue-500/20",
-                  isPool && "bg-purple-500/10 text-purple-500 border-purple-500/20",
-                  isFilter && "bg-teal-500/10 text-teal-500 border-teal-500/20"
-                )}
-              >
-                {isFixed ? t("public.typeFixed", "Fixed") : isPool ? `${t("public.typePool", "Skin Pool")} (${reward.pool_items?.length ?? 0})` : t("public.typeFilter", "Filter")}
-              </Badge>
-
-              {reward.is_paused && (
-                <Badge variant="outline" className="border-amber-500/30 text-amber-500 bg-amber-500/10 text-xs font-semibold">
-                  {t("public.paused", "Paused")} {reward.pause_reason ? `(${reward.pause_reason})` : ""}
-                </Badge>
-              )}
-            </div>
-
-            <h2 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">
-              {reward.twitch_title}
-            </h2>
-
-            {reward.twitch_description && (
-              <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-                {reward.twitch_description}
-              </p>
-            )}
-          </div>
-
-          {/* Pricing Box - Note: Market Value NOT duplicated here */}
-          <div className="flex flex-row md:flex-col items-baseline md:items-end justify-between w-full md:w-auto p-4 rounded-xl bg-secondary/30 border border-border/60 shrink-0 gap-1">
-            <span className="text-xs text-muted-foreground font-medium">{t("public.pointsCost", "Channel Points Cost")}</span>
-            {reward.cost_points != null ? (
-              <span className="text-2xl font-black text-purple-400 font-mono">
-                {reward.cost_points.toLocaleString()} {t("common.pts", "pts")}
-              </span>
-            ) : (
-              <span className="text-sm text-muted-foreground italic">{t("public.pointsCostHidden", "Points cost hidden")}</span>
-            )}
-          </div>
-        </div>
-
-        {/* ── If FIXED: Large Single Skin Showcase ── */}
-        {isFixed && (
-          <div className="page-shell rounded-xl border border-border/60 bg-background/50 flex flex-col md:flex-row items-center justify-center gap-8 text-center md:text-left">
-            <a
-              href={getCsgoMarketUrl(reward.market_item_name)}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={`View "${reward.market_item_name}" on CS2 Market`}
-              className="w-48 h-48 drop-shadow-xl shrink-0 cursor-pointer"
-            >
-              <SkinImage marketItemName={reward.market_item_name} size={300} />
-            </a>
-            <div className="space-y-2">
-              <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">{t("public.itemDrop", "Item Drop")}</span>
-              <div>
-                <a
-                  href={getCsgoMarketUrl(reward.market_item_name)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 group/link hover:text-primary transition-colors text-left"
-                  title={`View "${reward.market_item_name}" on CS2 Market`}
-                >
-                  <h3 className="text-xl font-bold text-foreground group-hover/link:text-primary transition-colors">
-                    {reward.market_item_name || t("public.unknownSkin", "Unknown skin")}
-                  </h3>
-                  <IconExternalLink className="text-muted-foreground group-hover/link:text-primary" />
-                </a>
-              </div>
-              {reward.market_price != null && (
-                <p className="text-sm text-muted-foreground font-mono">
-                  {t("public.estimatedPrice", "Estimated Steam Market Price:")}{" "}
-                  <span className="text-foreground font-bold font-mono">
-                    {formatPriceWithDeviation(
-                      reward.market_price,
-                      reward.permissible_market_price_deviation,
-                      reward.currency
-                    )}
-                  </span>
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── If FILTER: Criteria Box ── */}
-        {isFilter && reward.filter_details && (
-          <div className="p-6 rounded-xl border border-teal-500/20 bg-teal-500/5 space-y-3">
-            <h3 className="text-sm font-bold text-teal-400 flex items-center gap-2">
-              <IconSparkles />
-              <span>{t("public.filterCriteria", "Filter Criteria")}</span>
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div className="p-3 rounded-xl bg-card border border-border">
-                <span className="text-muted-foreground block mb-1">{t("public.priceRange", "Price Range")}</span>
-                <span className="font-mono font-bold text-foreground text-sm">
-                  {reward.filter_details.min_price ?? 0} – {reward.filter_details.max_price ?? "∞"} {reward.currency ?? ""}
-                </span>
-              </div>
-              {reward.filter_details.name_contains && (
-                <div className="p-3 rounded-xl bg-card border border-border">
-                  <span className="text-muted-foreground block mb-1">{t("public.nameContains", "Name Contains")}</span>
-                  <span className="font-semibold text-foreground">{reward.filter_details.name_contains}</span>
-                </div>
-              )}
-              {reward.filter_details.name_prefix && (
-                <div className="p-3 rounded-xl bg-card border border-border">
-                  <span className="text-muted-foreground block mb-1">{t("public.namePrefix", "Name Prefix")}</span>
-                  <span className="font-semibold text-foreground">{reward.filter_details.name_prefix}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── If POOL: Sub-Grid of Mini-Cards ── */}
-        {isPool && (
-          <div className="space-y-4 pt-2">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base font-bold text-foreground">
-                  {t("public.poolDropItems", { count: reward.pool_items?.length ?? 0 })}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {t("public.poolDropDesc", "When redeemed, one skin is randomly selected from this pool based on the drop chances below.")}
-                </p>
-              </div>
-            </div>
-
-            {(!reward.pool_items || reward.pool_items.length === 0) ? (
-              <p className="text-xs text-muted-foreground py-4 italic">
-                {t("public.poolItemsHidden", "Items in this pool are currently hidden or not configured.")}
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {reward.pool_items.map((item: PublicPoolItem, index: number) => (
-                  <PoolMiniCard key={`${item.market_hash_name}-${index}`} item={item} currency={reward.currency} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Requirements & Limits Cards Grid ── */}
-        {(chatReqText || hasTwitchLimits || hasBotLimits) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-border/60">
-            {/* 1. Chat Activity Requirement */}
-            {chatReqText && (
-              <div className="p-4 rounded-xl bg-secondary/20 border border-border/60 space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-violet-400" />
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    {t("public.chatReqTitle", "Chat Activity Requirement")}
-                  </h4>
-                </div>
-                <p className="text-xs text-foreground leading-relaxed">
-                  {chatReqText}
-                </p>
-              </div>
-            )}
-
-            {/* 2. Twitch Limits & Cooldown */}
-            {hasTwitchLimits && (
-              <div className="p-4 rounded-xl bg-secondary/20 border border-border/60 space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-purple-400" />
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    {t("public.twitchLimitsTitle", "Twitch Limits & Cooldown")}
-                  </h4>
-                </div>
-                <div className="space-y-1.5 text-xs text-foreground">
-                  {reward.max_redemptions_per_stream != null && reward.max_redemptions_per_stream > 0 && (
-                    <div className="flex items-center justify-between gap-2 py-1 border-b border-border/30 last:border-b-0">
-                      <span className="text-muted-foreground truncate min-w-0">{t("public.streamLimit", "Stream limit:")}</span>
-                      <span className="font-semibold text-foreground shrink-0 whitespace-nowrap">{t("public.maxPerStream", { count: reward.max_redemptions_per_stream })}</span>
-                    </div>
-                  )}
-                  {reward.max_redemptions_per_user_per_stream != null && reward.max_redemptions_per_user_per_stream > 0 && (
-                    <div className="flex items-center justify-between gap-2 py-1 border-b border-border/30 last:border-b-0">
-                      <span className="text-muted-foreground truncate min-w-0">{t("public.userLimit", "User limit:")}</span>
-                      <span className="font-semibold text-foreground shrink-0 whitespace-nowrap">{t("public.maxPerUserStream", { count: reward.max_redemptions_per_user_per_stream })}</span>
-                    </div>
-                  )}
-                  {reward.global_cooldown_seconds != null && reward.global_cooldown_seconds > 0 && (
-                    <div className="flex items-center justify-between gap-2 py-1 border-b border-border/30 last:border-b-0">
-                      <span className="text-muted-foreground truncate min-w-0">{t("public.cooldown", "Cooldown:")}</span>
-                      <span className="font-semibold text-foreground shrink-0 whitespace-nowrap">{formatCooldown(reward.global_cooldown_seconds)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 3. Bot Purchase Limits */}
-            {hasBotLimits && (
-              <div className="p-4 rounded-xl bg-secondary/20 border border-border/60 space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-amber-400" />
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    {t("public.botLimitsTitle", "Bot Purchase Limits")}
-                  </h4>
-                </div>
-                <div className="space-y-1.5 text-xs text-foreground">
-                  {reward.purchase_limits?.global?.map((rule, i) => (
-                    <div key={`g-${i}`} className="flex items-center justify-between gap-2 py-1 border-b border-border/30 last:border-b-0">
-                      <span className="text-muted-foreground truncate min-w-0">{t("public.globalLimitLabel", "Global limit (all viewers):")}</span>
-                      <span className="font-semibold text-foreground shrink-0 whitespace-nowrap">
-                        {rule.window_hours ? t("public.maxEveryHours", { count: rule.max_redemptions, hours: rule.window_hours }) : t("public.maxAllTime", { count: rule.max_redemptions })}
-                      </span>
-                    </div>
-                  ))}
-                  {reward.purchase_limits?.user?.map((rule, i) => (
-                    <div key={`u-${i}`} className="flex items-center justify-between gap-2 py-1 border-b border-border/30 last:border-b-0">
-                      <span className="text-muted-foreground truncate min-w-0">{t("public.personalLimitLabel", "Personal limit (per viewer):")}</span>
-                      <span className="font-semibold text-foreground shrink-0 whitespace-nowrap">
-                        {rule.window_hours ? t("public.maxEveryHours", { count: rule.max_redemptions, hours: rule.window_hours }) : t("public.maxAllTime", { count: rule.max_redemptions })}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Pool Mini-Card ─────────────────────────────────────────────────────────
-function PoolMiniCard({
-  item,
-  currency,
-}: {
-  item: PublicPoolItem;
-  currency?: string | null;
-}) {
-  const marketUrl = getCsgoMarketUrl(item.market_hash_name);
-  const priceWithDev = formatPriceWithDeviation(
-    item.current_market_price,
-    item.permissible_market_price_deviation,
-    currency
-  );
-
-  return (
-    <a
-      href={marketUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={`View "${item.market_hash_name}" on CS2 Market`}
-      className="group/pool flex flex-col justify-between p-4 rounded-xl border border-border/80 bg-background/80 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all space-y-3 cursor-pointer text-left no-underline block"
-    >
-      {/* Top: Drop Chance Badge (NO EMOJI) & Price with Deviation */}
-      <div className="flex items-center justify-between gap-1.5">
-        {item.chance_percentage != null ? (
-          <Badge
-            variant="secondary"
-            className="text-[11px] font-mono font-bold bg-primary/10 text-primary border-primary/20 px-2 py-0.5"
-          >
-            {item.chance_percentage.toFixed(2)}%
-          </Badge>
-        ) : (
-          <span />
-        )}
-
-        {priceWithDev && (
-          <span className="text-[11px] font-mono font-semibold text-foreground/90 tabular-nums">
-            {priceWithDev}
-          </span>
-        )}
-      </div>
-
-      {/* Middle: Skin Image - LARGER! */}
-      <div className="w-full h-32 flex items-center justify-center p-1 drop-shadow-sm group-hover/pool:scale-105 transition-transform duration-300">
-        <SkinImage marketItemName={item.market_hash_name} size={300} className="w-full h-full object-contain" />
-      </div>
-
-      {/* Bottom: Item Name + External Link indicator */}
-      <div className="pt-2 border-t border-border/40">
-        <div className="flex items-center justify-between gap-1.5">
-          <p
-            className="text-xs font-semibold text-foreground truncate group-hover/pool:text-primary transition-colors flex-1"
-            title={item.market_hash_name}
-          >
-            {item.market_hash_name}
-          </p>
-          <IconExternalLink className="text-muted-foreground group-hover/pool:text-primary shrink-0 opacity-60 group-hover/pool:opacity-100 transition-opacity" />
-        </div>
-      </div>
-    </a>
   );
 }

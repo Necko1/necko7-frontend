@@ -1,9 +1,10 @@
+import ProfileIdentity from "@/components/profiles/ProfileIdentity";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { viewerApi, publicApi, authApi } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
 import { useCopy } from "@/lib/useCopy";
-import { PageHeader, QueryError } from "@/components/common/Page";
+import { QueryError } from "@/components/common/Page";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import ViewerHistory, {
@@ -37,13 +38,15 @@ export default function ChannelProfilePage() {
     );
   const profile = query.data;
   return (
-    <div className="page-shell space-y-7">
-      <PageHeader
-        eyebrow={c(
-          "Your activity · one channel",
-          "Ваша активность · один канал",
+    <div className="page-shell profile-shell space-y-7">
+      <ProfileIdentity
+        avatar={user?.avatar_url}
+        login={user?.login}
+        context={c(
+          `Your activity · ${info.data?.display_name || identifier}`,
+          `Ваша активность · ${info.data?.display_name || identifier}`,
         )}
-        title={info.data?.display_name || identifier}
+        name={user?.login || c("Your profile", "Ваш профиль")}
         description={c(
           `Your rewards and eligibility as @${user?.login || "viewer"} on this channel.`,
           `Ваши награды и доступность для @${user?.login || "зрителя"} на этом канале.`,

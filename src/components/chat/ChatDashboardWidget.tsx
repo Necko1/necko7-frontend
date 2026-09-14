@@ -11,15 +11,18 @@ export default function ChatDashboardWidget({
   title,
   compact = true,
   hours = 168,
+  interval,
 }: {
   channelId: string;
   title?: string;
   showTopChatters?: boolean;
   compact?: boolean;
   hours?: number | null;
+  interval?: number;
 }) {
   const c = useCopy();
-  const bucket = hours == null || hours >= 720 ? 24 : hours <= 24 ? 1 : 6;
+  const bucket =
+    interval || (hours == null || hours >= 720 ? 24 : hours <= 24 ? 1 : 6);
   const query = useQuery({
     queryKey: ["chatDashboard", channelId, hours, bucket],
     queryFn: () =>

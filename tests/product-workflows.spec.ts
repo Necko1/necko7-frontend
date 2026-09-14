@@ -84,9 +84,12 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole("alert")).toContainText("Enter a reward title");
     await page.locator("#twitch_title").fill("QA drop");
     await page
-      .locator(".builder-advanced > summary")
-      .filter({ hasText: "Viewer eligibility" })
+      .getByRole("navigation", { name: "Configure behavior sections" })
+      .getByRole("button", { name: /Viewer eligibility/ })
       .click();
+    await page
+      .getByRole("switch", { name: "Require chat activity", exact: true })
+      .check();
     await page.locator("#chat_min_messages").fill("5");
     await page.getByRole("dialog").screenshot({
       path: `test-results/product/${width}-configure.png`,
@@ -217,7 +220,10 @@ test("chat filters survive navigation and old pages pause live updates", async (
   await page.getByLabel("Follow latest", { exact: true }).check();
   await page.getByRole("button", { name: "Older", exact: true }).click();
   await expect(
-    page.getByText("Updates paused on older pages", { exact: true }),
+    page.getByText(
+      "Paused while reading older messages. Resumes on the latest page.",
+      { exact: true },
+    ),
   ).toBeVisible();
   await expect(page.locator(".message-stream")).toContainText("Message 50");
   await page.reload();
@@ -291,8 +297,14 @@ test("analysis uses a shared period, correct server sort, and keyboard chart ins
     if (req.url().includes("/chat/leaderboard")) requests.push(req.url());
   });
   await page.goto("/leaderboard");
-  await page.getByRole("button", { name: "24h", exact: true }).click();
-  await page.getByLabel("Rank by", { exact: false }).selectOption("characters");
+  await page
+    .getByRole("navigation", { name: "Analysis period" })
+    .getByRole("button", { name: "24h", exact: true })
+    .click();
+  await page
+    .getByRole("group", { name: "Rank by", exact: true })
+    .getByRole("button", { name: "Characters", exact: true })
+    .click();
   await expect
     .poll(() =>
       requests.some(
@@ -355,13 +367,20 @@ test("browser back restores the applied chat search inputs", async ({
   await page.goto("/chat");
   await page.getByLabel("Message text", { exact: true }).fill("first");
   await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(
+    page.getByText("Matching: “first”", { exact: true }),
+  ).toBeVisible();
   await page.getByLabel("Message text", { exact: true }).fill("second");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page).toHaveURL(/q=second/);
-  await expect(page.getByText("Matching: “second”", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Matching: “second”", { exact: true }),
+  ).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/q=first/);
-  await expect(page.getByText("Matching: “first”", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Matching: “first”", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("Message text", { exact: true })).toHaveValue(
     "first",
   );

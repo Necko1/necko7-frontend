@@ -141,3 +141,108 @@ lint has only the existing effect/dependency/shared-export warnings. The shared 
 bundle still triggers the existing 500 kB advisory. Backend cargo check and all 68
 unit tests pass. Final captures are retained in .qa/workflow-pass without replacing
 older baselines. Changes remain in the current working tree for review.
+
+## Focused workflow correction pass — 14 September 2026
+
+This completes the requested correction pass on top of the committed redesign. The
+shell, graphite/lime tokens, typography, workspace switching, shared login, instance
+bootstrap, role boundaries, contextual guide and consequential-action confirmations
+are preserved. No new UI dependencies were introduced.
+
+### Corrections and reusable components
+
+- `ProfileIdentity` reunites avatar, display name, Twitch identity and channel/account
+  context on operator, global and channel profiles. Profiles have a bounded 1240px
+  reading area and related content stays grouped on wide screens. Community names
+  wrap even when they contain uninterrupted text.
+- Personal histories retain expandable outcomes and now include item artwork and a
+  contextual public-reward link. Reference IDs and purchase metadata move into a
+  secondary disclosure. Operator purchase rows also regain item artwork. A reward
+  that is no longer available has an explicit unavailable state at its public URL.
+- Chat uses timestamp, colored author and message on the same reading line, with
+  date separators and a small keyboard-accessible author filter. Continuations are
+  used only for adjacent messages in an unfiltered conversation; filtered/search
+  histories retain every author because omitted messages may have intervened.
+  Newest-first remains the default. The optional reverse direction is explicitly
+  scoped to the current page, preserving the server's existing pagination contract.
+- Shared `Segments` exposes small fixed choices directly. Analytics restores 1h/6h/24h
+  aggregation, visible measure selection and an aligned quiet-interval switch while
+  keeping the graph design. Quiet mode actually excludes empty intervals; both modes
+  bound the graph to 350 intervals. Leaderboard ranks 1–3 have restrained, dense
+  visual distinctions and ranking modes stay visible.
+- `BehaviorEditor` replaces the concatenated legacy configuration steps with focused
+  viewer-experience, pricing/market, eligibility and usage-limit panels. Only the
+  chosen panel is rendered. Type-dependent pricing, enabled chat rules, rolling
+  limits and market safety reveal their controls when relevant. Live summaries,
+  changed-field saves, validation, draft recovery and failed-save preservation remain.
+  Resetting a draft also resets local disclosure state. Mobile editing removes the
+  unrelated action bar while keeping those actions in the overview.
+- `RewardShowcase` gives public Fixed/Pool/Filter details an open composition with
+  reward identity, points, instructions, contents, restrictions and short-link sharing.
+  `ItemManifest` shares artwork, prices, probabilities, search and incremental display
+  between the showcase and `EffectiveReward`, which replaces the old technical dump.
+  Full item names/messages wrap safely; the compact live summary truncates long item
+  names without squeezing probabilities. Full configuration remains inspectable.
+- Cases foreground meaningful retained milestones and current outcome. Repeated
+  low-level records stay available under All retained events. The incomplete-audit-
+  trail disclaimer and existing resolution permissions/confirmations remain.
+- Logs regain a compact terminal register with line numbers, level/category, expandable
+  event data, wrapped JSON and clipboard feedback. Filtering and pagination remain.
+- Follow latest now has a stable switch label and checked-state meaning. Separate
+  status text explains manual refresh, 10-second polling, or an automatic pause while
+  reading older pages. Return to latest resumes polling. Toggling it on while reading
+  an older page does not unexpectedly navigate away.
+
+### Narrow backend support
+
+The final contract review caught a real public-price discrepancy. Public responses
+use major currency amounts, while operator reward responses use minor units. The
+shared manifest now handles those contracts explicitly. Public reward conversion in
+`necko7/src/api/v1/public_broadcasters.rs` now uses the existing currency-aware helper
+for item prices, pool prices and displayed automatic Channel Points (USD/EUR use
+1000 units; RUB uses 100). Currency accompanies published pool/filter prices even
+when the headline market price is hidden. Hidden prices/chances stay hidden; an
+unpublished chance is not displayed as 0%. Deploy this small backend correction with
+the frontend. There is no migration, new endpoint, or purchase/refund processing change.
+
+### Verification and rendered review
+
+- Final full Playwright run: **39 passed**. It includes the existing 48 page/viewport
+  sweep and new correction tests for identities/artwork, reward navigation, pool
+  discovery, hidden probabilities, currency units, selective save payloads, draft
+  reset, retained events, author filtering/grouping, aggregation and live-refresh
+  pause/resume in both channel and operator-viewer chat.
+- Type checking and production build pass. Lint exits successfully with the same
+  existing 10 shared-export/effect/dependency warnings. The existing >500kB shared
+  bundle advisory remains; no advisory is treated as a new failure.
+- Backend: `cargo check` and **70 tests passed**, including new public-price and
+  visibility tests for USD, EUR, RUB, manual pricing and hidden values.
+- Desktop/mobile rendered review covered all affected surfaces with long URLs,
+  uninterrupted strings, long usernames/items, 26-item pools, one/18-channel profiles,
+  alternating/consecutive authors and held/completed/refunded/penalized/pending rows.
+  Widths include 1440/390, analytics at 768, and profiles at 1920/768/390. Enabled mobile
+  eligibility and rolling-limit controls were reviewed separately. Issues found and
+  fixed during review included mobile community overflow, squeezed probabilities and
+  false continuation grouping after filtering.
+- 43 correction captures are retained locally under `.qa/correction-pass`; prior
+  `.qa/workflow-pass` and earlier baselines are preserved. All browser responses and
+  writes were isolated fixtures. No production purchases, refunds or Twitch writes
+  were performed. Final diffs were inspected; the pre-existing deleted OpenAPI file
+  and backend `.idea` directory were left untouched. This pass is not committed/pushed.
+
+### Remaining boundaries and release review
+
+Public Filter rewards expose configured criteria, not a promised current item list;
+actual candidates change with the market. Bot/deleted-message classification and
+precise Twitch cooldown expiry are not supplied by the current API and are not
+invented. Retained case logs remain bounded and are not a complete audit trail.
+Browser-tab drafts still do not synchronize between devices.
+
+Fixtures use deterministic artwork/avatar substitutes to verify layout and loading,
+not live CDN delivery. Real OAuth, database-backed updates, actual market artwork,
+clipboard permissions across browsers and external delivery need staging review.
+Before merging/deploying, check public prices against an actual USD/EUR/RUB account,
+an existing reward edit with safety/chat/rolling limits, and representative profile
+artwork. Review one controlled case resolution in staging. Safari/Firefox and real mobile-device testing were not performed. Broader
+chat search/order APIs, bulk history tools and message-template editing remain outside
+this focused correction pass.

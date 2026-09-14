@@ -49,6 +49,47 @@ export default function RedemptionCase({
   const events = [...(logs.data?.items || [])]
     .filter((event) => event.details?.redemption_id === r.twitch_redemption_id)
     .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id);
+  const eventTitles: Record<string, string> = {
+    STEAM_TRADE_OFFER_SENT: c(
+      "Steam trade offer sent",
+      "Предложение обмена Steam отправлено",
+    ),
+    REDEMPTION_ORDER_CREATED: c(
+      "Market order created",
+      "Заказ на маркете создан",
+    ),
+    REDEMPTION_COMPLETED: c("Delivery completed", "Доставка завершена"),
+    REDEMPTION_MANUAL_HOLD: c(
+      "Processing placed on hold",
+      "Обработка приостановлена",
+    ),
+    REDEMPTION_RETRY_REQUESTED: c(
+      "Purchase retry requested",
+      "Запрошена повторная покупка",
+    ),
+    REDEMPTION_MANUALLY_RETRIED: c(
+      "Manual retry recorded",
+      "Записана повторная попытка",
+    ),
+    REDEMPTION_MANUALLY_REFUNDED: c(
+      "Manual refund recorded",
+      "Записан ручной возврат",
+    ),
+    REDEMPTION_MANUALLY_PENALIZED: c(
+      "Closed without refund",
+      "Закрыто без возврата",
+    ),
+  };
+  const milestones: { title: string; at: string; count: number }[] = [];
+  for (const event of events) {
+    const title = eventTitles[event.event_type];
+    if (!title) continue;
+    const previous = milestones[milestones.length - 1];
+    if (previous?.title === title) {
+      previous.count++;
+      previous.at = event.created_at;
+    } else milestones.push({ title, at: event.created_at, count: 1 });
+  }
   const stateCopy: Record<string, string> = {
     PENDING: c(
       "The redemption is waiting for processing. No completed purchase is recorded.",
@@ -250,28 +291,38 @@ export default function RedemptionCase({
                 {c("Viewer redeemed the reward", "Зритель активировал награду")}
               </p>
             </li>
-            {logs.isLoading ? (
-              <Skeleton className="h-20" />
-            ) : logs.isError ? (
-              <QueryError onRetry={() => logs.refetch()} />
-            ) : (
-              events.map((event) => (
-                <li key={event.id}>
-                  <time>{new Date(event.created_at).toLocaleString()}</time>
-                  <p>{event.message}</p>
-                  {event.solution_hint && (
-                    <p className="text-muted-foreground">
-                      {event.solution_hint}
-                    </p>
+            {r.retry_count > 0 && (
+              <li>
+                <p>
+                  {c(
+                    "Retry attempts recorded",
+                    "Зафиксировано повторных попыток",
                   )}
-                  <details>
-                    <summary className="text-xs text-muted-foreground">
-                      {c("Event data", "Данные события")}
-                    </summary>
-                    <pre className="whitespace-pre-wrap break-all text-xs">
-                      {JSON.stringify(event.details, null, 2)}
-                    </pre>
-                  </details>
+                  : <strong>{r.retry_count}</strong>
+                </p>
+              </li>
+            )}
+            {logs.isLoading ? (
+              <li>
+                <Skeleton className="h-12" />
+              </li>
+            ) : logs.isError ? (
+              <li>
+                <QueryError onRetry={() => logs.refetch()} />
+              </li>
+            ) : (
+              milestones.map((event, i) => (
+                <li key={i}>
+                  <time>{new Date(event.at).toLocaleString()}</time>
+                  <p>
+                    {event.title}
+                    {event.count > 1 && (
+                      <small>
+                        {" "}
+                        · {event.count} {c("records", "записей")}
+                      </small>
+                    )}
+                  </p>
                 </li>
               ))
             )}
@@ -283,6 +334,34 @@ export default function RedemptionCase({
               </p>
             </li>
           </ol>
+          <details className="case-retained">
+            <summary>
+              {c("All retained events", "Все сохранённые события")} (
+              {events.length})
+            </summary>
+            <p className="text-xs text-muted-foreground">
+              {c(
+                "Chronological technical records. Repeated transitions are preserved here.",
+                "Технические записи по времени. Повторные переходы сохранены здесь.",
+              )}
+            </p>
+            {events.map((event) => (
+              <article key={event.id}>
+                <time>{new Date(event.created_at).toLocaleString()}</time>
+                <strong>{event.event_type}</strong>
+                <p>{event.message}</p>
+                {event.solution_hint && (
+                  <p className="text-muted-foreground">{event.solution_hint}</p>
+                )}
+                <details>
+                  <summary>{c("Event data", "Данные события")}</summary>
+                  <pre className="configuration-json">
+                    {JSON.stringify(event.details, null, 2)}
+                  </pre>
+                </details>
+              </article>
+            ))}
+          </details>
           {(logs.data?.total || 0) > limit && (
             <Button
               variant="ghost"
