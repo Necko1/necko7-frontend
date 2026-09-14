@@ -1,129 +1,119 @@
-import { useTranslation } from "react-i18next";
 import { authApi } from "@/lib/apiClient";
-import { cn } from "@/lib/utils";
+import { useCopy } from "@/lib/useCopy";
+import Brand from "@/components/layout/Brand";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 
-const IconTwitch = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-  </svg>
-);
-
-const IconUser = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-  </svg>
-);
-
-const IconBroadcast = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" /><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5" />
-    <circle cx="12" cy="12" r="2" /><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5" />
-    <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1" />
-  </svg>
-);
-
-interface AuthButtonProps {
-  href: string;
-  variant: "primary" | "secondary";
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-function AuthButton({ href, variant, icon, title, description }: AuthButtonProps) {
-  return (
-    <a
-      href={href}
-      className={cn(
-        "flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 group",
-
-        variant === "primary"
-          ? "bg-primary/10 border-primary/30 hover:bg-primary/20 hover:border-primary/50 "
-          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
-      )}
-    >
-      <span className={cn(
-        "flex items-center justify-center w-10 h-10 rounded-lg shrink-0 transition-colors",
-        variant === "primary"
-          ? "bg-primary/20 text-primary group-hover:bg-primary/30"
-          : "bg-white/10 text-muted-foreground group-hover:text-foreground"
-      )}>
-        {icon}
-      </span>
-      <div className="text-left flex-1 min-w-0">
-        <p className={cn(
-          "font-semibold text-sm",
-          variant === "primary" ? "text-primary" : "text-foreground"
-        )}>
-          {title}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </div>
-      <svg
-        width="16" height="16" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-        className="text-muted-foreground group-hover:text-foreground transition-colors shrink-0"
-      >
-        <polyline points="9 18 15 12 9 6" />
-      </svg>
-    </a>
-  );
-}
-
 export default function LoginPage() {
-  const { t } = useTranslation();
-
+  const c = useCopy();
   return (
-    <div className="rounded-lg p-5 sm:p-8 bg-card border border-border space-y-6">
-      <div className="flex justify-end -mt-2 -mr-2">
-        <LanguageSwitcher variant="compact" className="bg-white/5 border-white/10" />
-      </div>
-
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="flex justify-center mb-4">
-          <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30">
-            <IconTwitch />
+    <div className="entry-page">
+      <header className="entry-masthead">
+        <Brand />
+        <LanguageSwitcher variant="compact" />
+      </header>
+      <main className="entry-login">
+        <section className="entry-intro">
+          <p className="eyebrow">TWITCH / MARKET.CSGO.COM</p>
+          <h1>
+            {c(
+              "Your channels. Your rewards. One place.",
+              "Ваши каналы. Ваши награды. Всё рядом.",
+            )}
+          </h1>
+          <p className="entry-lead">
+            {c(
+              "Follow your rewards from Channel Points to CS items. Pick up where you left off, across the channels you’re part of.",
+              "Следите за наградами: от баллов канала до предметов CS. Возвращайтесь к своему профилю и каналам, в которых участвуете.",
+            )}
+          </p>
+          <dl className="entry-contexts">
+            <div>
+              <dt>{c("Your profile", "Ваш профиль")}</dt>
+              <dd>
+                {c(
+                  "Reward history and activity across channels, with eligibility in each community.",
+                  "История наград и активность на всех каналах, условия получения в каждом сообществе.",
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>{c("Your channel spaces", "Ваши каналы")}</dt>
+              <dd>
+                {c(
+                  "Move between communities and channels you help run. Your access follows your Twitch account.",
+                  "Переключайтесь между сообществами и каналами, которыми помогаете управлять. Доступ связан с аккаунтом Twitch.",
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>{c("Behind the rewards", "Управление наградами")}</dt>
+              <dd>
+                {c(
+                  "Streamers and authorized editors can configure rewards, track purchases and resolve held redemptions.",
+                  "Стримеры и назначенные редакторы настраивают награды, отслеживают покупки и разрешают удержанные заявки.",
+                )}
+              </dd>
+            </div>
+          </dl>
+        </section>
+        <section className="entry-access" aria-labelledby="sign-in-title">
+          <p className="eyebrow">
+            {c("WELCOME BACK / START HERE", "С ВОЗВРАЩЕНИЕМ / НАЧНИТЕ ЗДЕСЬ")}
+          </p>
+          <h2 id="sign-in-title">
+            {c(
+              "Continue with your Twitch account",
+              "Войдите с аккаунтом Twitch",
+            )}
+          </h2>
+          <p>
+            {c(
+              "For viewers, editors and returning streamers. Sign in to open your profile and the channels you already have access to.",
+              "Для зрителей, редакторов и стримеров. Войдите, чтобы открыть профиль и доступные вам каналы.",
+            )}
+          </p>
+          <a className="entry-primary" href={authApi.loginUrl()}>
+            {c("Sign in with Twitch", "Войти через Twitch")}
+            <span aria-hidden="true">↗</span>
+          </a>
+          <p className="entry-note">
+            {c(
+              "Editor access must be granted by a channel owner. Signing in does not grant moderation permissions.",
+              "Доступ редактора предоставляет владелец канала. Сам вход не даёт прав модерации.",
+            )}
+          </p>
+          <div className="entry-connect">
+            <h3>
+              {c("Bringing your own channel?", "Подключаете свой канал?")}
+            </h3>
+            <p>
+              {c(
+                "Connect it to enable reward management and bot access. Twitch will ask for additional channel permissions.",
+                "Подключите канал для управления наградами и работы бота. Twitch запросит дополнительные разрешения канала.",
+              )}
+            </p>
+            <a href={authApi.connectUrl()}>
+              {c("Connect my Twitch channel", "Подключить мой канал Twitch")}{" "}
+              <span aria-hidden="true">→</span>
+            </a>
           </div>
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {t("auth.welcomeTitle")}
-        </h1>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {t("auth.welcomeSubtitle")}
-        </p>
-      </div>
-
-      {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="px-3 text-xs text-muted-foreground bg-card">
-            {t("auth.chooseLoginType")}
-          </span>
-        </div>
-      </div>
-
-      {/* Login options */}
-      <div className="space-y-3">
-        <AuthButton
-          href={authApi.connectUrl()}
-          variant="primary"
-          icon={<IconBroadcast />}
-          title={t("auth.connectStreamerTitle")}
-          description={t("auth.connectStreamerDesc")}
-        />
-        <AuthButton
-          href={authApi.loginUrl()}
-          variant="secondary"
-          icon={<IconUser />}
-          title={t("auth.loginUserTitle")}
-          description={t("auth.loginUserDesc")}
-        />
-      </div>
+          <p className="entry-note">
+            {c(
+              "Authorization takes place on Twitch. No separate password is needed here.",
+              "Авторизация проходит на Twitch. Отдельный пароль здесь не нужен.",
+            )}
+          </p>
+        </section>
+      </main>
+      <footer className="entry-footer">
+        NECKO7{" "}
+        <span>
+          {c(
+            "Community activity · Channel rewards · Purchase operations",
+            "Активность сообществ · Награды каналов · Управление покупками",
+          )}
+        </span>
+      </footer>
     </div>
   );
 }

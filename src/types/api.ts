@@ -533,6 +533,7 @@ export interface ChannelLogsSummaryResponse {
 }
 
 export interface ListChannelLogsQuery {
+  redemption_id?: string;
   level?: ChannelLogLevel | null;
   category?: ChannelLogCategory | null;
   search?: string | null;

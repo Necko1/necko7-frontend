@@ -43,6 +43,6 @@ export default function DashboardPage() {
     <section><div className="section-heading"><h2>{t("ops.recent")}</h2><Link className="text-xs text-primary hover:underline" to="/redemptions">{t("ops.viewAll")} →</Link></div><RedemptionList channelId={channelId} pageSize={5} compact /></section>
     <section><div className="section-heading"><div><h2>{t("ops.activity")}</h2><p className="text-xs text-muted-foreground mt-1">{t("ops.activityDesc")}</p></div><div className="flex gap-1">{(["week", "month", "year"] as const).map(p => <Button key={p} variant={p === period ? "secondary" : "ghost"} size="sm" aria-pressed={p === period} onClick={() => setPeriod(p)}>{t(`dashboard.${p}`)}</Button>)}</div></div>{stats.isError ? <QueryError onRetry={() => void stats.refetch()} /> : <div className="metric-strip">{cards.map(([label, value]) => <div className="min-w-0" key={label}><p className="text-xs text-muted-foreground">{label}</p>{stats.isLoading ? <Skeleton className="h-7 w-20 mt-2" /> : <p className="metric-value tabular-nums">{value ?? "–"}</p>}</div>)}</div>}</section>
     <DashboardLogsWidget channelId={channelId} />
-    <details className="border-t border-border py-5"><summary className="text-sm font-semibold">{t("dashboard.chatAnalytics")}</summary><div className="mt-5"><ChatDashboardWidget channelId={channelId} showTopChatters title={t("dashboard.chatAnalytics")} /></div></details>
+    <ChatDashboardWidget channelId={channelId} compact />
   </div>;
 }

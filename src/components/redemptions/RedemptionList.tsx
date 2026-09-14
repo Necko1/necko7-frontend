@@ -1,8 +1,9 @@
+import RedemptionCase from "./RedemptionCase";
 import ConfirmAction from "@/components/common/ConfirmAction";
 import { EmptyState, QueryError } from "@/components/common/Page";
 import { useAppStore } from "@/store/useAppStore";
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { redemptionsApi } from "@/lib/apiClient";
@@ -12,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { formatMinorCurrency } from "@/lib/currency";
 import { toast } from "sonner";
 
 // ── Status helpers ─────────────────────────────────────────────────────────
@@ -97,23 +97,6 @@ function getLocalizedFailDescription(desc: string | null | undefined, language: 
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────
-const IconRetry = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="23 4 23 10 17 10" />
-    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-  </svg>
-);
-const IconRefund = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="1 4 1 10 7 10" />
-    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-  </svg>
-);
-const IconPenalty = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
 const IconChevron = ({ open }: { open: boolean }) => (
   <svg
     width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -122,22 +105,6 @@ const IconChevron = ({ open }: { open: boolean }) => (
     <polyline points="6 9 12 15 18 9" />
   </svg>
 );
-const IconUser = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-  </svg>
-);
-const IconExternalLink = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
-  </svg>
-);
-const IconCopy = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-  </svg>
-);
-
 // ── Redemption Row ─────────────────────────────────────────────────────────
 function RedemptionRow({
   redemption,
@@ -154,9 +121,7 @@ function RedemptionRow({
   const [action, setAction] = useState<"retry" | "refund" | "penalty" | null>(null);
   const role = useAppStore(state => state.broadcasters.find(b => b.channel_id === channelId)?.role.toUpperCase());
   const canAct = role === "OWNER" || role === "EDITOR";
-  const [tradeCopied, setTradeCopied] = useState(false);
   const qc = useQueryClient();
-  const navigate = useNavigate();
 
   const retryMutation = useMutation({
     mutationFn: () => redemptionsApi.retry(channelId, redemption.twitch_redemption_id),
@@ -179,6 +144,8 @@ function RedemptionRow({
       qc.invalidateQueries({ queryKey: ["balance", channelId] });
       qc.invalidateQueries({ queryKey: ["channel-logs", channelId] });
       qc.invalidateQueries({ queryKey: ["logs-summary", channelId] });
+      qc.invalidateQueries({ queryKey: ["case-events", channelId] });
+      qc.invalidateQueries({ queryKey: ["viewer-context", channelId, redemption.user_id] });
       toast.success(t("redemptions.retrySuccess", "Заказ успешно создан на маркете!"));
     },
     onError: (err: any) => {
@@ -198,6 +165,8 @@ function RedemptionRow({
       qc.invalidateQueries({ queryKey: ["balance", channelId] });
       qc.invalidateQueries({ queryKey: ["channel-logs", channelId] });
       qc.invalidateQueries({ queryKey: ["logs-summary", channelId] });
+      qc.invalidateQueries({ queryKey: ["case-events", channelId] });
+      qc.invalidateQueries({ queryKey: ["viewer-context", channelId, redemption.user_id] });
       toast.success(t("redemptions.refundSuccess", "Баллы успешно возвращены!"));
     },
     onError: (err: any) => {
@@ -217,6 +186,8 @@ function RedemptionRow({
       qc.invalidateQueries({ queryKey: ["balance", channelId] });
       qc.invalidateQueries({ queryKey: ["channel-logs", channelId] });
       qc.invalidateQueries({ queryKey: ["logs-summary", channelId] });
+      qc.invalidateQueries({ queryKey: ["case-events", channelId] });
+      qc.invalidateQueries({ queryKey: ["viewer-context", channelId, redemption.user_id] });
       toast.success(t("redemptions.penaltySuccess", "Выкуп успешно оштрафован!"));
     },
     onError: (err: any) => {
@@ -265,19 +236,6 @@ function RedemptionRow({
     }
   };
 
-  const handleUserClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/chat/users/${redemption.user_id}`);
-  };
-
-  const handleCopyTradeLink = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(redemption.user_trade_link).then(() => {
-      setTradeCopied(true);
-      setTimeout(() => setTradeCopied(false), 2000);
-    });
-  };
-
   return (
     <div className="ledger-row">
       <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={`detail-${redemption.twitch_redemption_id}`} className="ledger-summary">
@@ -288,171 +246,7 @@ function RedemptionRow({
         <span className="ledger-chevron"><IconChevron open={open} /></span>
       </button>
 
-      {/* Expanded details */}
-      {open && (
-        <div id={`detail-${redemption.twitch_redemption_id}`} className="border-t border-border bg-background/40 px-4 sm:px-6 py-5 space-y-5">
-          {isManualHold && <div className="border-l-2 border-amber-400 pl-3"><p className="text-sm font-semibold text-amber-300">{t("ops.holdReason")}</p><p className="mt-1 text-sm text-muted-foreground">{getLocalizedFailDescription(redemption.fail_description, i18n.language) || t("ops.noReason")}</p></div>}
-          <div className="grid grid-cols-2 gap-4 text-xs">
-            <div>
-              <p className="text-muted-foreground mb-0.5">{t("redemptions.redemptionId")}</p>
-              <p className="font-mono text-foreground break-all">{redemption.twitch_redemption_id}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-0.5">{t("redemptions.rewardId")}</p>
-              <p className="font-mono text-foreground break-all">{redemption.twitch_reward_id}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-0.5">{t("redemptions.userId")}</p>
-              <div className="flex items-center gap-2">
-                <p className="text-foreground">{redemption.user_id}</p>
-                <button
-                  type="button"
-                  onClick={handleUserClick}
-                  className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
-                >
-                  <IconUser />
-                  {t("redemptions.viewProfile")}
-                </button>
-              </div>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-0.5">{t("redemptions.retryCount")}</p>
-              <p className="text-foreground tabular-nums">{redemption.retry_count}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-0.5">{t("redemptions.marketPaid")}</p>
-              <p className="text-foreground tabular-nums">
-                {redemption.market_paid_price != null
-                  ? formatMinorCurrency(redemption.market_paid_price, redemption.currency)
-                  : "–"}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-0.5">{t("redemptions.pointsCost")}</p>
-              <p className="text-foreground tabular-nums">{redemption.twitch_points_cost.toLocaleString()} {t("common.pts")}</p>
-            </div>
-            {redemption.market_item_name != null && (
-              <div className="col-span-2">
-                <p className="text-muted-foreground mb-0.5">{t("redemptions.marketItem")}</p>
-                <a
-                  href={`https://market.csgo.com/en/?search=${encodeURIComponent(redemption.market_item_name)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline inline-flex items-center gap-1 font-medium break-all"
-                >
-                  {redemption.market_item_name}
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                    <polyline points="15 3 21 3 21 9" />
-                    <line x1="10" y1="14" x2="21" y2="3" />
-                  </svg>
-                </a>
-              </div>
-            )}
-            {/* Trade link */}
-            {redemption.user_trade_link && (
-              <div className="col-span-2">
-                <p className="text-muted-foreground mb-1">{t("redemptions.steamTradeLink")}</p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-mono text-[10px] text-foreground break-all truncate max-w-[240px]">
-                    {redemption.user_trade_link}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleCopyTradeLink}
-                    className={cn(
-                      "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border transition-all",
-                      tradeCopied
-                        ? "border-green-500/40 text-green-500 bg-green-500/10"
-                        : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                    )}
-                  >
-                    <IconCopy />
-                    {tradeCopied ? t("common.copied") : t("common.copy")}
-                  </button>
-                  <a
-                    href={redemption.user_trade_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <IconExternalLink />
-                    {t("common.open")}
-                  </a>
-                </div>
-              </div>
-            )}
-            <div>
-              <p className="text-muted-foreground mb-0.5">{t("redemptions.created")}</p>
-              <p className="text-foreground">{format(new Date(redemption.created_at), "dd MMM yyyy HH:mm:ss")}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-0.5">{t("redemptions.updated")}</p>
-              <p className="text-foreground">{format(new Date(redemption.updated_at), "dd MMM yyyy HH:mm:ss")}</p>
-            </div>
-            {redemption.fail_cause && (
-              <div className="col-span-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-semibold text-destructive">
-                    {FAIL_CAUSE_I18N_KEYS[redemption.fail_cause]
-                      ? t(FAIL_CAUSE_I18N_KEYS[redemption.fail_cause])
-                      : formatFailCause(redemption.fail_cause)}
-                  </span>
-                  <code className="text-[10px] font-mono bg-destructive/10 text-destructive/80 px-1.5 py-0.5 rounded border border-destructive/20">
-                    {redemption.fail_cause}
-                  </code>
-                </div>
-                {redemption.fail_description && (
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {getLocalizedFailDescription(redemption.fail_description, i18n.language)}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Action buttons for failed / pending / manual hold states */}
-          {canAct && (isFailedPenalty || isPending || isManualHold) && (
-            <div className="flex flex-wrap gap-2">
-              {(isFailedPenalty || isManualHold) && (
-                <Button
-                  size="sm"
-                  className="gap-1.5 text-xs cursor-pointer"
-                  onClick={() => setAction("retry")}
-                  disabled={isLoading}
-                >
-                  <IconRetry />
-                  {t("redemptions.retryMarketOrder")}
-                </Button>
-              )}
-              {(isPending || isManualHold) && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-xs cursor-pointer"
-                  onClick={() => setAction("refund")}
-                  disabled={isLoading}
-                >
-                  <IconRefund />
-                  {t("redemptions.refund")}
-                </Button>
-              )}
-              {(isPending || isManualHold) && (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="gap-1.5 text-xs cursor-pointer"
-                  onClick={() => setAction("penalty")}
-                  disabled={isLoading}
-                >
-                  <IconPenalty />
-                  {t("ops.penaltyLabel")}
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      {open && <RedemptionCase redemption={redemption} channelId={channelId} statusLabel={getStatusLabel(redemption.status)} failure={getLocalizedFailDescription(redemption.fail_description, i18n.language) || (redemption.fail_cause ? (FAIL_CAUSE_I18N_KEYS[redemption.fail_cause] ? t(FAIL_CAUSE_I18N_KEYS[redemption.fail_cause]) : formatFailCause(redemption.fail_cause)) : "")} canAct={canAct} pending={isLoading} onAction={setAction} />}
       <ConfirmAction open={!!action} onClose={() => setAction(null)} pending={isLoading} destructive={action === "penalty"}
         title={t(`ops.${action || "retry"}Title`)} description={t(`ops.${action || "retry"}Desc`)}
         label={action === "retry" ? t("redemptions.retryMarketOrder") : action === "refund" ? t("redemptions.refund") : t("ops.penaltyLabel")}

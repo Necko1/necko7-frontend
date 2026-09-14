@@ -206,6 +206,7 @@ export const statsApi = {
 // ===== Chat Analytics (v0.4.0) =====
 
 export const chatApi = {
+  getViewerContext: (channelId: string, userId: string) => api.get<ViewerChannelProfileResponse>(`/api/v1/broadcasters/${channelId}/chat/users/${userId}/profile`),
   getDashboard: (channelId: string, params?: ChatDashboardQuery) =>
     api.get<ChatDashboardData>(
       `/api/v1/broadcasters/${channelId}/chat/dashboard`,

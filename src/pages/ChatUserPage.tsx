@@ -1,684 +1,180 @@
-import { QueryError } from "@/components/common/Page";
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { chatApi, redemptionsApi } from "@/lib/apiClient";
 import { useAppStore } from "@/store/useAppStore";
-import { chatApi } from "@/lib/apiClient";
-import type { ChatMessage, RedemptionResponse } from "@/types/api";
-import { cn } from "@/lib/utils";
-import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
+import { useCopy } from "@/lib/useCopy";
+import { PageHeader, QueryError } from "@/components/common/Page";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import SkinImage from "@/components/common/SkinImage";
-import { formatMinorCurrency } from "@/lib/currency";
-
-const PAGE_SIZE = 50;
-const REDEMPTION_PAGE_SIZE = 9;
-
-// ── Time window options ────────────────────────────────────────────────────────
-const TIME_WINDOWS: { labelKey?: string; label: string; value: number | null }[] = [
-  { label: "All time", value: null },
-  { label: "24h", value: 24 },
-  { label: "7d", value: 168 },
-  { label: "30d", value: 720 },
-];
-
-// ── Status helpers ────────────────────────────────────────────────────────────
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "redemptions.statuses.pending",
-  ORDER_CREATED: "redemptions.statuses.orderCreated",
-  MANUAL_HOLD: "redemptions.statuses.manualHold",
-  COMPLETED: "redemptions.statuses.completed",
-  FAILED_REFUND: "redemptions.statuses.refunded",
-  FAILED_PENALTY: "redemptions.statuses.penalized",
-  Pending: "redemptions.statuses.pending",
-  OrderCreated: "redemptions.statuses.orderCreated",
-  ManualHold: "redemptions.statuses.manualHold",
-  Completed: "redemptions.statuses.completed",
-  FailedRefund: "redemptions.statuses.refunded",
-  FailedPenalty: "redemptions.statuses.penalized",
-};
-
-const STATUS_CLASSES: Record<string, string> = {
-  PENDING: "status-pending",
-  ORDER_CREATED: "status-order-created",
-  MANUAL_HOLD: "status-manual-hold",
-  COMPLETED: "status-completed",
-  FAILED_REFUND: "status-failed-refund",
-  FAILED_PENALTY: "status-failed-penalty",
-  Pending: "status-pending",
-  OrderCreated: "status-order-created",
-  ManualHold: "status-manual-hold",
-  Completed: "status-completed",
-  FailedRefund: "status-failed-refund",
-  FailedPenalty: "status-failed-penalty",
-};
-
-// ── Icons ────────────────────────────────────────────────────────────────────
-const IconSearch = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
-
-const IconArrowLeft = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-  </svg>
-);
-
-const IconCalendar = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-  </svg>
-);
-
-const IconCopy = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-  </svg>
-);
-
-const IconExternalLink = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
-  </svg>
-);
-
-// ── Stat Card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-1">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-xl font-bold text-foreground tabular-nums">{typeof value === "number" ? value.toLocaleString() : value}</p>
-      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
-    </div>
-  );
-}
-
-// ── Copy button ───────────────────────────────────────────────────────────────
-function CopyButton({ text }: { text: string }) {
-  const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
-  const copy = useCallback(() => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [text]);
-  return (
-    <button
-      type="button"
-      onClick={copy}
-      className={cn(
-        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border transition-all",
-        copied
-          ? "border-green-500/40 text-green-500 bg-green-500/10"
-          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/30"
-      )}
-    >
-      <IconCopy />
-      {copied ? t("common.copied") : t("common.copy")}
-    </button>
-  );
-}
-
-// ── Date grouping helpers ────────────────────────────────────────────────────
-function formatDateDivider(dateStr: string, t: (key: string) => string): string {
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-  if (isToday(date)) return t("common.today");
-  if (isYesterday(date)) return t("common.yesterday");
-  return format(date, "dd MMMM yyyy");
-}
-
-function getDateKey(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-  return format(date, "yyyy-MM-dd");
-}
-
-// ── Stream Chat Message Row ──────────────────────────────────────────────────
-function UserMessageRow({ msg }: { msg: ChatMessage }) {
-  const { t } = useTranslation();
-  const date = new Date(msg.sent_at);
-  const timeStr = !isNaN(date.getTime()) ? format(date, "HH:mm:ss") : "–";
-
-  return (
-    <div
-      className="group flex items-start gap-3 py-1.5 px-3 rounded-lg hover:bg-muted/40 transition-colors text-sm leading-relaxed"
-      title={`${msg.char_count} ${t("common.chars")} · ${timeStr}`}
-    >
-      <span className="text-xs text-muted-foreground/60 tabular-nums shrink-0 pt-0.5 select-none font-mono">
-        {timeStr}
-      </span>
-      <p className="text-foreground break-words flex-1 min-w-0 font-normal">
-        {msg.message_text}
-      </p>
-      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-muted-foreground/60 tabular-nums shrink-0 pt-0.5 select-none font-mono">
-        {msg.char_count} {t("common.chars")}
-      </span>
-    </div>
-  );
-}
-
-// ── Redemption Card ───────────────────────────────────────────────────────────
-function RedemptionCard({ redemption }: { redemption: RedemptionResponse }) {
-  const { t } = useTranslation();
-  const statusKey = STATUS_LABELS[redemption.status];
-  const statusLabel = statusKey ? t(statusKey) : redemption.status;
-
-  return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col hover:border-primary/30 transition-all group">
-      {/* Skin image */}
-      <div className="aspect-square bg-muted/20 relative overflow-hidden">
-        <SkinImage
-          marketItemName={redemption.market_item_name}
-          size={150}
-          className="w-full h-full object-contain p-2 transition-transform group-hover:scale-105"
-          fallbackClassName="w-full h-full flex items-center justify-center bg-primary/5"
-        />
-        <div className="absolute top-2 right-2">
-          <Badge
-            className={cn(
-              "text-[10px] px-1.5 py-0 font-medium border rounded-md",
-              STATUS_CLASSES[redemption.status] || "status-pending"
-            )}
-          >
-            {statusLabel}
-          </Badge>
-        </div>
-      </div>
-
-      {/* Info */}
-      <div className="p-3 flex-1 flex flex-col gap-2">
-        <div>
-          <p className="text-xs font-semibold text-foreground leading-snug line-clamp-2">
-            {redemption.market_item_name ?? "Twitch Reward"}
-          </p>
-          <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-            <IconCalendar />
-            <span>{format(new Date(redemption.created_at), "dd MMM yyyy HH:mm")}</span>
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-medium text-primary tabular-nums">
-            {redemption.twitch_points_cost.toLocaleString()} {t("common.pts")}
-          </span>
-          {redemption.market_paid_price != null && (
-            <span className="text-muted-foreground tabular-nums">
-              {formatMinorCurrency(redemption.market_paid_price, redemption.currency)}
-            </span>
-          )}
-        </div>
-
-        {/* Trade link */}
-        {redemption.user_trade_link && (
-          <div className="flex items-center gap-1.5 pt-1 border-t border-border mt-auto">
-            <CopyButton text={redemption.user_trade_link} />
-            <a
-              href={redemption.user_trade_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
-            >
-              <IconExternalLink />
-              {t("chatUser.tradeLink")}
-            </a>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
+import { Button } from "@/components/ui/button";
+import { ViewerLimits } from "@/components/profiles/ViewerHistory";
+import RedemptionList from "@/components/redemptions/RedemptionList";
+import ChatHistory from "@/components/chat/ChatHistory";
 export default function ChatUserPage() {
-  const { t } = useTranslation();
-  const { userId } = useParams<{ userId: string }>();
-  const targetUserId = userId ?? "";
-  const navigate = useNavigate();
-  const { selectedBroadcasterId } = useAppStore();
-  const channelId = selectedBroadcasterId ?? "";
-
-  const [timeWindow, setTimeWindow] = useState<number | null>(null);
-
-  // Messages state
-  const [msgOffset, setMsgOffset] = useState(0);
-  const [allMessages, setAllMessages] = useState<ChatMessage[]>([]);
-  const [msgSearch, setMsgSearch] = useState("");
-  const [debouncedMsgSearch, setDebouncedMsgSearch] = useState("");
-  const msgSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleMsgSearchChange = (val: string) => {
-    setMsgSearch(val);
-    if (msgSearchTimerRef.current) clearTimeout(msgSearchTimerRef.current);
-    msgSearchTimerRef.current = setTimeout(() => setDebouncedMsgSearch(val.trim()), 400);
-  };
-
-  // Redemptions state
-  const [redOffset, setRedOffset] = useState(0);
-  const [allRedemptions, setAllRedemptions] = useState<RedemptionResponse[]>([]);
-
-  // Reset messages when filter or search changes
-  useEffect(() => {
-    setMsgOffset(0);
-    setAllMessages([]);
-  }, [channelId, userId, timeWindow, debouncedMsgSearch]);
-
-  // Reset redemptions when channel or user changes
-  useEffect(() => {
-    setRedOffset(0);
-    setAllRedemptions([]);
-  }, [channelId, userId]);
-
-  // ── Queries ────────────────────────────────────────────────────────────────
-
-  const { data: summary, isLoading: summaryLoading, isError: summaryError, refetch: retrySummary } = useQuery({
-    queryKey: ["userSummary", channelId, targetUserId],
-    queryFn: () => chatApi.getUserSummary(channelId, targetUserId).then((r) => r.data),
-    enabled: !!channelId && !!targetUserId,
-    staleTime: 60_000,
+  const c = useCopy();
+  const { userId = "" } = useParams();
+  const channel = useAppStore((s) => s.getSelectedBroadcaster());
+  const id = channel?.channel_id || "";
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("view") || "redemptions";
+  const status = params.get("state") || "";
+  const identity = useQuery({
+    queryKey: ["userStats", id, userId, null],
+    queryFn: () => chatApi.getUserStats(id, userId).then((r) => r.data),
+    enabled: !!id && !!userId,
   });
-
-  const { data: periodStats, isLoading: statsLoading, isError: statsError, refetch: retryStats } = useQuery({
-    queryKey: ["userStats", channelId, targetUserId, timeWindow],
+  const context = useQuery({
+    queryKey: ["viewer-context", id, userId],
+    queryFn: () => chatApi.getViewerContext(id, userId).then((r) => r.data),
+    enabled: !!id && !!userId,
+    refetchInterval: 30_000,
+  });
+  const holds = useQuery({
+    queryKey: ["redemptions", id, "viewer-holds", userId],
     queryFn: () =>
-      chatApi
-        .getUserStats(channelId, targetUserId, { time_window_hours: timeWindow })
+      redemptionsApi
+        .list(id, { user_id: userId, status: "MANUAL_HOLD", limit: 1 })
         .then((r) => r.data),
-    enabled: !!channelId && !!targetUserId,
-    staleTime: 30_000,
+    enabled: !!id && !!userId,
+    refetchInterval: 15_000,
   });
-
-  const { data: messagesData, isFetching: msgsFetching, isError: messagesError, refetch: retryMessages } = useQuery({
-    queryKey: [
-      "userMessages",
-      channelId,
-      targetUserId,
-      timeWindow,
-      debouncedMsgSearch,
-      msgOffset,
-    ],
-    queryFn: () =>
-      chatApi
-        .getUserMessages(channelId, targetUserId, {
-          time_window_hours: timeWindow,
-          search: debouncedMsgSearch || null,
-          offset: msgOffset,
-          limit: PAGE_SIZE,
-        })
-        .then((r) => r.data),
-    enabled: !!channelId && !!targetUserId,
-    staleTime: 30_000,
-
-  });
-
-  // Accumulate messages
-  useEffect(() => {
-    if (!messagesData) return;
-    setAllMessages((prev) => {
-      if (msgOffset === 0) {
-        return messagesData.items;
-      }
-      const existingIds = new Set(prev.map((m) => m.id));
-      const fresh = messagesData.items.filter((m) => !existingIds.has(m.id));
-      return [...prev, ...fresh];
-    });
-  }, [messagesData, msgOffset]);
-
-  const { data: redemptionsData, isFetching: redsFetching, isError: redemptionsError, refetch: retryRedemptions } = useQuery({
-    queryKey: ["userRedemptions", channelId, targetUserId, redOffset],
-    queryFn: () =>
-      chatApi
-        .getUserRedemptions(channelId, targetUserId, {
-          offset: redOffset,
-          limit: REDEMPTION_PAGE_SIZE,
-        })
-        .then((r) => r.data),
-    enabled: !!channelId && !!targetUserId,
-    staleTime: 30_000,
-
-  });
-
-  // Accumulate redemptions
-  useEffect(() => {
-    if (!redemptionsData) return;
-    setAllRedemptions((prev) => {
-      if (redOffset === 0) {
-        return redemptionsData.items;
-      }
-      const existingIds = new Set(prev.map((r) => r.twitch_redemption_id));
-      const fresh = redemptionsData.items.filter((r) => !existingIds.has(r.twitch_redemption_id));
-      return [...prev, ...fresh];
-    });
-  }, [redemptionsData, redOffset]);
-
-  const msgHasMore = messagesData ? allMessages.length < messagesData.total : false;
-  const redHasMore = redemptionsData ? allRedemptions.length < redemptionsData.total : false;
-
-  const avgCharsPerMsg =
-    periodStats && periodStats.message_count > 0
-      ? Math.round(periodStats.char_count / periodStats.message_count)
-      : 0;
-
-  const displayMessages = allMessages.length > 0 ? allMessages : messagesData?.items ?? [];
-  const displayRedemptions = allRedemptions.length > 0 ? allRedemptions : redemptionsData?.items ?? [];
-
-  const userLogin = periodStats?.user_login || summary?.chatter_user_login || targetUserId || "user";
-  const displayName = periodStats?.display_name || userLogin;
-  const avatarUrl = periodStats?.profile_image_url;
-
-  // Group messages by date
-  const groupedMessages = useMemo(() => {
-    const msgs = allMessages.length > 0 ? allMessages : messagesData?.items ?? [];
-    const groups: { dateKey: string; label: string; messages: ChatMessage[] }[] = [];
-    const map = new Map<string, { label: string; messages: ChatMessage[] }>();
-
-    for (const msg of msgs) {
-      const key = getDateKey(msg.sent_at);
-      if (!map.has(key)) {
-        const item = { label: formatDateDivider(msg.sent_at, t), messages: [] };
-        map.set(key, item);
-        groups.push({ dateKey: key, ...item });
-      }
-      map.get(key)!.messages.push(msg);
-    }
-    return groups;
-  }, [allMessages, messagesData?.items, t]);
-
-  if (summaryError || statsError || messagesError || redemptionsError) return <div className="page-shell"><QueryError onRetry={() => { void retrySummary(); void retryStats(); void retryMessages(); void retryRedemptions(); }} /></div>;
-
-  if (!channelId || !userId) {
-  return (
-      <div className="page-shell flex items-center justify-center min-h-96">
-        <p className="text-muted-foreground">{t("dashboard.selectChannelDesc")}</p>
-      </div>
-    );
-  }
-
+  const user = identity.data;
+  const profile = context.data;
+  const select = (view: string, state = "") =>
+    setParams({ view, ...(state ? { state } : {}) });
   return (
     <div className="page-shell space-y-6">
-      {/* Back navigation */}
-      <button
-        type="button"
-        onClick={() => navigate("/leaderboard")}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <IconArrowLeft />
-        {t("chatUser.backToLeaderboard")}
-      </button>
-
-      {/* Profile header */}
-      <div className="flex items-center gap-4 p-5 rounded-xl border border-border bg-card">
-        {summaryLoading && statsLoading ? (
-          <Skeleton className="w-14 h-14 rounded-full shrink-0" />
-        ) : avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt={displayName}
-            className="w-14 h-14 rounded-full object-cover shrink-0 ring-2 ring-border/80 shadow-sm"
-          />
-        ) : (
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0 shadow-sm"
-            style={{
-              background: `hsl(${[...userLogin].reduce((a, c) => a + c.charCodeAt(0), 0) % 360}, 55%, 42%)`,
-            }}
+      <PageHeader
+        eyebrow={c(
+          `Viewer casebook · ${channel?.channel_login || ""}`,
+          `Профиль зрителя · ${channel?.channel_login || ""}`,
+        )}
+        title={user?.display_name || user?.user_login || userId}
+        description={c(
+          "Review this viewer's activity, eligibility and unresolved purchases on the current channel.",
+          "Проверьте активность зрителя, ограничения и нерешённые покупки на текущем канале.",
+        )}
+        actions={<Link to="/chat">{c("Channel chat", "Чат канала")} →</Link>}
+      />
+      {identity.isError && <QueryError onRetry={() => identity.refetch()} />}
+      <div className="viewer-context-bar">
+        <span className="text-xs text-muted-foreground">
+          Twitch ID: {userId}
+        </span>
+        {user?.user_login && (
+          <a
+            href={`https://www.twitch.tv/${user.user_login}`}
+            target="_blank"
+            rel="noreferrer"
           >
-            {userLogin.charAt(0).toUpperCase()}
-          </div>
+            @{user.user_login} ↗
+          </a>
         )}
-        <div className="flex-1 min-w-0 space-y-1">
-          {summaryLoading && statsLoading ? (
-            <>
-              <Skeleton className="h-6 w-40" />
-              <Skeleton className="h-4 w-56" />
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-foreground">
-                  {displayName}
-                </h1>
-                {displayName.toLowerCase() !== userLogin.toLowerCase() ? (
-                  <span className="text-sm font-medium text-muted-foreground">
-                    (@{userLogin})
-                  </span>
-                ) : displayName !== userLogin ? (
-                  <span className="text-xs font-mono text-muted-foreground/70">
-                    @{userLogin}
-                  </span>
-                ) : null}
-                {userLogin && userLogin !== userId && (
-                  <a
-                    href={`https://twitch.tv/${userLogin}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline ml-1"
-                    title={`Open @${userLogin} Twitch channel`}
-                  >
-                    <IconExternalLink />
-                    Twitch
-                  </a>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                <span className="font-mono text-foreground/60">{userId}</span>
-                {summary?.first_seen_at && (
-                  <span className="flex items-center gap-1">
-                    <IconCalendar />
-                    {t("chatUser.firstSeen")} {format(new Date(summary.first_seen_at), "dd MMM yyyy")}
-                  </span>
-                )}
-                {summary?.last_seen_at && (
-                  <span>
-                    {t("chatUser.lastSeen")}{" "}
-                    {formatDistanceToNow(new Date(summary.last_seen_at), { addSuffix: true })}
-                  </span>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-        {/* Lifetime totals */}
-        {summary && (
-          <div className="hidden sm:flex items-center gap-4 shrink-0">
-            <div className="text-right">
-              <p className="text-lg font-bold text-foreground tabular-nums">
-                {summary.total_messages.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">{t("chatUser.totalMessages")}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold text-foreground tabular-nums">
-                {summary.total_chars.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">{t("chatUser.totalChars")}</p>
-            </div>
-          </div>
+        {holds.isError ? (
+          <QueryError onRetry={() => holds.refetch()} />
+        ) : (
+          <Button
+            variant={holds.data?.total ? "default" : "outline"}
+            disabled={holds.isPending}
+            onClick={() => select("redemptions", "MANUAL_HOLD")}
+          >
+            {holds.data?.total ?? "…"} {c("need review", "требуют проверки")}
+          </Button>
         )}
       </div>
-
-      {/* Period selector */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground font-medium">{t("chatUser.period")}</span>
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1">
-          {TIME_WINDOWS.map((tw) => (
-            <button
-              key={String(tw.value)}
-              type="button"
-              onClick={() => setTimeWindow(tw.value)}
-              className={cn(
-                "px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
-                timeWindow === tw.value
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {tw.value === null ? t("chatUser.allTime") : tw.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Period stat cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard
-          label={t("chat.messages")}
-          value={statsLoading ? "—" : (periodStats?.message_count ?? 0)}
-          sub={timeWindow ? t("chatUser.lastPeriod", { label: TIME_WINDOWS.find((t) => t.value === timeWindow)?.label }) : t("chatUser.allTime")}
-        />
-        <StatCard
-          label={t("chat.characters")}
-          value={statsLoading ? "—" : (periodStats?.char_count ?? 0)}
-          sub={timeWindow ? t("chatUser.lastPeriod", { label: TIME_WINDOWS.find((t) => t.value === timeWindow)?.label }) : t("chatUser.allTime")}
-        />
-        <StatCard
-          label={t("chat.avgChars")}
-          value={statsLoading ? "—" : avgCharsPerMsg}
-          sub={t("chatUser.inSelectedPeriod")}
-        />
-      </div>
-
-      {/* Two-column content: messages | redemptions */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Left: Messages */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">
-              {t("chatUser.messageHistory")}
-              {messagesData && (
-                <span className="ml-1.5 text-xs text-muted-foreground font-normal">
-                  ({messagesData.total.toLocaleString()} {t("common.total")})
-                </span>
-              )}
-            </h2>
-            {msgsFetching && (
-              <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            )}
+      {context.isError ? (
+        <QueryError onRetry={() => context.refetch()} />
+      ) : !profile ? (
+        <Skeleton className="h-20" />
+      ) : (
+        <div className="profile-totals">
+          <div>
+            <strong>{profile.redemption_stats.total_redemptions}</strong>
+            <span>{c("Redemptions", "Активации")}</span>
           </div>
-
-          {/* Search bar for user messages */}
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-              <IconSearch />
+          <div>
+            <strong>{profile.redemption_stats.failed}</strong>
+            <span>{c("Failed", "С ошибкой")}</span>
+          </div>
+          <div>
+            <strong>
+              {profile.chat_stats.total_messages.toLocaleString()}
+            </strong>
+            <span>
+              {c("Chat messages · all time", "Сообщения · всё время")}
             </span>
-            <Input
-              placeholder={t("chatUser.searchPlaceholder")}
-              value={msgSearch}
-              onChange={(e) => handleMsgSearchChange(e.target.value)}
-              className="pl-9 h-9 bg-card rounded-xl text-xs"
-            />
           </div>
-
-          {/* Stream-style messages list with date dividers */}
-          <div className="rounded-xl border border-border bg-card/60 p-3 sm:p-4 space-y-4">
-            {statsLoading && allMessages.length === 0 ? (
-              <div className="space-y-3 py-2">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Skeleton className="h-4 w-14 rounded" />
-                    <Skeleton className="h-4 flex-1 rounded" />
-                  </div>
-                ))}
-              </div>
-            ) : displayMessages.length === 0 ? (
-              <div className="py-10 text-center text-muted-foreground text-xs">
-                {debouncedMsgSearch
-                  ? t("chatUser.noMessagesSearch")
-                  : t("chatUser.noMessagesPeriod")}
-              </div>
-            ) : (
-              <div className="space-y-5">
-                {groupedMessages.map((group) => (
-                  <div key={group.dateKey} className="space-y-1">
-                    {/* Centered Date Header */}
-                    <div className="relative flex items-center justify-center py-1.5 select-none">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-border/70" />
-                      </div>
-                      <div className="relative px-3 py-0.5 rounded-full bg-card border border-border text-[10px] font-semibold text-muted-foreground shadow-xs">
-                        {group.label}
-                      </div>
-                    </div>
-
-                    {/* Messages under date */}
-                    <div className="space-y-0.5">
-                      {group.messages.map((msg) => (
-                        <UserMessageRow key={msg.id} msg={msg} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {msgHasMore && (
-              <button
-                type="button"
-                onClick={() => setMsgOffset((o) => o + PAGE_SIZE)}
-                disabled={msgsFetching}
-                className="w-full py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all disabled:opacity-50 mt-2"
-              >
-                {msgsFetching
-                  ? t("common.loading")
-                  : t("chatUser.loadMoreRemaining", { count: messagesData!.total - displayMessages.length })}
-              </button>
-            )}
+          <div>
+            <strong>
+              {profile.limits.filter((rule) => rule.is_limit_reached).length}
+            </strong>
+            <span>{c("Limits reached", "Достигнуто лимитов")}</span>
           </div>
         </div>
-
-        {/* Right: Redemptions */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">
-              {t("redemptions.title")}
-              {redemptionsData && (
-                <span className="ml-1.5 text-xs text-muted-foreground font-normal">
-                  ({redemptionsData.total.toLocaleString()} {t("common.total")})
-                </span>
-              )}
-            </h2>
-            {redsFetching && (
-              <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {redsFetching && allRedemptions.length === 0
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="aspect-square rounded-xl" />
-                ))
-              : displayRedemptions.map((r) => (
-                  <RedemptionCard key={r.twitch_redemption_id} redemption={r} />
-                ))}
-          </div>
-
-          {redHasMore && (
-            <button
-              type="button"
-              onClick={() => setRedOffset((o) => o + REDEMPTION_PAGE_SIZE)}
-              disabled={redsFetching}
-              className="w-full py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all disabled:opacity-50"
+      )}
+      <nav
+        className="context-tabs"
+        aria-label={c("Viewer activity", "Активность зрителя")}
+      >
+        {[
+          ["redemptions", c("Purchases & cases", "Покупки и проверки")],
+          ["chat", c("Chat history", "История чата")],
+          ["eligibility", c("Eligibility & limits", "Требования и лимиты")],
+        ].map(([key, title]) => (
+          <button
+            key={key}
+            aria-current={tab === key ? "page" : undefined}
+            onClick={() => select(key)}
+          >
+            {title}
+          </button>
+        ))}
+      </nav>
+      {tab === "chat" ? (
+        <ChatHistory
+          key={`${id}:${userId}`}
+          channelId={id}
+          userId={userId}
+          compact
+        />
+      ) : tab === "eligibility" ? (
+        profile && (
+          <ViewerLimits
+            limits={profile.limits}
+            channelLogin={channel?.channel_login || id}
+          />
+        )
+      ) : (
+        <section className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="ghost"
+              aria-pressed={!status}
+              onClick={() => select("redemptions")}
             >
-              {redsFetching
-                ? t("common.loading")
-                : t("chatUser.loadMoreRemaining", { count: redemptionsData!.total - displayRedemptions.length })}
-            </button>
-          )}
-
-          {!redsFetching && displayRedemptions.length === 0 && (
-            <div className="py-10 text-center text-muted-foreground text-sm">
-              {t("chatUser.noRedemptions")}
-            </div>
-          )}
-        </div>
-      </div>
+              {c("All purchases", "Все покупки")}
+            </Button>
+            <Button
+              variant="ghost"
+              aria-pressed={status === "MANUAL_HOLD"}
+              onClick={() => select("redemptions", "MANUAL_HOLD")}
+            >
+              {c("Held cases", "Удержанные активации")}
+            </Button>
+            <p className="text-xs text-muted-foreground self-center">
+              {c(
+                "Trade links belong to individual redemptions; open a case to inspect the submitted link.",
+                "Ссылки обмена относятся к конкретным активациям; откройте запись для проверки.",
+              )}
+            </p>
+          </div>
+          <RedemptionList
+            channelId={id}
+            userIdFilter={userId}
+            statusFilter={status === "MANUAL_HOLD" ? "MANUAL_HOLD" : undefined}
+            pageSize={10}
+          />
+        </section>
+      )}
     </div>
   );
 }
-

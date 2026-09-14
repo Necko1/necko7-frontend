@@ -1,162 +1,192 @@
 import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { authApi, usersApi } from "@/lib/apiClient";
+import { useCopy } from "@/lib/useCopy";
+import Brand from "@/components/layout/Brand";
+import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import { Button } from "@/components/ui/button";
 import type { AxiosError } from "axios";
 
-const IconAlertTriangle = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-    <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-  </svg>
-);
-
-const IconBot = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="11" width="18" height="10" rx="2" /><circle cx="12" cy="5" r="2" />
-    <path d="M12 7v4" /><line x1="8" y1="16" x2="8" y2="16" /><line x1="16" y1="16" x2="16" y2="16" />
-  </svg>
-);
-
-const Step = ({ num, text }: { num: number; text: React.ReactNode }) => (
-  <div className="flex gap-3 items-start">
-    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0 mt-0.5">
-      {num}
-    </span>
-    <p className="text-sm text-muted-foreground leading-relaxed">{text}</p>
-  </div>
-);
-
 export default function InitBotPage() {
-  const { t } = useTranslation();
-
-  // Check if the bot is already initialized
-  const { data, error, isLoading } = useQuery({
+  const c = useCopy();
+  const { data, error, isLoading, refetch } = useQuery({
     queryKey: ["me"],
     queryFn: () => usersApi.me().then((r) => r.data),
     retry: false,
     staleTime: 0,
   });
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <svg
-          className="animate-spin w-7 h-7 text-primary"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-        </svg>
-      </div>
-    );
-  }
-
-  // Already logged in
-  if (data) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // If status is NOT 404 (e.g. 401 Unauthorized), the bot is ALREADY initialized!
-  // App init guard on the backend only returns 404 when the bot is not yet initialized.
   const status = (error as AxiosError)?.response?.status;
-  if (status && status !== 404) {
-    return <Navigate to="/login" replace />;
-  }
+  if (data) return <Navigate to="/dashboard" replace />;
+  if (status === 401) return <Navigate to="/login" replace />;
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-animated relative overflow-hidden px-4">
-      {/* Ambient glow orbs */}
-      <div
-        className="absolute top-1/4 left-1/3 w-96 h-96 rounded-full opacity-20 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, #40372e 0%, transparent 70%)" }}
-      />
-      <div
-        className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-15 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, #2a526a 0%, transparent 70%)" }}
-      />
-
-      <div className="relative z-10 glass rounded-2xl p-8 glow-teal space-y-6 max-w-lg w-full">
-      {/* Warning header */}
-      <div className="flex flex-col items-center text-center space-y-3">
-        <div className="w-16 h-16 rounded-2xl bg-yellow-500/15 border border-yellow-500/30 flex items-center justify-center text-yellow-400">
-          <IconAlertTriangle />
+    <div className="entry-page setup-page">
+      <header className="entry-masthead">
+        <Brand />
+        <LanguageSwitcher variant="compact" />
+      </header>
+      <main>
+        <div className="setup-heading">
+          <p className="eyebrow">
+            {c(
+              "INSTANCE SETUP / ADMINISTRATOR",
+              "НАСТРОЙКА СИСТЕМЫ / АДМИНИСТРАТОР",
+            )}
+          </p>
+          <h1>{c("Initialize the bot integration", "Инициализация бота")}</h1>
+          <p className="entry-lead">
+            {c(
+              "One-time configuration for the instance owner. Connect the dedicated Twitch bot account before users can access this application.",
+              "Однократная настройка владельцем системы. Подключите отдельный аккаунт бота Twitch, чтобы открыть приложение пользователям.",
+            )}
+          </p>
         </div>
-        <h1 className="text-2xl font-bold text-foreground">{t("auth.botNotInitialized")}</h1>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {t("auth.botNotInitDesc")}
-        </p>
-      </div>
-
-      {/* Setup instructions */}
-      <div className="rounded-xl border border-border bg-background/40 p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <span className="text-primary">📋</span> {t("auth.beforeBegin")}
-        </h2>
-        <div className="space-y-3">
-          <Step
-            num={1}
-            text={
-              <>
-                <a
-                  href="https://dev.twitch.tv/console"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline font-medium"
-                >
-                  dev.twitch.tv/console
-                </a>{" "}
-                – {t("auth.step1")}
-              </>
-            }
-          />
-          <Step
-            num={2}
-            text={
-              <>
-                {t("auth.step2")}:{" "}
-                <code className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs font-mono">
-                  https://your-backend.domain/api/v1/auth/callback
-                </code>
-              </>
-            }
-          />
-          <Step
-            num={3}
-            text={
-              <>
-                {t("auth.step3")} (
-                <code className="px-1 py-0.5 rounded bg-white/10 text-xs font-mono">.env</code>
-                ).
-              </>
-            }
-          />
-          <Step
-            num={4}
-            text={t("auth.step4")}
-          />
-          <Step
-            num={5}
-            text={t("auth.step5")}
-          />
-        </div>
-      </div>
-
-      {/* Authorize button */}
-      <a
-        href={authApi.initBotUrl()}
-        className="flex items-center justify-center gap-3 w-full py-3.5 px-5 rounded-xl font-semibold text-sm transition-all duration-200
-          bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 active:translate-y-0"
-      >
-        <IconBot />
-        {t("auth.authBotBtn")}
-      </a>
-
-      <p className="text-center text-xs text-muted-foreground/60">
-        {t("auth.onlyOnceNote")}
-      </p>
-      </div>
+        {isLoading ? (
+          <p role="status">
+            {c(
+              "Checking initialization state…",
+              "Проверяем состояние системы…",
+            )}
+          </p>
+        ) : status !== 404 ? (
+          <section role="alert" className="setup-unavailable">
+            <h2>
+              {c(
+                "Setup state is unavailable",
+                "Состояние настройки недоступно",
+              )}
+            </h2>
+            <p>
+              {c(
+                "The server could not confirm whether this instance is initialized. Check backend availability before authorizing an account.",
+                "Сервер не подтвердил состояние инициализации. Проверьте доступность бэкенда перед авторизацией аккаунта.",
+              )}
+            </p>
+            <Button onClick={() => refetch()}>
+              {c("Check again", "Проверить снова")}
+            </Button>
+          </section>
+        ) : (
+          <div className="setup-layout">
+            <section aria-labelledby="prerequisites">
+              <h2 id="prerequisites">
+                {c(
+                  "Prepare the Twitch application",
+                  "Подготовьте приложение Twitch",
+                )}
+              </h2>
+              <ol className="setup-steps">
+                <li>
+                  <div>
+                    <h3>
+                      {c(
+                        "Register your application",
+                        "Зарегистрируйте приложение",
+                      )}
+                    </h3>
+                    <p>
+                      {c(
+                        "Create an application in the ",
+                        "Создайте приложение в ",
+                      )}
+                      <a
+                        href="https://dev.twitch.tv/console"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Twitch Developer Console ↗
+                      </a>
+                      .
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <div>
+                    <h3>
+                      {c("Set the OAuth callback", "Укажите OAuth callback")}
+                    </h3>
+                    <p>
+                      {c(
+                        "Use your public backend address, matching APP_URL on the server, followed by this path:",
+                        "Используйте публичный адрес бэкенда, совпадающий с APP_URL на сервере, и этот путь:",
+                      )}
+                    </p>
+                    <code>/api/v1/auth/callback</code>
+                    <p className="entry-note">
+                      {c(
+                        "Example: https://your-backend.domain/api/v1/auth/callback",
+                        "Пример: https://your-backend.domain/api/v1/auth/callback",
+                      )}
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <div>
+                    <h3>{c("Configure the backend", "Настройте бэкенд")}</h3>
+                    <p>
+                      {c(
+                        "Set the application credentials in the server environment (.env), then restart the backend to apply them.",
+                        "Укажите данные приложения в окружении сервера (.env) и перезапустите бэкенд для их применения.",
+                      )}
+                    </p>
+                    <div className="setup-variables">
+                      <code>TWITCH_CLIENT_ID</code>
+                      <code>TWITCH_CLIENT_SECRET</code>
+                    </div>
+                    <p className="entry-note">
+                      {c(
+                        "Keep the client secret on the server. It is never entered on this page.",
+                        "Client Secret хранится на сервере. На этой странице его вводить не нужно.",
+                      )}
+                    </p>
+                  </div>
+                </li>
+              </ol>
+            </section>
+            <aside className="setup-authorize">
+              <p className="setup-state">
+                <span />
+                {c("Awaiting bot authorization", "Ожидается авторизация бота")}
+              </p>
+              <h2>
+                {c("Authorize the bot account", "Авторизуйте аккаунт бота")}
+              </h2>
+              <p>
+                {c(
+                  "On Twitch, select the dedicated account that will read and send chat messages as the bot. Verify the account before approving access.",
+                  "На Twitch выберите отдельный аккаунт, от имени которого бот будет читать и отправлять сообщения. Проверьте аккаунт перед подтверждением доступа.",
+                )}
+              </p>
+              <div className="setup-scopes">
+                <h3>
+                  {c("Requested bot permissions", "Запрашиваемые права бота")}
+                </h3>
+                <code>user:read:chat</code>
+                <code>user:write:chat</code>
+                <code>user:bot</code>
+              </div>
+              <a className="entry-primary" href={authApi.initBotUrl()}>
+                {c("Authorize bot on Twitch", "Авторизовать бота на Twitch")}
+                <span aria-hidden="true">↗</span>
+              </a>
+              <p className="entry-note">
+                {c(
+                  "Successful authorization initializes this instance and unlocks normal sign-in. Streamers connect their own channels separately afterwards.",
+                  "После успешной авторизации система будет инициализирована и откроется обычный вход. Стримеры подключат свои каналы отдельно.",
+                )}
+              </p>
+            </aside>
+          </div>
+        )}
+      </main>
+      <footer className="entry-footer">
+        NECKO7{" "}
+        <span>
+          {c(
+            "Instance configuration · Twitch application & bot account",
+            "Настройка системы · Приложение Twitch и аккаунт бота",
+          )}
+        </span>
+      </footer>
     </div>
   );
 }

@@ -1,315 +1,239 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, Link } from "react-router-dom";
 import { useAppStore } from "@/store/useAppStore";
-import { authApi, broadcastersApi } from "@/lib/apiClient";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { authApi, broadcastersApi, redemptionsApi } from "@/lib/apiClient";
+import type { BroadcasterListItem } from "@/types/api";
+import { useCopy } from "@/lib/useCopy";
+import { PageHeader, EmptyState, QueryError } from "@/components/common/Page";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { PinOffIcon } from "@hugeicons/core-free-icons";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 
-// ── Icons ──────────────────────────────────────────────────────────────────
-const IconSearch = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
-
-const IconPlus = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-);
-
-const IconSettings = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-  </svg>
-);
-
-const IconCheck = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-const IconTwitch = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-  </svg>
-);
-
-const IconArrowRight = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-  </svg>
-);
-
-const IconPinOff = () => <HugeiconsIcon icon={PinOffIcon} size={15} strokeWidth={2} />;
-
-export default function ChannelsPage() {
-  const { t } = useTranslation();
+function WorkspaceRow({ channel }: { channel: BroadcasterListItem }) {
+  const c = useCopy();
   const navigate = useNavigate();
-  const {
-    currentUser,
-    broadcasters,
-    selectedBroadcasterId,
-    setSelectedBroadcasterId,
-  } = useAppStore();
-
-  const [search, setSearch] = useState("");
-
-  // Check if the current user's own channel is present in the broadcasters list
-  const isSelfConnected = useMemo(() => {
-    if (!currentUser) return false;
-    return broadcasters.some(
-      (b) =>
-        b.channel_id === currentUser.twitch_id ||
-        b.channel_login.toLowerCase() === currentUser.login.toLowerCase()
-    );
-  }, [broadcasters, currentUser]);
-
-  // Filter broadcasters by search query
-  const filteredBroadcasters = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return broadcasters;
-    return broadcasters.filter(
-      (b) =>
-        b.channel_login.toLowerCase().includes(q) ||
-        (b.display_name ?? "").toLowerCase().includes(q) ||
-        b.role.toLowerCase().includes(q)
-    );
-  }, [broadcasters, search]);
-
   const qc = useQueryClient();
-
-  const unpinMutation = useMutation({
-    mutationFn: (channelId: string) => broadcastersApi.unpin(channelId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["broadcasters"] });
-    },
+  const { selectedBroadcasterId, setSelectedBroadcasterId } = useAppStore();
+  const [inspect, setInspect] = useState(false);
+  const viewer = channel.role.toUpperCase() === "VIEWER";
+  const selected = channel.channel_id === selectedBroadcasterId;
+  const settings = useQuery({
+    queryKey: ["settings", channel.channel_id],
+    queryFn: () =>
+      broadcastersApi.getSettings(channel.channel_id).then((r) => r.data),
+    enabled: inspect && !viewer,
+    staleTime: 30_000,
   });
-
-  const handleSelectChannel = (channelId: string, role: string, login: string) => {
-    setSelectedBroadcasterId(channelId);
-    if (role.toUpperCase() === "VIEWER") {
-      navigate(`/c/${login}`);
-    } else {
-      navigate("/dashboard");
-    }
+  const holds = useQuery({
+    queryKey: ["redemptions", channel.channel_id, "workspace-holds"],
+    queryFn: () =>
+      redemptionsApi
+        .list(channel.channel_id, { status: "MANUAL_HOLD", limit: 1 })
+        .then((r) => r.data),
+    enabled: inspect && !viewer,
+    staleTime: 15_000,
+  });
+  const unpin = useMutation({
+    mutationFn: () => broadcastersApi.unpin(channel.channel_id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["broadcasters"] }),
+  });
+  const select = (path?: string) => {
+    setSelectedBroadcasterId(channel.channel_id);
+    navigate(path || (viewer ? `/c/${channel.channel_login}` : "/dashboard"));
   };
-
-  const handleConnectChannel = () => {
-    window.location.href = authApi.connectUrl();
-  };
-
   return (
-    <div className="page-shell space-y-8 max-w-7xl mx-auto">
-      {/* ── Page Header ── */}
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">
-            {t("channels.title")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("channels.subtitle")}
-          </p>
-        </div>
-
-        {/* Search bar & connect action */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative w-full sm:w-64">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-              <IconSearch />
-            </span>
-            <Input
-              type="search"
-              placeholder={t("channels.searchPlaceholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-card border-border"
-            />
-          </div>
-
-          <Button
-            onClick={handleConnectChannel}
-            variant="outline"
-            className="shrink-0 gap-2 border-primary/30 hover:border-primary hover:bg-primary/5 text-foreground"
-          >
-            <IconTwitch />
-            <span>{t("channels.connectChannel")}</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* ── Channels Grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
-        {/* ── "Connect to your channel" card — shown first if user is not in list ── */}
-        {!isSelfConnected && (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={handleConnectChannel}
-            onKeyDown={(e) => e.key === "Enter" && handleConnectChannel()}
-            className="group relative flex flex-col justify-between p-6 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-all duration-200 cursor-pointer min-h-56 text-left focus:outline-none focus:ring-2 focus:ring-primary/40"
-          >
-            <div className="space-y-3">
-              <div className="w-14 h-14 rounded-xl bg-primary/15 border border-primary/20 text-primary flex items-center justify-center group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200 glow-teal">
-                <IconPlus />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
-                  {t("channels.connectYourChannel")}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                  {t("channels.connectYourChannelDesc")}
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-4 flex items-center gap-2 text-xs font-semibold text-primary group-hover:translate-x-0.5 transition-transform">
-              <IconTwitch />
-              <span>{t("channels.connectViaTwitch")}</span>
-              <IconArrowRight />
-            </div>
-          </div>
-        )}
-
-        {/* ── Broadcaster cards ── */}
-        {filteredBroadcasters.map((b) => {
-          const isSelected = b.channel_id === selectedBroadcasterId;
-          const roleUpper = b.role.toUpperCase();
-          const isViewer = roleUpper === "VIEWER";
-
-          return (
-            <div
-              key={b.channel_id}
-              role="button"
-              tabIndex={0}
-              onClick={() => handleSelectChannel(b.channel_id, b.role, b.channel_login)}
-              onKeyDown={(e) => e.key === "Enter" && handleSelectChannel(b.channel_id, b.role, b.channel_login)}
-              className={cn(
-                "group relative flex flex-col justify-between p-5 rounded-xl border bg-card transition-all duration-200 cursor-pointer min-h-56 text-left focus:outline-none focus:ring-2 focus:ring-primary/40 hover:shadow-lg hover:shadow-primary/5",
-                isSelected
-                  ? "border-primary ring-1 ring-primary/40 shadow-sm"
-                  : "border-border hover:border-primary/40 hover:-translate-y-0.5"
-              )}
-            >
-              {/* Card top: Avatar + Badges */}
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <Avatar className="h-14 w-14 rounded-xl ring-2 ring-primary/20 shrink-0">
-                    <AvatarImage
-                      src={b.profile_image_url ?? undefined}
-                      alt={b.display_name || b.channel_login}
-                    />
-                    <AvatarFallback className="text-base font-bold bg-primary text-primary-foreground rounded-xl">
-                      {(b.channel_login || "??").slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  {/* Status / Role badge */}
-                  <div className="flex items-center gap-1.5">
-                    {isSelected && (
-                      <Badge className="bg-primary/20 text-primary border border-primary/30 gap-1 text-[11px] font-semibold">
-                        <IconCheck />
-                        {t("channels.active")}
-                      </Badge>
-                    )}
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        "text-[11px] font-medium capitalize",
-                        roleUpper === "OWNER" && "bg-purple-500/15 text-purple-600 dark:text-purple-300 border-purple-500/20",
-                        roleUpper === "EDITOR" && "bg-teal-500/15 text-teal-600 dark:text-teal-300 border-teal-500/20",
-                        roleUpper === "VIEWER" && "bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/20"
-                      )}
-                    >
-                      {roleUpper === "VIEWER" ? t("channels.viewer") : roleUpper === "OWNER" ? t("channels.owner") : roleUpper === "EDITOR" ? t("channels.editor") : b.role}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Channel Name */}
-                <div>
-                  <h3 className="text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">
-                    {b.display_name || b.channel_login}
-                  </h3>
-                  {b.display_name && b.display_name.toLowerCase() !== b.channel_login.toLowerCase() ? (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      @{b.channel_login} · ID: {b.channel_id}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-                      ID: {b.channel_id}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Card bottom: Actions */}
-              <div className="pt-4 mt-2 border-t border-border flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors flex items-center gap-1">
-                  {isSelected ? (isViewer ? t("channels.viewRewards") : t("channels.currentlyActive")) : (isViewer ? t("channels.openRewards") : t("channels.switchToChannel"))}
-                  {!isSelected && <IconArrowRight />}
-                </span>
-
-                {/* Card Action: Settings for Owner/Editor, Unpin for Viewer */}
-                {isViewer ? (
-                  <button
-                    type="button"
-                    title={t("channels.unpinChannel")}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      unpinMutation.mutate(b.channel_id);
-                    }}
-                    disabled={unpinMutation.isPending}
-                    className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  >
-                    <IconPinOff />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    title={t("channels.channelSettings")}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/broadcasters/${b.channel_id}/settings`);
-                    }}
-                    className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                  >
-                    <IconSettings />
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── Empty search state ── */}
-      {filteredBroadcasters.length === 0 && search.trim() && (
-        <div className="py-16 text-center space-y-3">
-          <p className="text-base font-semibold text-foreground">
-            {t("channels.noChannelsMatch", { query: search })}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {t("channels.tryDifferent")}
-          </p>
+    <article className="workspace-row" data-current={selected}>
+      <div className="workspace-row-main">
+        <button
+          className="workspace-choice"
+          onClick={() => select()}
+          aria-current={selected ? "true" : undefined}
+        >
+          <span className="workspace-avatar">
+            {channel.profile_image_url ? (
+              <img src={channel.profile_image_url} alt="" />
+            ) : (
+              channel.channel_login.slice(0, 2).toUpperCase()
+            )}
+          </span>
+          <span className="min-w-0">
+            <strong>{channel.display_name || channel.channel_login}</strong>
+            <small>@{channel.channel_login}</small>
+          </span>
+          <span className="workspace-choice-action">
+            {selected
+              ? c("Current workspace", "Текущий канал")
+              : viewer
+                ? c("Open catalog", "Открыть каталог")
+                : c("Switch workspace", "Перейти в канал")}{" "}
+            →
+          </span>
+        </button>
+        {viewer ? (
           <Button
             variant="ghost"
-            onClick={() => setSearch("")}
-            className="text-primary text-xs"
+            disabled={unpin.isPending}
+            onClick={() => unpin.mutate()}
           >
-            {t("channels.clearSearch")}
+            {c("Unpin", "Открепить")}
           </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            aria-expanded={inspect}
+            onClick={() => setInspect(!inspect)}
+          >
+            {c("Setup & attention", "Настройка и проверка")}
+          </Button>
+        )}
+      </div>
+      {inspect && !viewer && (
+        <div className="workspace-inspect">
+          {settings.isError || holds.isError ? (
+            <QueryError
+              onRetry={() => {
+                settings.refetch();
+                holds.refetch();
+              }}
+            />
+          ) : settings.isPending || holds.isPending ? (
+            <p>{c("Checking channel…", "Проверка канала…")}</p>
+          ) : (
+            <>
+              <span>
+                {settings.data.is_active
+                  ? c("Bot enabled", "Бот включён")
+                  : c("Bot disabled", "Бот выключен")}
+              </span>
+              <span>
+                {settings.data.market_api_key_set
+                  ? c("Market key stored", "Ключ маркета сохранён")
+                  : c("Market key missing", "Ключ маркета не настроен")}
+              </span>
+              <button
+                className="text-amber-300"
+                onClick={() => select("/redemptions?status=MANUAL_HOLD")}
+              >
+                {holds.data.total} {c("need review", "требуют проверки")} →
+              </button>
+              <button
+                onClick={() =>
+                  select(`/broadcasters/${channel.channel_id}/settings`)
+                }
+              >
+                {c("Open settings", "Настройки")} →
+              </button>
+            </>
+          )}
         </div>
       )}
+    </article>
+  );
+}
+
+export default function ChannelsPage() {
+  const c = useCopy();
+  const { broadcasters } = useAppStore();
+  const [search, setSearch] = useState("");
+  const groups = [
+    {
+      role: "OWNER",
+      title: c("Your channel", "Ваш канал"),
+      detail: c(
+        "You manage the bot and editor access.",
+        "Вы управляете ботом и доступом редакторов.",
+      ),
+    },
+    {
+      role: "EDITOR",
+      title: c("Channels you operate", "Каналы под вашим управлением"),
+      detail: c(
+        "Editor access to rewards, purchases and bot settings.",
+        "Доступ редактора к наградам, покупкам и настройкам.",
+      ),
+    },
+    {
+      role: "VIEWER",
+      title: c("Pinned channels", "Закреплённые каналы"),
+      detail: c(
+        "Reward catalogs you follow as a viewer.",
+        "Каталоги наград, которые вы просматриваете как зритель.",
+      ),
+    },
+  ];
+  const filtered = broadcasters.filter((b) =>
+    `${b.channel_login} ${b.display_name || ""}`
+      .toLowerCase()
+      .includes(search.toLowerCase().trim()),
+  );
+  return (
+    <div className="page-shell space-y-7">
+      <PageHeader
+        eyebrow={c("Workspaces", "Каналы")}
+        title={c("Choose your channel", "Выберите канал")}
+        description={c(
+          "Switch operational context or browse the channels you follow.",
+          "Переключите рабочий канал или откройте каталог наград.",
+        )}
+        actions={
+          <Button
+            variant="outline"
+            onClick={() => {
+              window.location.href = authApi.connectUrl();
+            }}
+          >
+            {c("Connect your Twitch channel", "Подключить канал Twitch")}
+          </Button>
+        }
+      />
+      <Input
+        type="search"
+        aria-label={c("Find a channel", "Найти канал")}
+        placeholder={c("Find a channel by name…", "Поиск канала по имени…")}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="max-w-lg"
+      />
+      {groups.map((group) => {
+        const items = filtered.filter(
+          (b) => b.role.toUpperCase() === group.role,
+        );
+        if (!items.length) return null;
+        return (
+          <section key={group.role} className="workspace-group">
+            <div>
+              <h2 className="section-title">
+                {group.title} <small>{items.length}</small>
+              </h2>
+              <p className="text-sm text-muted-foreground">{group.detail}</p>
+            </div>
+            <div>
+              {items.map((channel) => (
+                <WorkspaceRow channel={channel} key={channel.channel_id} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+      {!filtered.length && (
+        <EmptyState
+          title={c("No matching channels", "Каналы не найдены")}
+          description={c(
+            "Try another name or connect your Twitch channel.",
+            "Попробуйте другое имя или подключите Twitch.",
+          )}
+          action={
+            search ? (
+              <Button variant="ghost" onClick={() => setSearch("")}>
+                {c("Clear search", "Сбросить поиск")}
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+      <Link className="text-sm text-muted-foreground" to="/me">
+        {c("Your profile across all channels", "Ваш профиль на всех каналах")} →
+      </Link>
     </div>
   );
 }

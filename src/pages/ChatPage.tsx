@@ -1,411 +1,179 @@
-import { QueryError } from "@/components/common/Page";
-import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { useAppStore } from "@/store/useAppStore";
+import { Link, useSearchParams } from "react-router-dom";
 import { chatApi } from "@/lib/apiClient";
-import type { LeaderboardUserItem } from "@/types/api";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { useAppStore } from "@/store/useAppStore";
+import { useCopy } from "@/lib/useCopy";
+import { PageHeader, EmptyState, QueryError } from "@/components/common/Page";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import ChatDashboardWidget from "@/components/chat/ChatDashboardWidget";
-
-// ── Time window options ──────────────────────────────────────────────────────
-const TIME_WINDOWS: { key: string; label: string; value: number | null }[] = [
-  { key: "logs.presetAll", label: "All time", value: null },
-  { key: "logs.preset6h", label: "6h", value: 6 },
-  { key: "logs.preset24h", label: "24h", value: 24 },
-  { key: "logs.preset7d", label: "7d", value: 168 },
-  { key: "chat.preset30d", label: "30d", value: 720 },
-];
-
-const PAGE_SIZE = 50;
-
-// ── Icons ─────────────────────────────────────────────────────────────────────
-const IconSearch = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
-
-const IconRefresh = ({ spinning }: { spinning: boolean }) => (
-  <svg
-    width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-    className={cn("transition-transform", spinning && "animate-spin")}
-  >
-    <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-  </svg>
-);
-
-const IconChevronRight = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
-);
-
-const IconMessageSquare = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-);
-
-const IconText = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" />
-  </svg>
-);
-
-// ── Medal badge ───────────────────────────────────────────────────────────────
-function MedalBadge({ rank }: { rank: number }) {
-  if (rank === 1)
-    return (
-      <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-yellow-500/20 text-yellow-400 text-xs font-bold ring-1 ring-yellow-500/40">
-        1
-      </span>
-    );
-  if (rank === 2)
-    return (
-      <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-slate-400/20 text-slate-300 text-xs font-bold ring-1 ring-slate-400/40">
-        2
-      </span>
-    );
-  if (rank === 3)
-    return (
-      <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-amber-700/20 text-amber-600 text-xs font-bold ring-1 ring-amber-700/40">
-        3
-      </span>
-    );
-  return (
-    <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground text-xs font-medium">
-      {rank}
-    </span>
-  );
-}
-
-// ── Avatar initials ───────────────────────────────────────────────────────────
-function UserInitials({ login }: { login: string }) {
-  const letter = (login || "?").charAt(0).toUpperCase();
-  const hue = [...login].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
-  return (
-    <div
-      className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-      style={{ background: `hsl(${hue}, 55%, 42%)` }}
-    >
-      {letter}
-    </div>
-  );
-}
-
-// ── Leaderboard row ───────────────────────────────────────────────────────────
-function LeaderboardRow({
-  item,
-  rank,
-  primaryField,
-  secondaryField,
-  primaryLabel,
-  secondaryLabel,
-}: {
-  item: LeaderboardUserItem;
-  rank: number;
-  primaryField: "message_count" | "char_count";
-  secondaryField: "message_count" | "char_count";
-  primaryLabel: string;
-  secondaryLabel: string;
-}) {
-  const { t } = useTranslation();
-  const topClass =
-    rank === 1
-      ? "bg-yellow-500/5 hover:bg-yellow-500/10 border-yellow-500/15"
-      : rank === 2
-      ? "bg-slate-400/5 hover:bg-slate-400/10 border-slate-400/15"
-      : rank === 3
-      ? "bg-amber-700/5 hover:bg-amber-700/10 border-amber-700/15"
-      : "hover:bg-muted/30 border-transparent";
-
-  return (
-    <Link
-      to={`/chat/users/${item.chatter_user_id}`}
-      className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all group text-left",
-        topClass
-      )}
-    >
-      <MedalBadge rank={rank} />
-      <UserInitials login={item.chatter_user_login} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-          @{item.chatter_user_login}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          <span className="text-muted-foreground/70">{secondaryLabel}:</span>{" "}
-          {item[secondaryField].toLocaleString()}
-          {" · "}
-          <span className="text-muted-foreground/70">{t("chat.lastActive")}:</span>{" "}
-          {format(new Date(item.last_seen_at), "dd MMM HH:mm")}
-        </p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="text-sm font-semibold text-primary tabular-nums">
-          {item[primaryField].toLocaleString()}
-        </p>
-        <p className="text-[10px] text-muted-foreground">{primaryLabel}</p>
-      </div>
-      <IconChevronRight />
-    </Link>
-  );
-}
-
-// ── Leaderboard column ────────────────────────────────────────────────────────
-function LeaderboardColumn({
-  channelId,
-  sortBy,
-  title,
-  primaryField,
-  secondaryField,
-  primaryLabel,
-  secondaryLabel,
-  timeWindowHours,
-  search,
-  isFetching,
-}: {
-  channelId: string;
-  sortBy: "messages" | "characters";
-  title: string;
-  primaryField: "message_count" | "char_count";
-  secondaryField: "message_count" | "char_count";
-  primaryLabel: string;
-  secondaryLabel: string;
-  timeWindowHours: number | null;
-  search: string;
-  isFetching: boolean;
-}) {
-  const { t } = useTranslation();
-  const [offset, setOffset] = useState(0);
-  const [allItems, setAllItems] = useState<LeaderboardUserItem[]>([]);
-
-  // Reset when filters change
-  useEffect(() => {
-    setOffset(0);
-    setAllItems([]);
-  }, [channelId, sortBy, timeWindowHours, search]);
-
-  const { data, isLoading, isFetching: colFetching, isError, refetch } = useQuery({
-    queryKey: ["leaderboard", channelId, sortBy, timeWindowHours, search, offset],
+export default function ChatPage() {
+  const c = useCopy();
+  const id = useAppStore((s) => s.selectedBroadcasterId) || "";
+  const [params, setParams] = useSearchParams();
+  const hours =
+    params.get("hours") === "all" ? null : Number(params.get("hours")) || 168;
+  const sort = params.get("sort") === "characters" ? "characters" : "messages";
+  const page = Math.max(0, Number(params.get("page")) || 0);
+  const search = params.get("search") || "";
+  const [draft, setDraft] = useState(search);
+  const set = (key: string, value: string) =>
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete("page");
+      if (value) next.set(key, value);
+      else next.delete(key);
+      return next;
+    });
+  const query = useQuery({
+    queryKey: ["leaderboard", id, hours, sort, search, page],
     queryFn: () =>
       chatApi
-        .getLeaderboard(channelId, {
-          sort_by: sortBy,
-          time_window_hours: timeWindowHours,
+        .getLeaderboard(id, {
+          time_window_hours: hours,
+          sort_by: sort,
+          order: "desc",
           search: search || null,
-          offset,
-          limit: PAGE_SIZE,
+          offset: page * 25,
+          limit: 25,
         })
         .then((r) => r.data),
-    enabled: !!channelId,
-    staleTime: 30_000,
-
+    enabled: !!id,
   });
-
-  // Accumulate items across pages
-  useEffect(() => {
-    if (!data) return;
-    setAllItems((prev) => {
-      if (offset === 0) {
-        return data.items;
-      }
-      const existingIds = new Set(prev.map((i) => i.chatter_user_id));
-      const fresh = data.items.filter((i) => !existingIds.has(i.chatter_user_id));
-      return [...prev, ...fresh];
-    });
-  }, [data, offset]);
-
-  const hasMore = data ? allItems.length < data.total : false;
-
-  const loadMore = () => {
-    if (!colFetching) setOffset((o) => o + PAGE_SIZE);
-  };
-
-  const displayItems = allItems.length > 0 ? allItems : data?.items ?? [];
-
-  if (isError) return <QueryError onRetry={() => void refetch()} />;
   return (
-    <div className="flex flex-col gap-3">
-      {/* Column header */}
-      <div className="flex items-center gap-2 px-1">
-        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-          {sortBy === "messages" ? <IconMessageSquare /> : <IconText />}
-        </div>
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-          {data && (
-            <p className="text-xs text-muted-foreground">{data.total.toLocaleString()} {t("chat.user")}</p>
-          )}
-        </div>
-        {(isFetching || colFetching) && (
-          <div className="ml-auto w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+    <div className="page-shell space-y-6">
+      <PageHeader
+        eyebrow={c("Community", "Сообщество")}
+        title={c("Chat activity", "Активность чата")}
+        description={c(
+          "Understand when your channel is active and which viewers participate.",
+          "Посмотрите, когда канал активен и кто участвует в чате.",
         )}
-      </div>
-
-      {/* List */}
-      <div className="space-y-1.5">
-        {isLoading
-          ? Array.from({ length: 10 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 rounded-xl" />
-            ))
-          : displayItems.map((item, i) => (
-              <LeaderboardRow
-                key={item.chatter_user_id}
-                item={item}
-                rank={i + 1}
-                primaryField={primaryField}
-                secondaryField={secondaryField}
-                primaryLabel={primaryLabel}
-                secondaryLabel={secondaryLabel}
-              />
-            ))}
-      </div>
-
-      {/* Load more */}
-      {hasMore && (
-        <button
-          type="button"
-          onClick={loadMore}
-          disabled={colFetching}
-          className="w-full py-2 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all disabled:opacity-50"
-        >
-          {colFetching ? t("common.loading") : `${t("common.next")} (${data!.total - displayItems.length})`}
-        </button>
-      )}
-
-      {displayItems.length === 0 && !isLoading && (
-        <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-          <IconMessageSquare />
-          <p className="mt-2 text-sm">{t("chat.noChattersFound")}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
-export default function ChatPage() {
-  const { t } = useTranslation();
-  const { selectedBroadcasterId } = useAppStore();
-  const channelId = selectedBroadcasterId ?? "";
-
-  const [timeWindow, setTimeWindow] = useState<number | null>(null);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const handleSearchChange = (val: string) => {
-    setSearch(val);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => setDebouncedSearch(val), 400);
-  };
-
-  const [isFetchingGlobal] = useState(false);
-
-  if (!channelId) {
-    return (
-      <div className="page-shell flex items-center justify-center min-h-96">
-        <p className="text-muted-foreground">{t("dashboard.selectChannel")}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div key={refreshKey} className="page-shell space-y-8 max-w-7xl mx-auto">
-      {/* Activity Timeline & Metrics */}
-      <ChatDashboardWidget
-        channelId={channelId}
-        showTopChatters={false}
-        title={t("chat.timeline")}
+        actions={
+          <Link to="/chat">
+            {c("Open message history", "Открыть историю сообщений")} →
+          </Link>
+        }
       />
-
-      {/* Leaderboard Header */}
-      <div className="flex items-start justify-between gap-4 pt-4 border-t border-border">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">{t("chat.leaderboardTitle")}</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {t("chat.leaderboardSubtitle")}
-          </p>
+      <nav
+        className="context-tabs"
+        aria-label={c("Analysis period", "Период анализа")}
+      >
+        {[
+          [24, "24h"],
+          [168, "7d"],
+          [720, "30d"],
+          [null, c("All time", "Всё время")],
+        ].map(([value, label]) => (
+          <button
+            key={String(value)}
+            aria-current={hours === value ? "true" : undefined}
+            onClick={() => set("hours", value == null ? "all" : String(value))}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      <ChatDashboardWidget channelId={id} compact={false} hours={hours} />
+      <section className="space-y-4">
+        <div className="section-heading">
+          <h2>{c("Participating viewers", "Участники чата")}</h2>
+          <span className="text-xs text-muted-foreground">
+            {query.data?.total ?? "…"} {c("viewers", "зрителей")}
+          </span>
         </div>
-        <button
-          type="button"
-          onClick={() => setRefreshKey((k) => k + 1)}
-          className="h-9 px-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors flex items-center gap-2 text-xs"
+        <form
+          className="flex flex-wrap gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            set("search", draft.trim());
+          }}
         >
-          <IconRefresh spinning={false} />
-          {t("common.refresh")}
-        </button>
-      </div>
-
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
-        <div className="relative flex-1 min-w-48 max-w-xs">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-            <IconSearch />
-          </div>
-          <input
-            type="text"
-            placeholder={t("chat.filterChatters")}
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full h-9 pl-9 pr-4 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+          <Input
+            aria-label={c("Find a viewer", "Найти зрителя")}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={c("Find a viewer…", "Найти зрителя…")}
+            className="max-w-sm"
           />
+          <Button type="submit" variant="outline">
+            {c("Search", "Найти")}
+          </Button>
+          <label className="flex gap-2 items-center text-sm">
+            {c("Rank by", "Рейтинг по")}
+            <select value={sort} onChange={(e) => set("sort", e.target.value)}>
+              <option value="messages">{c("Messages", "Сообщения")}</option>
+              <option value="characters">{c("Characters", "Символы")}</option>
+            </select>
+          </label>
+        </form>
+        {query.isError ? (
+          <QueryError onRetry={() => query.refetch()} />
+        ) : query.isPending ? (
+          <Skeleton className="h-48" />
+        ) : !query.data.items.length ? (
+          <EmptyState title={c("No viewers match", "Зрители не найдены")} />
+        ) : (
+          <div className="participant-table">
+            <div className="participant-head">
+              <span>#</span>
+              <span>{c("Viewer", "Зритель")}</span>
+              <span>{c("Messages", "Сообщения")}</span>
+              <span>{c("Characters", "Символы")}</span>
+              <span>{c("Last active", "Последняя активность")}</span>
+            </div>
+            {query.data.items.map((viewer, index) => (
+              <Link
+                key={viewer.chatter_user_id}
+                to={`/chat/users/${viewer.chatter_user_id}`}
+              >
+                <span>{search ? "—" : page * 25 + index + 1}</span>
+                <strong>@{viewer.chatter_user_login}</strong>
+                <span>{viewer.message_count.toLocaleString()}</span>
+                <span>{viewer.char_count.toLocaleString()}</span>
+                <time>
+                  {new Date(viewer.last_seen_at).toLocaleDateString()}
+                </time>
+              </Link>
+            ))}
+          </div>
+        )}
+        <div className="history-toolbar">
+          <Button
+            variant="outline"
+            disabled={!page || query.isFetching}
+            onClick={() =>
+              setParams((previous) => {
+                const next = new URLSearchParams(previous);
+                next.set("page", String(page - 1));
+                return next;
+              })
+            }
+          >
+            {c("Previous", "Назад")}
+          </Button>
+          <span>{page + 1}</span>
+          <Button
+            variant="outline"
+            disabled={
+              query.isFetching ||
+              !query.data ||
+              (page + 1) * 25 >= query.data.total
+            }
+            onClick={() =>
+              setParams((previous) => {
+                const next = new URLSearchParams(previous);
+                next.set("page", String(page + 1));
+                return next;
+              })
+            }
+          >
+            {c("Next", "Далее")}
+          </Button>
         </div>
-
-        {/* Time window */}
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1">
-          {TIME_WINDOWS.map((tw) => (
-            <button
-              key={String(tw.value)}
-              type="button"
-              onClick={() => setTimeWindow(tw.value)}
-              className={cn(
-                "px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
-                timeWindow === tw.value
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t(tw.key, tw.label)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Two-column leaderboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <LeaderboardColumn
-          channelId={channelId}
-          sortBy="messages"
-          title={`${t("chat.topChatters")} (${t("chat.messages")})`}
-          primaryField="message_count"
-          secondaryField="char_count"
-          primaryLabel={t("chat.messages")}
-          secondaryLabel={t("chat.chars")}
-          timeWindowHours={timeWindow}
-          search={debouncedSearch}
-          isFetching={isFetchingGlobal}
-        />
-        <LeaderboardColumn
-          channelId={channelId}
-          sortBy="characters"
-          title={`${t("chat.topChatters")} (${t("chat.characters")})`}
-          primaryField="char_count"
-          secondaryField="message_count"
-          primaryLabel={t("chat.characters")}
-          secondaryLabel={t("chat.messages")}
-          timeWindowHours={timeWindow}
-          search={debouncedSearch}
-          isFetching={isFetchingGlobal}
-        />
-      </div>
+      </section>
     </div>
   );
 }

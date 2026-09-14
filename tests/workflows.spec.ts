@@ -26,7 +26,7 @@ test("filters reset pagination and network failures are not empty states", async
   await expect(page.locator(".ledger-summary")).toHaveCount(7);
   await page.getByRole("button", { name: "Manual Hold", exact: true }).click();
   await expect(page.locator(".ledger-summary")).toHaveCount(6);
-  await page.route("**/redemptions?**", route => route.fulfill({ status: 503, body: "{}" }));
+  await page.route("**/api/v1/broadcasters/*/redemptions?**", route => route.fulfill({ status: 503, body: "{}" }));
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.getByRole("alert").first()).toContainText("Couldn’t load");
 });
@@ -104,6 +104,11 @@ for (const width of [1440, 390]) {
     await expect(dialog).toHaveCount(0);
     await page.getByRole("button", { name: "Redline drop", exact: true }).click();
     await expect(dialog).toBeVisible();
+    const tabBounds = await dialog.getByRole("tablist").boundingBox();
+    for (const tab of await dialog.getByRole("tab").all()) {
+      const rect = await tab.boundingBox();
+      expect(rect!.y + rect!.height).toBeLessThanOrEqual(tabBounds!.y + tabBounds!.height + 1);
+    }
     const bounds = await dialog.boundingBox();
     expect(bounds!.width).toBeLessThanOrEqual(width);
     await page.screenshot({ path: `test-results/visual/${width}-edit-reward.png`, fullPage: true, animations: "disabled" });

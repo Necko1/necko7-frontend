@@ -1,10 +1,14 @@
+import { isAxiosError } from "axios";
+import RewardSummary from "@/components/rewards/RewardSummary";
+import { rewardErrors } from "@/components/rewards/validateReward";
+import { useCopy } from "@/lib/useCopy";
 import { PageHeader, QueryError, EmptyState } from "@/components/common/Page";
 import ConfirmAction from "@/components/common/ConfirmAction";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
-import { rewardsApi } from "@/lib/apiClient";
+import { rewardsApi, broadcastersApi } from "@/lib/apiClient";
 import type {
   RewardResponse,
   CreateRewardBody,
@@ -20,7 +24,11 @@ import type {
   PurchaseLimitRule,
   RewardPurchaseLimitsConfig,
 } from "@/types/api";
-import { formatMinorCurrency, minorToMajor, majorToMinor } from "@/lib/currency";
+import {
+  formatMinorCurrency,
+  minorToMajor,
+  majorToMinor,
+} from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -28,12 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -48,80 +51,214 @@ import { getShortRewardUrl } from "@/lib/shortUrl";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 const IconPlus = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
 const IconLink = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </svg>
 );
 const IconCheck = ({ className }: { className?: string } = {}) => (
-  <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className={className}
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 const IconSearch = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
 const IconRefresh = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="23 4 23 10 17 10" />
+    <polyline points="1 20 1 14 7 14" />
     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
   </svg>
 );
 const IconPause = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="6" y="4" width="4" height="16" />
+    <rect x="14" y="4" width="4" height="16" />
   </svg>
 );
 const IconPlay = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polygon points="5 3 19 12 5 21 5 3" />
   </svg>
 );
 const IconTrash = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
   </svg>
 );
 const IconClose = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 const IconExternalLink = ({ className }: { className?: string } = {}) => (
-  <svg className={cn("shrink-0", className)} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className={cn("shrink-0", className)}
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
     <polyline points="15 3 21 3 21 9" />
     <line x1="10" y1="14" x2="21" y2="3" />
   </svg>
 );
 const IconDownload = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="7 10 12 15 17 10" />
     <line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
 const IconImage = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
     <circle cx="8.5" cy="8.5" r="1.5" />
     <polyline points="21 15 16 10 5 21" />
   </svg>
 );
 const IconFilter = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
   </svg>
 );
 const IconPool = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <rect x="3" y="3" width="7" height="7" rx="1" />
     <rect x="14" y="3" width="7" height="7" rx="1" />
     <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -129,7 +266,16 @@ const IconPool = () => (
   </svg>
 );
 const IconCheckAll = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M18 6 7 17l-5-5" />
     <path d="m22 10-7.5 7.5L13 16" />
   </svg>
@@ -137,12 +283,18 @@ const IconCheckAll = () => (
 
 // ── Image helpers ──────────────────────────────────────────────────────────
 // Direct CDN URL — for <img> display only (no CORS header, browser shows fine)
-function getSkinImageUrl(marketItemName: string, size: 150 | 300 = 300): string {
+function getSkinImageUrl(
+  marketItemName: string,
+  size: 150 | 300 = 300,
+): string {
   return `https://cdn2.csgo.com/item/${encodeURIComponent(marketItemName)}/${size}.png`;
 }
 
 // Proxied URL — for canvas pixel access (proxy adds Access-Control-Allow-Origin: *)
-function getSkinImageUrlProxied(marketItemName: string, size: 150 | 300 = 300): string {
+function getSkinImageUrlProxied(
+  marketItemName: string,
+  size: 150 | 300 = 300,
+): string {
   const cdnUrl = getSkinImageUrl(marketItemName, size);
   const base = config.API_BASE_URL.replace(/\/$/, "");
   return `${base}/api/v1/proxy/image?url=${encodeURIComponent(cdnUrl)}`;
@@ -170,7 +322,7 @@ function SkinImage({
     <div
       className={cn(
         "relative overflow-hidden bg-gradient-to-br from-background/80 to-muted/40 flex items-center justify-center",
-        className
+        className,
       )}
       style={style}
     >
@@ -180,7 +332,9 @@ function SkinImage({
       {status === "error" && (
         <div className="flex flex-col items-center gap-1.5 text-muted-foreground/40">
           <IconImage />
-          <span className="text-[10px]">{t("rewards.card.noPreview", "No preview")}</span>
+          <span className="text-[10px]">
+            {t("rewards.card.noPreview", "No preview")}
+          </span>
         </div>
       )}
       <img
@@ -233,10 +387,20 @@ function SkinIconDownloader({
       const cropSide = Math.min(srcW, srcH);
       const offsetX = (srcW - cropSide) / 2;
       const offsetY = (srcH - cropSide) / 2;
-      ctx.drawImage(src, offsetX, offsetY, cropSide, cropSide, 0, 0, targetSize, targetSize);
+      ctx.drawImage(
+        src,
+        offsetX,
+        offsetY,
+        cropSide,
+        cropSide,
+        0,
+        0,
+        targetSize,
+        targetSize,
+      );
       return dst;
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -266,7 +430,12 @@ function SkinIconDownloader({
       setIsLoading(false);
     };
     img.onerror = () => {
-      setError(t("rewards.downloader.error", "Failed to load skin image. The item name may not match the market exactly."));
+      setError(
+        t(
+          "rewards.downloader.error",
+          "Failed to load skin image. The item name may not match the market exactly.",
+        ),
+      );
       setIsLoading(false);
     };
   }, [open, marketItemName, buildCroppedCanvas, t]);
@@ -287,9 +456,14 @@ function SkinIconDownloader({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-sm sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-base">{t("rewards.downloader.title", "Download Twitch Panel Icon")}</DialogTitle>
+          <DialogTitle className="text-base">
+            {t("rewards.downloader.title", "Download Twitch Panel Icon")}
+          </DialogTitle>
           <DialogDescription className="text-xs leading-relaxed">
-            {t("rewards.downloader.description", "Center-cropped to a perfect square. Download in the sizes accepted by Twitch reward panels.")}
+            {t(
+              "rewards.downloader.description",
+              "Center-cropped to a perfect square. Download in the sizes accepted by Twitch reward panels.",
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -302,7 +476,9 @@ function SkinIconDownloader({
           >
             {isLoading && (
               <div className="absolute inset-0 animate-pulse bg-muted/60 flex items-center justify-center">
-                <span className="text-[10px] text-muted-foreground">{t("rewards.downloader.loading", "Loading…")}</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {t("rewards.downloader.loading", "Loading…")}
+                </span>
               </div>
             )}
             {previewUrl && (
@@ -319,14 +495,20 @@ function SkinIconDownloader({
                 <IconImage />
               </div>
             )}
-            <div className="absolute bottom-1 right-1 rounded bg-black/50 px-1 py-0.5 text-[9px] text-white/80 font-mono">112×112</div>
+            <div className="absolute bottom-1 right-1 rounded bg-black/50 px-1 py-0.5 text-[9px] text-white/80 font-mono">
+              112×112
+            </div>
           </div>
 
           {error && (
-            <p className="text-xs text-destructive text-center max-w-xs leading-relaxed">{error}</p>
+            <p className="text-xs text-destructive text-center max-w-xs leading-relaxed">
+              {error}
+            </p>
           )}
 
-          <p className="text-xs text-muted-foreground text-center truncate max-w-full px-2">{marketItemName}</p>
+          <p className="text-xs text-muted-foreground text-center truncate max-w-full px-2">
+            {marketItemName}
+          </p>
 
           <div className="flex items-center gap-2 w-full">
             {SIZES.map((sz) => (
@@ -337,17 +519,22 @@ function SkinIconDownloader({
                 className={cn(
                   "flex-1 flex flex-col items-center gap-1 rounded-xl border border-border py-3 px-2 transition-all",
                   "hover:border-primary/50 hover:bg-primary/5 disabled:opacity-40 disabled:cursor-not-allowed",
-                  "text-foreground font-medium"
+                  "text-foreground font-medium",
                 )}
               >
                 <IconDownload />
-                <span className="text-xs tabular-nums">{sz}×{sz}</span>
+                <span className="text-xs tabular-nums">
+                  {sz}×{sz}
+                </span>
               </button>
             ))}
           </div>
 
           <p className="text-[10px] text-muted-foreground/60 text-center">
-            {t("rewards.downloader.note", "Images are cropped client-side in your browser. Nothing is uploaded.")}
+            {t(
+              "rewards.downloader.note",
+              "Images are cropped client-side in your browser. Nothing is uploaded.",
+            )}
           </p>
         </div>
       </DialogContent>
@@ -362,10 +549,14 @@ function calcPoolChances(items: PoolItemConfig[]): number[] {
   return items.map((it) => (it.weight / total) * 100);
 }
 
-function mostExpensivePoolItem(items: PoolItemConfig[]): PoolItemConfig | undefined {
+function mostExpensivePoolItem(
+  items: PoolItemConfig[],
+): PoolItemConfig | undefined {
   return items.reduce<PoolItemConfig | undefined>((best, it) => {
     const price = it.current_market_price ?? 0;
-    return best === undefined || price > (best.current_market_price ?? 0) ? it : best;
+    return best === undefined || price > (best.current_market_price ?? 0)
+      ? it
+      : best;
   }, undefined);
 }
 
@@ -388,14 +579,18 @@ function RewardCard({
   onClick: () => void;
 }) {
   const { t } = useTranslation();
-  const formattedPrice = formatMinorCurrency(reward.current_market_price, reward.currency);
+  const formattedPrice = formatMinorCurrency(
+    reward.current_market_price,
+    reward.currency,
+  );
   const type = reward.reward_type ?? "FIXED";
   const isManual = reward.pricing_mode === "MANUAL";
 
   // Determine preview skin name for POOL
-  const poolPreviewSkin = type === "POOL" && reward.pool_items?.length
-    ? mostExpensivePoolItem(reward.pool_items)?.market_hash_name
-    : null;
+  const poolPreviewSkin =
+    type === "POOL" && reward.pool_items?.length
+      ? mostExpensivePoolItem(reward.pool_items)?.market_hash_name
+      : null;
 
   const handleCardClick = (e: React.MouseEvent) => {
     if (reward.is_deleted) return;
@@ -418,65 +613,90 @@ function RewardCard({
 
   return (
     <div
-      data-paused={reward.is_paused} data-selected={selected}
+      data-paused={reward.is_paused}
+      data-selected={selected}
       onClick={handleCardClick}
-      role="button" tabIndex={reward.is_deleted ? -1 : 0} aria-disabled={reward.is_deleted} aria-label={reward.twitch_title}
-      onKeyDown={e => { if (!reward.is_deleted && e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onClick(); } }}
+      role="button"
+      tabIndex={reward.is_deleted ? -1 : 0}
+      aria-disabled={reward.is_deleted}
+      aria-label={reward.twitch_title}
+      onKeyDown={(e) => {
+        if (
+          !reward.is_deleted &&
+          e.target === e.currentTarget &&
+          (e.key === "Enter" || e.key === " ")
+        ) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={cn(
         "reward-tile relative cursor-pointer transition-colors duration-200 group overflow-hidden select-none",
         "hover:border-primary/50 focus-visible:border-primary",
-        selected && !reward.is_deleted && "border-primary/80 bg-primary/10 shadow-lg shadow-primary/15 ring-2 ring-primary/50",
+        selected &&
+          !reward.is_deleted &&
+          "border-primary/80 bg-primary/10 shadow-lg shadow-primary/15 ring-2 ring-primary/50",
         reward.is_paused && !selected && "border-amber-400/25",
-        reward.is_deleted && "border-dashed"
+        reward.is_deleted && "border-dashed",
       )}
     >
       <div className="relative">
-      {/* Skin / type banner */}
-      {type === "FIXED" && reward.market_item_name ? (
-        <SkinImage
-          marketItemName={reward.market_item_name}
-          size={300}
-          objectFit="contain"
-          className="reward-art w-full"
-        />
-      ) : type === "POOL" && poolPreviewSkin ? (
-        <div className="relative">
+        {/* Skin / type banner */}
+        {type === "FIXED" && reward.market_item_name ? (
           <SkinImage
-            marketItemName={poolPreviewSkin}
+            marketItemName={reward.market_item_name}
             size={300}
             objectFit="contain"
             className="reward-art w-full"
           />
-          <div className="absolute top-2 left-2 rounded-lg bg-black/60 backdrop-blur-sm px-2 py-1 flex items-center gap-1.5 text-[10px] text-white/90 font-medium">
-            <IconPool />
-            {t("rewards.card.poolSkins", { count: reward.pool_items?.length ?? 0 })}
+        ) : type === "POOL" && poolPreviewSkin ? (
+          <div className="relative">
+            <SkinImage
+              marketItemName={poolPreviewSkin}
+              size={300}
+              objectFit="contain"
+              className="reward-art w-full"
+            />
+            <div className="absolute top-2 left-2 rounded-lg bg-black/60 backdrop-blur-sm px-2 py-1 flex items-center gap-1.5 text-[10px] text-white/90 font-medium">
+              <IconPool />
+              {t("rewards.card.poolSkins", {
+                count: reward.pool_items?.length ?? 0,
+              })}
+            </div>
           </div>
-        </div>
-      ) : type === "FILTER" ? (
-        <div className="reward-art w-full flex flex-col items-center justify-center gap-2 border-b border-border">
-          <div className="rounded-full bg-primary/10 p-3 text-primary">
-            <IconFilter />
+        ) : type === "FILTER" ? (
+          <div className="reward-art w-full flex flex-col items-center justify-center gap-2 border-b border-border">
+            <div className="rounded-full bg-primary/10 p-3 text-primary">
+              <IconFilter />
+            </div>
+            {reward.filter_config && (
+              <span className="text-xs text-muted-foreground font-mono">
+                {reward.filter_config.min_price.toFixed(0)} –{" "}
+                {reward.filter_config.max_price.toFixed(0)} {reward.currency}
+              </span>
+            )}
           </div>
-          {reward.filter_config && (
-            <span className="text-xs text-muted-foreground font-mono">
-              {reward.filter_config.min_price.toFixed(0)} – {reward.filter_config.max_price.toFixed(0)} {reward.currency}
-            </span>
-          )}
-        </div>
-      ) : (
-        <div className="reward-art w-full flex items-center justify-center text-muted-foreground/30">
-          <IconImage />
-        </div>
-      )}
+        ) : (
+          <div className="reward-art w-full flex items-center justify-center text-muted-foreground/30">
+            <IconImage />
+          </div>
+        )}
 
-      <span className="reward-type-stamp">{type} / {reward.currency}</span>
+        <span className="reward-type-stamp">
+          {type} / {reward.currency}
+        </span>
       </div>
       <div className="reward-body">
         {/* Checkbox */}
         {!reward.is_deleted && (
-          <button type="button" aria-pressed={selected} aria-label={`${t("common.select", "Select")} ${reward.twitch_title}`}
+          <button
+            type="button"
+            aria-pressed={selected}
+            aria-label={`${t("common.select", "Select")} ${reward.twitch_title}`}
             className="absolute top-3 right-3 z-10 p-1 cursor-pointer"
-            title={selected ? "Deselect (or Ctrl+Click)" : "Select (or Ctrl+Click)"}
+            title={
+              selected ? "Deselect (or Ctrl+Click)" : "Select (or Ctrl+Click)"
+            }
             onClick={(e) => {
               e.stopPropagation();
               if (e.shiftKey) {
@@ -493,11 +713,19 @@ function RewardCard({
                 "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all backdrop-blur-sm",
                 selected
                   ? "bg-primary border-primary shadow-sm shadow-primary/30"
-                  : "border-white/60 bg-black/30 opacity-100"
+                  : "border-white/60 bg-black/30 opacity-100",
               )}
             >
               {selected && (
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                >
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               )}
@@ -515,23 +743,29 @@ function RewardCard({
                 reward.pause_reason === "NO_MONEY"
                   ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
                   : reward.pause_reason === "PRICE_LIMIT"
-                  ? "border-orange-500/30 text-orange-400 bg-orange-500/10"
-                  : "status-failed-refund"
+                    ? "border-orange-500/30 text-orange-400 bg-orange-500/10"
+                    : "status-failed-refund",
               )}
               title={
                 reward.pause_reason === "NO_MONEY"
-                  ? t("rewards.card.pausedNoMoneyTip", "Paused automatically: insufficient balance on Market")
+                  ? t(
+                      "rewards.card.pausedNoMoneyTip",
+                      "Paused automatically: insufficient balance on Market",
+                    )
                   : reward.pause_reason === "PRICE_LIMIT"
-                  ? t("rewards.card.pausedPriceLimitTip", "Paused automatically: market price exceeded configured limits")
-                  : t("rewards.card.pausedManual", "Paused manually")
+                    ? t(
+                        "rewards.card.pausedPriceLimitTip",
+                        "Paused automatically: market price exceeded configured limits",
+                      )
+                    : t("rewards.card.pausedManual", "Paused manually")
               }
             >
               <IconPause />
               {reward.pause_reason === "NO_MONEY"
                 ? t("rewards.card.pausedNoMoney", "Paused (No balance)")
                 : reward.pause_reason === "PRICE_LIMIT"
-                ? t("rewards.card.pausedPriceLimit", "Paused (Price limit)")
-                : t("rewards.card.pausedGeneral", "Paused")}
+                  ? t("rewards.card.pausedPriceLimit", "Paused (Price limit)")
+                  : t("rewards.card.pausedGeneral", "Paused")}
             </Badge>
           )}
           {reward.market_autobuy && (
@@ -545,33 +779,68 @@ function RewardCard({
             </Badge>
           )}
           {isManual && (
-            <Badge variant="outline" className="text-xs border-blue-500/30 text-blue-400 bg-blue-500/10">
+            <Badge
+              variant="outline"
+              className="text-xs border-blue-500/30 text-blue-400 bg-blue-500/10"
+            >
               {t("rewards.card.manualPrice", "Manual price")}
             </Badge>
           )}
           {reward.is_public === false && (
-            <Badge variant="outline" className="text-xs border-border text-muted-foreground/80 bg-muted/40" title={t("rewards.card.privateTip", "Hidden from public rewards showcase")}>
+            <Badge
+              variant="outline"
+              className="text-xs border-border text-muted-foreground/80 bg-muted/40"
+              title={t(
+                "rewards.card.privateTip",
+                "Hidden from public rewards showcase",
+              )}
+            >
               {t("rewards.card.private", "Private")}
             </Badge>
           )}
-          {((reward.chat_min_messages ?? 0) > 0 || (reward.chat_min_characters ?? 0) > 0) && (
-            <Badge variant="outline" className="text-xs border-violet-500/30 text-violet-400 bg-violet-500/10" title="Has Chat Activity Requirements">
-              {(reward.chat_min_messages ?? 0) > 0 ? `${reward.chat_min_messages} msgs` : ""}
-              {(reward.chat_min_messages ?? 0) > 0 && (reward.chat_min_characters ?? 0) > 0 ? ` ${reward.chat_logical_operator ?? "AND"} ` : ""}
-              {(reward.chat_min_characters ?? 0) > 0 ? `${reward.chat_min_characters} chars` : ""}
-              {(reward.chat_time_window_hours ?? 0) > 0 ? ` / ${reward.chat_time_window_hours}h` : ""}
+          {((reward.chat_min_messages ?? 0) > 0 ||
+            (reward.chat_min_characters ?? 0) > 0) && (
+            <Badge
+              variant="outline"
+              className="text-xs border-violet-500/30 text-violet-400 bg-violet-500/10"
+              title="Has Chat Activity Requirements"
+            >
+              {(reward.chat_min_messages ?? 0) > 0
+                ? `${reward.chat_min_messages} msgs`
+                : ""}
+              {(reward.chat_min_messages ?? 0) > 0 &&
+              (reward.chat_min_characters ?? 0) > 0
+                ? ` ${reward.chat_logical_operator ?? "AND"} `
+                : ""}
+              {(reward.chat_min_characters ?? 0) > 0
+                ? `${reward.chat_min_characters} chars`
+                : ""}
+              {(reward.chat_time_window_hours ?? 0) > 0
+                ? ` / ${reward.chat_time_window_hours}h`
+                : ""}
             </Badge>
           )}
-          {((reward.purchase_limits?.user?.length ?? 0) > 0 || (reward.purchase_limits?.global?.length ?? 0) > 0) && (
+          {((reward.purchase_limits?.user?.length ?? 0) > 0 ||
+            (reward.purchase_limits?.global?.length ?? 0) > 0) && (
             <Badge
               variant="outline"
               className="text-xs border-amber-500/30 text-amber-400 bg-amber-500/10"
               title={[
-                ...(reward.purchase_limits?.user ?? []).map((u) => `User: max ${u.max_redemptions}${u.window_hours ? ` / ${u.window_hours}h` : " all-time"}`),
-                ...(reward.purchase_limits?.global ?? []).map((g) => `Global: max ${g.max_redemptions}${g.window_hours ? ` / ${g.window_hours}h` : " all-time"}`),
+                ...(reward.purchase_limits?.user ?? []).map(
+                  (u) =>
+                    `User: max ${u.max_redemptions}${u.window_hours ? ` / ${u.window_hours}h` : " all-time"}`,
+                ),
+                ...(reward.purchase_limits?.global ?? []).map(
+                  (g) =>
+                    `Global: max ${g.max_redemptions}${g.window_hours ? ` / ${g.window_hours}h` : " all-time"}`,
+                ),
               ].join("; ")}
             >
-              {t("rewards.card.limitsRules", { count: ((reward.purchase_limits?.user?.length ?? 0) + (reward.purchase_limits?.global?.length ?? 0)) })}
+              {t("rewards.card.limitsRules", {
+                count:
+                  (reward.purchase_limits?.user?.length ?? 0) +
+                  (reward.purchase_limits?.global?.length ?? 0),
+              })}
             </Badge>
           )}
         </div>
@@ -597,15 +866,17 @@ function RewardCard({
             </a>
           ) : type === "POOL" ? (
             <span className="text-xs text-muted-foreground">
-              {t("rewards.card.itemsInPool", { count: reward.pool_items?.length ?? 0 })}
+              {t("rewards.card.itemsInPool", {
+                count: reward.pool_items?.length ?? 0,
+              })}
             </span>
           ) : type === "FILTER" && reward.filter_config ? (
             <span className="text-xs text-muted-foreground">
               {reward.filter_config.name_contains
                 ? `"${reward.filter_config.name_contains}"`
                 : reward.filter_config.name_prefix
-                ? `${reward.filter_config.name_prefix}…`
-                : t("rewards.card.dynamicFilter", "Dynamic filter")}
+                  ? `${reward.filter_config.name_prefix}…`
+                  : t("rewards.card.dynamicFilter", "Dynamic filter")}
             </span>
           ) : null}
         </div>
@@ -613,13 +884,19 @@ function RewardCard({
         {/* Price info */}
         <div className="grid grid-cols-2 gap-2">
           <div className="reward-price">
-            <p className="text-xs text-muted-foreground">{t("rewards.card.marketPrice", "Market price")}</p>
-            <p className="text-sm font-bold tabular-nums text-foreground">{formattedPrice}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("rewards.card.marketPrice", "Market price")}
+            </p>
+            <p className="text-sm font-bold tabular-nums text-foreground">
+              {formattedPrice}
+            </p>
           </div>
           <div className="reward-price">
             {isManual ? (
               <>
-                <p className="text-xs text-muted-foreground">{t("rewards.card.twitchPoints", "Twitch Points")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("rewards.card.twitchPoints", "Twitch Points")}
+                </p>
                 <p className="text-sm font-bold tabular-nums text-foreground">
                   {reward.manual_twitch_points != null
                     ? reward.manual_twitch_points.toLocaleString()
@@ -628,7 +905,9 @@ function RewardCard({
               </>
             ) : (
               <>
-                <p className="text-xs text-muted-foreground">{t("rewards.card.markup", "Markup")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("rewards.card.markup", "Markup")}
+                </p>
                 <p className="text-sm font-bold tabular-nums text-primary">
                   +{reward.twitch_price_markup_percentage}%
                   {reward.price_strategy && (
@@ -644,18 +923,44 @@ function RewardCard({
 
         {/* Footer meta */}
         <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-muted-foreground">
-          <span>{t("rewards.card.cd", { seconds: reward.global_cooldown_seconds })}</span>
+          <span>
+            {t("rewards.card.cd", { seconds: reward.global_cooldown_seconds })}
+          </span>
           <span>·</span>
-          <span>{t("rewards.card.maxStream", { count: reward.max_redemptions_per_stream })}</span>
+          <span>
+            {t("rewards.card.maxStream", {
+              count: reward.max_redemptions_per_stream,
+            })}
+          </span>
           <span>·</span>
-          <span>{t("rewards.card.maxUserStream", { count: reward.max_redemptions_per_user_per_stream })}</span>
-          {(reward.min_market_price != null || reward.max_market_price != null) && (
+          <span>
+            {t("rewards.card.maxUserStream", {
+              count: reward.max_redemptions_per_user_per_stream,
+            })}
+          </span>
+          {(reward.min_market_price != null ||
+            reward.max_market_price != null) && (
             <>
               <span>·</span>
-              <span className="text-amber-400/90" title="Market Price Safety Limits">
+              <span
+                className="text-amber-400/90"
+                title="Market Price Safety Limits"
+              >
                 {t("rewards.card.priceLimits", {
-                  min: reward.min_market_price != null ? formatMinorCurrency(reward.min_market_price, reward.currency) : "0",
-                  max: reward.max_market_price != null ? formatMinorCurrency(reward.max_market_price, reward.currency) : "∞",
+                  min:
+                    reward.min_market_price != null
+                      ? formatMinorCurrency(
+                          reward.min_market_price,
+                          reward.currency,
+                        )
+                      : "0",
+                  max:
+                    reward.max_market_price != null
+                      ? formatMinorCurrency(
+                          reward.max_market_price,
+                          reward.currency,
+                        )
+                      : "∞",
                 })}
               </span>
             </>
@@ -676,7 +981,9 @@ function PoolItemsEditor({
 }) {
   const { t } = useTranslation();
   const chances = calcPoolChances(items);
-  const [openMsgIndices, setOpenMsgIndices] = useState<Record<number, boolean>>({});
+  const [openMsgIndices, setOpenMsgIndices] = useState<Record<number, boolean>>(
+    {},
+  );
 
   const update = (idx: number, patch: Partial<PoolItemConfig>) => {
     onChange(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
@@ -687,7 +994,11 @@ function PoolItemsEditor({
   const add = () =>
     onChange([
       ...items,
-      { market_hash_name: "", weight: 1, permissible_market_price_deviation: 10 },
+      {
+        market_hash_name: "",
+        weight: 1,
+        permissible_market_price_deviation: 10,
+      },
     ]);
 
   return (
@@ -705,7 +1016,9 @@ function PoolItemsEditor({
                 <Input
                   placeholder="AWP | Asiimov (Field-Tested)"
                   value={it.market_hash_name}
-                  onChange={(e) => update(idx, { market_hash_name: e.target.value })}
+                  onChange={(e) =>
+                    update(idx, { market_hash_name: e.target.value })
+                  }
                   className="text-sm h-8"
                 />
               </div>
@@ -739,7 +1052,9 @@ function PoolItemsEditor({
                   className="text-xs text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-0.5 max-w-full min-w-0"
                   title={it.market_hash_name}
                 >
-                  <span className="truncate min-w-0">{it.market_hash_name}</span>
+                  <span className="truncate min-w-0">
+                    {it.market_hash_name}
+                  </span>
                   <IconExternalLink className="shrink-0" />
                 </a>
               </div>
@@ -748,24 +1063,35 @@ function PoolItemsEditor({
             {/* Weight + deviation */}
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t("rewards.pool.weight", "Weight")}</Label>
+                <Label className="text-xs text-muted-foreground">
+                  {t("rewards.pool.weight", "Weight")}
+                </Label>
                 <Input
                   type="number"
                   min={0.01}
                   step={0.01}
                   value={it.weight}
-                  onChange={(e) => update(idx, { weight: parseFloat(e.target.value) || 1 })}
+                  onChange={(e) =>
+                    update(idx, { weight: parseFloat(e.target.value) || 1 })
+                  }
                   className="h-8 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t("rewards.pool.maxDeviation", "Max deviation %")}</Label>
+                <Label className="text-xs text-muted-foreground">
+                  {t("rewards.pool.maxDeviation", "Max deviation %")}
+                </Label>
                 <Input
                   type="number"
                   min={0}
                   max={100}
                   value={it.permissible_market_price_deviation}
-                  onChange={(e) => update(idx, { permissible_market_price_deviation: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    update(idx, {
+                      permissible_market_price_deviation:
+                        parseInt(e.target.value) || 0,
+                    })
+                  }
                   className="h-8 text-sm"
                 />
               </div>
@@ -775,7 +1101,9 @@ function PoolItemsEditor({
             <div className="pt-1.5 border-t border-border/40">
               <button
                 type="button"
-                onClick={() => setOpenMsgIndices((prev) => ({ ...prev, [idx]: !isMsgOpen }))}
+                onClick={() =>
+                  setOpenMsgIndices((prev) => ({ ...prev, [idx]: !isMsgOpen }))
+                }
                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-full text-left"
               >
                 <svg
@@ -787,15 +1115,24 @@ function PoolItemsEditor({
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className={cn("transition-transform duration-150", isMsgOpen && "rotate-90")}
+                  className={cn(
+                    "transition-transform duration-150",
+                    isMsgOpen && "rotate-90",
+                  )}
                 >
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
                 <span className="font-medium">
-                  {t("rewards.pool.customMessageTitle", "Сообщение в чат при выпадении")}
+                  {t(
+                    "rewards.pool.customMessageTitle",
+                    "Сообщение в чат при выпадении",
+                  )}
                 </span>
                 {it.custom_message ? (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 font-normal ml-auto">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 font-normal ml-auto"
+                  >
                     {t("rewards.pool.customMessageActive", "Кастомное")}
                   </Badge>
                 ) : (
@@ -818,7 +1155,11 @@ function PoolItemsEditor({
                           type="button"
                           onClick={() => {
                             const cur = it.custom_message || "";
-                            update(idx, { custom_message: cur ? `${cur} {${tag}}` : `{${tag}}` });
+                            update(idx, {
+                              custom_message: cur
+                                ? `${cur} {${tag}}`
+                                : `{${tag}}`,
+                            });
                           }}
                           title={`Click to add {${tag}}`}
                           className="inline-flex items-center gap-0.5 text-[10px] font-mono px-1.5 py-0.5 rounded border border-primary/25 bg-primary/5 hover:bg-primary/15 text-primary cursor-pointer active:scale-95"
@@ -834,11 +1175,13 @@ function PoolItemsEditor({
                     rows={2}
                     placeholder={t(
                       "rewards.pool.customMessagePlaceholder",
-                      "@{buyer}, твой дроп: {item} (шанс: {chance})! Заказ уже создаётся на маркете, ожидай трейд."
+                      "@{buyer}, твой дроп: {item} (шанс: {chance})! Заказ уже создаётся на маркете, ожидай трейд.",
                     )}
                     value={it.custom_message ?? ""}
                     onChange={(e) =>
-                      update(idx, { custom_message: e.target.value ? e.target.value : null })
+                      update(idx, {
+                        custom_message: e.target.value ? e.target.value : null,
+                      })
                     }
                     className="text-xs h-auto min-h-[56px] resize-y"
                   />
@@ -908,13 +1251,14 @@ function FilterPreviewBlock({
     };
   }, [run]);
 
-  const fmt = (n: number, currency: string) =>
-    n.toFixed(2) + " " + currency;
+  const fmt = (n: number, currency: string) => n.toFixed(2) + " " + currency;
 
   return (
     <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-foreground">{t("rewards.filterPreview.title", "Filter Preview")}</p>
+        <p className="text-sm font-medium text-foreground">
+          {t("rewards.filterPreview.title", "Filter Preview")}
+        </p>
         <button
           type="button"
           onClick={run}
@@ -930,7 +1274,9 @@ function FilterPreviewBlock({
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-full" />
           <div className="flex gap-2">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 flex-1 rounded-lg" />)}
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-12 flex-1 rounded-lg" />
+            ))}
           </div>
         </div>
       )}
@@ -945,9 +1291,14 @@ function FilterPreviewBlock({
             <span className="text-2xl font-bold tabular-nums text-foreground">
               {preview.total_matching_items}
             </span>
-            <span className="text-sm text-muted-foreground">{t("rewards.filterPreview.matchingSkins", "matching skins")}</span>
+            <span className="text-sm text-muted-foreground">
+              {t("rewards.filterPreview.matchingSkins", "matching skins")}
+            </span>
             {preview.estimated_twitch_points > 0 && (
-              <Badge variant="outline" className="ml-auto text-xs status-completed">
+              <Badge
+                variant="outline"
+                className="ml-auto text-xs status-completed"
+              >
                 ~{preview.estimated_twitch_points.toLocaleString()} pts
               </Badge>
             )}
@@ -956,14 +1307,31 @@ function FilterPreviewBlock({
           {/* Price stats */}
           <div className="grid grid-cols-4 gap-2 text-xs">
             {[
-              { label: t("rewards.filterPreview.min", "Min"), val: preview.min_price },
-              { label: t("rewards.filterPreview.avg", "Avg"), val: preview.average_price },
-              { label: t("rewards.filterPreview.median", "Median"), val: preview.median_price },
-              { label: t("rewards.filterPreview.max", "Max"), val: preview.max_price },
+              {
+                label: t("rewards.filterPreview.min", "Min"),
+                val: preview.min_price,
+              },
+              {
+                label: t("rewards.filterPreview.avg", "Avg"),
+                val: preview.average_price,
+              },
+              {
+                label: t("rewards.filterPreview.median", "Median"),
+                val: preview.median_price,
+              },
+              {
+                label: t("rewards.filterPreview.max", "Max"),
+                val: preview.max_price,
+              },
             ].map(({ label, val }) => (
-              <div key={label} className="rounded-lg bg-background/60 border border-border px-2 py-2 text-center">
+              <div
+                key={label}
+                className="rounded-lg bg-background/60 border border-border px-2 py-2 text-center"
+              >
                 <p className="text-muted-foreground mb-0.5">{label}</p>
-                <p className="font-semibold tabular-nums">{fmt(val, preview.currency)}</p>
+                <p className="font-semibold tabular-nums">
+                  {fmt(val, preview.currency)}
+                </p>
               </div>
             ))}
           </div>
@@ -971,7 +1339,12 @@ function FilterPreviewBlock({
           {/* Calculated price */}
           {preview.calculated_market_price > 0 && (
             <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">{t("rewards.filterPreview.calculatedPrice", "Calculated market price")}</span>
+              <span className="text-muted-foreground">
+                {t(
+                  "rewards.filterPreview.calculatedPrice",
+                  "Calculated market price",
+                )}
+              </span>
               <span className="font-bold text-primary tabular-nums">
                 {fmt(preview.calculated_market_price, preview.currency)}
               </span>
@@ -983,10 +1356,15 @@ function FilterPreviewBlock({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground font-medium">
-                  {t("rewards.filterPreview.sampleSkins", { count: preview.sample_items.length })}
+                  {t("rewards.filterPreview.sampleSkins", {
+                    count: preview.sample_items.length,
+                  })}
                 </p>
                 <span className="text-[10px] text-muted-foreground/60">
-                  {t("rewards.filterPreview.clickToView", "Click to view on Market")}
+                  {t(
+                    "rewards.filterPreview.clickToView",
+                    "Click to view on Market",
+                  )}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2 max-h-80 overflow-y-auto p-0.5">
@@ -1024,7 +1402,8 @@ function FilterPreviewBlock({
                             className="text-[10px] text-muted-foreground/70"
                             title={`Volume: ${item.volume}`}
                           >
-                            {item.volume} {t("rewards.filterPreview.pcs", "pcs.")}
+                            {item.volume}{" "}
+                            {t("rewards.filterPreview.pcs", "pcs.")}
                           </span>
                         )}
                       </div>
@@ -1039,7 +1418,10 @@ function FilterPreviewBlock({
 
       {!preview && !isLoading && !error && (
         <p className="text-xs text-muted-foreground/60 text-center py-2">
-          {t("rewards.filterPreview.setPriceTip", "Set min/max price to preview matching skins")}
+          {t(
+            "rewards.filterPreview.setPriceTip",
+            "Set min/max price to preview matching skins",
+          )}
         </p>
       )}
     </div>
@@ -1059,16 +1441,18 @@ function PoolItemsDetail({
 
   return (
     <div className="space-y-2 min-w-0">
-      <p className="text-sm font-medium text-foreground mb-3">{t("rewards.pool.itemsCount", { count: items.length })}</p>
+      <p className="text-sm font-medium text-foreground mb-3">
+        {t("rewards.pool.itemsCount", { count: items.length })}
+      </p>
       <div className="grid gap-2 min-w-0">
         {items.map((item, idx) => {
           const price = item.current_market_price;
-          const devAmt = price != null
-            ? (price * item.permissible_market_price_deviation) / 100 / 100
-            : null;
-          const priceFmt = price != null
-            ? formatMinorCurrency(price, currency)
-            : "–";
+          const devAmt =
+            price != null
+              ? (price * item.permissible_market_price_deviation) / 100 / 100
+              : null;
+          const priceFmt =
+            price != null ? formatMinorCurrency(price, currency) : "–";
 
           return (
             <div
@@ -1090,7 +1474,9 @@ function PoolItemsDetail({
                   className="text-sm font-medium hover:text-primary hover:underline inline-flex items-center gap-1 max-w-full min-w-0"
                   title={item.market_hash_name}
                 >
-                  <span className="truncate min-w-0">{item.market_hash_name}</span>
+                  <span className="truncate min-w-0">
+                    {item.market_hash_name}
+                  </span>
                   <IconExternalLink className="shrink-0" />
                 </a>
                 <p className="text-xs text-muted-foreground tabular-nums truncate">
@@ -1102,14 +1488,21 @@ function PoolItemsDetail({
                   )}
                 </p>
                 {item.custom_message && (
-                  <p className="text-[11px] text-muted-foreground/80 truncate max-w-sm" title={item.custom_message}>
+                  <p
+                    className="text-[11px] text-muted-foreground/80 truncate max-w-sm"
+                    title={item.custom_message}
+                  >
                     💬 <span className="italic">{item.custom_message}</span>
                   </p>
                 )}
               </div>
               <div className="text-right shrink-0">
-                <p className="text-sm font-bold tabular-nums text-primary">{chances[idx].toFixed(1)}%</p>
-                <p className="text-[10px] text-muted-foreground">{t("rewards.pool.weight", "weight")} {item.weight}</p>
+                <p className="text-sm font-bold tabular-nums text-primary">
+                  {chances[idx].toFixed(1)}%
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {t("rewards.pool.weight", "weight")} {item.weight}
+                </p>
               </div>
             </div>
           );
@@ -1145,33 +1538,50 @@ function StepTypeAndSkins({
                 "flex flex-col items-center gap-2 rounded-xl border-2 py-4 px-3 transition-all text-sm font-medium",
                 type === tType
                   ? "border-primary bg-primary/10 text-primary"
-                  : "border-border hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-foreground"
+                  : "border-border hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-foreground",
               )}
             >
-              {tType === "FIXED" ? <IconImage /> : tType === "POOL" ? <IconPool /> : <IconFilter />}
+              {tType === "FIXED" ? (
+                <IconImage />
+              ) : tType === "POOL" ? (
+                <IconPool />
+              ) : (
+                <IconFilter />
+              )}
               <span className="text-xs">
                 {tType === "FIXED"
                   ? t("rewards.pool.fixedSkin", "Fixed Skin")
                   : tType === "POOL"
-                  ? t("rewards.pool.skinPool", "Skin Pool")
-                  : t("rewards.pool.filter", "Filter")}
+                    ? t("rewards.pool.skinPool", "Skin Pool")
+                    : t("rewards.pool.filter", "Filter")}
               </span>
             </button>
           ))}
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
           {type === "FIXED"
-            ? t("rewards.steps.fixedDesc", "One specific skin. A fixed market item will be purchased when redeemed.")
+            ? t(
+                "rewards.steps.fixedDesc",
+                "One specific skin. A fixed market item will be purchased when redeemed.",
+              )
             : type === "POOL"
-            ? t("rewards.steps.poolDesc", "A weighted pool of skins. A random skin is picked from the pool on each redemption.")
-            : t("rewards.steps.filterDesc", "A dynamic filter matching skins by price range and name. Any matching skin can be purchased.")}
+              ? t(
+                  "rewards.steps.poolDesc",
+                  "A weighted pool of skins. A random skin is picked from the pool on each redemption.",
+                )
+              : t(
+                  "rewards.steps.filterDesc",
+                  "A dynamic filter matching skins by price range and name. Any matching skin can be purchased.",
+                )}
         </p>
       </div>
 
       {/* FIXED: item name */}
       {type === "FIXED" && (
         <div className="space-y-2">
-          <Label htmlFor="market_item_name">{t("rewards.steps.marketItemName", "Market Item Name")}</Label>
+          <Label htmlFor="market_item_name">
+            {t("rewards.steps.marketItemName", "Market Item Name")}
+          </Label>
           <Input
             id="market_item_name"
             placeholder="AWP | Asiimov (Field-Tested)"
@@ -1206,7 +1616,12 @@ function StepTypeAndSkins({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="filter_min">{t("rewards.steps.minPriceCurrency", "Min Price (in currency units)")}</Label>
+              <Label htmlFor="filter_min">
+                {t(
+                  "rewards.steps.minPriceCurrency",
+                  "Min Price (in currency units)",
+                )}
+              </Label>
               <Input
                 id="filter_min"
                 type="number"
@@ -1225,7 +1640,12 @@ function StepTypeAndSkins({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="filter_max">{t("rewards.steps.maxPriceCurrency", "Max Price (in currency units)")}</Label>
+              <Label htmlFor="filter_max">
+                {t(
+                  "rewards.steps.maxPriceCurrency",
+                  "Max Price (in currency units)",
+                )}
+              </Label>
               <Input
                 id="filter_max"
                 type="number"
@@ -1245,7 +1665,9 @@ function StepTypeAndSkins({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="filter_contains">{t("rewards.steps.nameContains", "Name Contains (optional)")}</Label>
+            <Label htmlFor="filter_contains">
+              {t("rewards.steps.nameContains", "Name Contains (optional)")}
+            </Label>
             <Input
               id="filter_contains"
               placeholder="Asiimov"
@@ -1262,7 +1684,9 @@ function StepTypeAndSkins({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="filter_prefix">{t("rewards.steps.namePrefix", "Name Prefix (optional)")}</Label>
+              <Label htmlFor="filter_prefix">
+                {t("rewards.steps.namePrefix", "Name Prefix (optional)")}
+              </Label>
               <Input
                 id="filter_prefix"
                 placeholder="AWP |"
@@ -1278,7 +1702,9 @@ function StepTypeAndSkins({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="filter_volume">{t("rewards.steps.minVolume", "Min Volume (optional)")}</Label>
+              <Label htmlFor="filter_volume">
+                {t("rewards.steps.minVolume", "Min Volume (optional)")}
+              </Label>
               <Input
                 id="filter_volume"
                 type="number"
@@ -1306,16 +1732,20 @@ function StepTypeAndSkins({
 function StepPricing({
   form,
   channelId,
+  currency,
   onChange,
 }: {
   form: Partial<CreateRewardBody>;
   channelId: string;
+  currency?: string;
   onChange: (patch: Partial<CreateRewardBody>) => void;
 }) {
   const { t } = useTranslation();
+  const c = useCopy();
   const mode = form.pricing_mode ?? "AUTO";
   const type = form.reward_type ?? "FIXED";
-  const showStrategy = mode === "AUTO" && (type === "POOL" || type === "FILTER");
+  const showStrategy =
+    mode === "AUTO" && (type === "POOL" || type === "FILTER");
 
   return (
     <div className="space-y-5">
@@ -1332,7 +1762,7 @@ function StepPricing({
                 "flex flex-col items-center gap-2 rounded-xl border-2 py-4 px-3 transition-all text-sm font-medium",
                 mode === m
                   ? "border-primary bg-primary/10 text-primary"
-                  : "border-border hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-foreground"
+                  : "border-border hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-foreground",
               )}
             >
               <span className="text-lg">{m === "AUTO" ? "📈" : "🔒"}</span>
@@ -1346,8 +1776,14 @@ function StepPricing({
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
           {mode === "AUTO"
-            ? t("rewards.pricing.modeAutoDesc", "Twitch Channel Points cost is calculated automatically based on current market price + markup.")
-            : t("rewards.pricing.modeManualDesc", "Twitch Channel Points cost is fixed and won't change with market fluctuations.")}
+            ? t(
+                "rewards.pricing.modeAutoDesc",
+                "Twitch Channel Points cost is calculated automatically based on current market price + markup.",
+              )
+            : t(
+                "rewards.pricing.modeManualDesc",
+                "Twitch Channel Points cost is fixed and won't change with market fluctuations.",
+              )}
         </p>
       </div>
 
@@ -1356,7 +1792,9 @@ function StepPricing({
           {/* Price strategy for POOL/FILTER */}
           {showStrategy && (
             <div className="space-y-2">
-              <Label>{t("rewards.pricing.priceStrategy", "Price Strategy")}</Label>
+              <Label>
+                {t("rewards.pricing.priceStrategy", "Price Strategy")}
+              </Label>
               <div className="grid grid-cols-3 gap-2">
                 {(["AVERAGE", "MEDIAN", "MAX"] as PriceStrategy[]).map((s) => (
                   <button
@@ -1367,53 +1805,75 @@ function StepPricing({
                       "rounded-xl border-2 py-2 px-3 text-xs font-medium transition-all",
                       form.price_strategy === s
                         ? "border-primary bg-primary/10 text-primary"
-                        : "border-border hover:border-primary/40 text-muted-foreground hover:text-foreground"
+                        : "border-border hover:border-primary/40 text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {s === "AVERAGE"
                       ? t("rewards.pricing.strategyAvg", "Average")
                       : s === "MEDIAN"
-                      ? t("rewards.pricing.strategyMed", "Median")
-                      : t("rewards.pricing.strategyMax", "Maximum")}
+                        ? t("rewards.pricing.strategyMed", "Median")
+                        : t("rewards.pricing.strategyMax", "Maximum")}
                   </button>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                {t("rewards.pricing.strategyDesc", "Strategy used to aggregate prices across pool items or filter results.")}
+                {t(
+                  "rewards.pricing.strategyDesc",
+                  "Strategy used to aggregate prices across pool items or filter results.",
+                )}
               </p>
             </div>
           )}
 
           {/* Markup % */}
           <div className="space-y-2">
-            <Label htmlFor="markup_pct">{t("rewards.pricing.markupPercent", "Twitch Price Markup %")}</Label>
+            <Label htmlFor="markup_pct">
+              {t("rewards.pricing.markupPercent", "Twitch Price Markup %")}
+            </Label>
             <Input
               id="markup_pct"
               type="number"
               min={0}
               max={4900}
               value={form.twitch_price_markup_percentage ?? 50}
-              onChange={(e) => onChange({ twitch_price_markup_percentage: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                onChange({
+                  twitch_price_markup_percentage: parseInt(e.target.value) || 0,
+                })
+              }
             />
             <p className="text-xs text-muted-foreground">
-              {t("rewards.pricing.markupDesc", "Percentage added on top of the market price to calculate Twitch Points cost.")}
+              {t(
+                "rewards.pricing.markupDesc",
+                "Percentage added on top of the market price to calculate Twitch Points cost.",
+              )}
             </p>
           </div>
 
           {/* Deviation (only for FIXED) */}
           {type === "FIXED" && (
             <div className="space-y-2">
-              <Label htmlFor="deviation">{t("rewards.pricing.deviationPercent", "Max Price Deviation %")}</Label>
+              <Label htmlFor="deviation">
+                {t("rewards.pricing.deviationPercent", "Max Price Deviation %")}
+              </Label>
               <Input
                 id="deviation"
                 type="number"
                 min={0}
                 max={100}
                 value={form.permissible_market_price_deviation ?? 10}
-                onChange={(e) => onChange({ permissible_market_price_deviation: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  onChange({
+                    permissible_market_price_deviation:
+                      parseInt(e.target.value) || 0,
+                  })
+                }
               />
               <p className="text-xs text-muted-foreground">
-                {t("rewards.pricing.deviationFixedDesc", "Max allowed deviation from the stored market price before the purchase is rejected.")}
+                {t(
+                  "rewards.pricing.deviationFixedDesc",
+                  "Max allowed deviation from the stored market price before the purchase is rejected.",
+                )}
               </p>
             </div>
           )}
@@ -1432,17 +1892,29 @@ function StepPricing({
 
       {mode === "MANUAL" && (
         <div className="space-y-2">
-          <Label htmlFor="manual_points">{t("rewards.pricing.fixedTwitchPoints", "Fixed Twitch Channel Points")}</Label>
+          <Label htmlFor="manual_points">
+            {t(
+              "rewards.pricing.fixedTwitchPoints",
+              "Fixed Twitch Channel Points",
+            )}
+          </Label>
           <Input
             id="manual_points"
             type="number"
             min={1}
             placeholder="10000"
             value={form.manual_twitch_points ?? ""}
-            onChange={(e) => onChange({ manual_twitch_points: parseInt(e.target.value) || null })}
+            onChange={(e) =>
+              onChange({
+                manual_twitch_points: parseInt(e.target.value) || null,
+              })
+            }
           />
           <p className="text-xs text-muted-foreground">
-            {t("rewards.pricing.fixedTwitchPointsDesc", "Channel Points cost viewers pay to redeem. This is fixed and won't follow market prices.")}
+            {t(
+              "rewards.pricing.fixedTwitchPointsDesc",
+              "Channel Points cost viewers pay to redeem. This is fixed and won't follow market prices.",
+            )}
           </p>
           {/* For FILTER in MANUAL mode, still show preview without points estimate */}
           {type === "FILTER" && form.filter_config && (
@@ -1457,68 +1929,113 @@ function StepPricing({
       )}
 
       {/* Market Price Safety Limits (Auto-pause) */}
-      <div className="space-y-3 rounded-xl border border-border bg-card/60 p-4">
-        <div className="space-y-1">
-          <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
-            <span>🛡️</span> {t("rewards.pricing.safetyLimits", "Market Price Safety Limits (Auto-pause)")}
-          </Label>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {t("rewards.pricing.safetyLimitsDesc", "Automatically pause this reward if market price drops below or rises above these limits. Protects your Market balance against sudden price surges.")}
+      <details className="builder-advanced">
+        <summary>
+          {c("Market price safety limits", "Защита цены маркета")}
+          <span>
+            {currency || c("Currency unavailable", "Валюта недоступна")}
+          </span>
+        </summary>
+        {!currency && (
+          <p>
+            {c(
+              "Market currency must be available before editing monetary safety limits. Check the market connection in bot settings.",
+              "Для изменения защиты цены нужна валюта маркета. Проверьте подключение в настройках бота.",
+            )}
           </p>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="min_market_price" className="text-xs">{t("rewards.pricing.minMarketPrice", "Min Market Price")}</Label>
-            <Input
-              id="min_market_price"
-              type="number"
-              min={0}
-              step={0.01}
-              placeholder={t("rewards.pricing.noMinimum", "No minimum")}
-              value={
-                form.min_market_price != null
-                  ? minorToMajor(form.min_market_price)
-                  : ""
-              }
-              onChange={(e) => {
-                const val = e.target.value.trim();
-                if (val === "") {
-                  onChange({ min_market_price: null });
-                } else {
-                  const num = parseFloat(val);
-                  onChange({ min_market_price: isNaN(num) ? null : majorToMinor(num) });
-                }
-              }}
-            />
-            <p className="text-[11px] text-muted-foreground">{t("rewards.pricing.autoPausesIfDrops", "Auto-pauses if price drops below")}</p>
+        )}
+        <fieldset disabled={!currency} className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
+              <span>🛡️</span>{" "}
+              {t(
+                "rewards.pricing.safetyLimits",
+                "Market Price Safety Limits (Auto-pause)",
+              )}
+            </Label>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {t(
+                "rewards.pricing.safetyLimitsDesc",
+                "Automatically pause this reward if market price drops below or rises above these limits. Protects your Market balance against sudden price surges.",
+              )}
+            </p>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="max_market_price" className="text-xs">{t("rewards.pricing.maxMarketPrice", "Max Market Price")}</Label>
-            <Input
-              id="max_market_price"
-              type="number"
-              min={0}
-              step={0.01}
-              placeholder={t("rewards.pricing.noMaximum", "No maximum")}
-              value={
-                form.max_market_price != null
-                  ? minorToMajor(form.max_market_price)
-                  : ""
-              }
-              onChange={(e) => {
-                const val = e.target.value.trim();
-                if (val === "") {
-                  onChange({ max_market_price: null });
-                } else {
-                  const num = parseFloat(val);
-                  onChange({ max_market_price: isNaN(num) ? null : majorToMinor(num) });
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="min_market_price" className="text-xs">
+                {t("rewards.pricing.minMarketPrice", "Min Market Price")}
+              </Label>
+              <Input
+                id="min_market_price"
+                type="number"
+                min={0}
+                step={0.01}
+                placeholder={t("rewards.pricing.noMinimum", "No minimum")}
+                value={
+                  form.min_market_price != null
+                    ? minorToMajor(form.min_market_price, currency)
+                    : ""
                 }
-              }}
-            />
-            <p className="text-[11px] text-muted-foreground">{t("rewards.pricing.autoPausesIfRises", "Auto-pauses if price rises above")}</p>
+                onChange={(e) => {
+                  const val = e.target.value.trim();
+                  if (val === "") {
+                    onChange({ min_market_price: null });
+                  } else {
+                    const num = parseFloat(val);
+                    onChange({
+                      min_market_price: isNaN(num)
+                        ? null
+                        : majorToMinor(num, currency),
+                    });
+                  }
+                }}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {t(
+                  "rewards.pricing.autoPausesIfDrops",
+                  "Auto-pauses if price drops below",
+                )}
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="max_market_price" className="text-xs">
+                {t("rewards.pricing.maxMarketPrice", "Max Market Price")}
+              </Label>
+              <Input
+                id="max_market_price"
+                type="number"
+                min={0}
+                step={0.01}
+                placeholder={t("rewards.pricing.noMaximum", "No maximum")}
+                value={
+                  form.max_market_price != null
+                    ? minorToMajor(form.max_market_price, currency)
+                    : ""
+                }
+                onChange={(e) => {
+                  const val = e.target.value.trim();
+                  if (val === "") {
+                    onChange({ max_market_price: null });
+                  } else {
+                    const num = parseFloat(val);
+                    onChange({
+                      max_market_price: isNaN(num)
+                        ? null
+                        : majorToMinor(num, currency),
+                    });
+                  }
+                }}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {t(
+                  "rewards.pricing.autoPausesIfRises",
+                  "Auto-pauses if price rises above",
+                )}
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
+        </fieldset>
+      </details>
     </div>
   );
 }
@@ -1534,10 +2051,13 @@ function StepTwitchSettings({
   isEdit: boolean;
 }) {
   const { t } = useTranslation();
+  const c = useCopy();
   return (
     <div className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="twitch_title">{t("rewards.twitchSettings.titleLabel", "Twitch Reward Title")}</Label>
+        <Label htmlFor="twitch_title">
+          {t("rewards.twitchSettings.titleLabel", "Twitch Reward Title")}
+        </Label>
         <Input
           id="twitch_title"
           placeholder="Get AWP Asiimov"
@@ -1547,7 +2067,9 @@ function StepTwitchSettings({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="twitch_description">{t("rewards.twitchSettings.promptLabel", "Description")}</Label>
+        <Label htmlFor="twitch_description">
+          {t("rewards.twitchSettings.promptLabel", "Description")}
+        </Label>
         <Textarea
           id="twitch_description"
           placeholder="Redeem to get this skin delivered to your Steam account."
@@ -1556,38 +2078,72 @@ function StepTwitchSettings({
           onChange={(e) => onChange({ twitch_description: e.target.value })}
         />
       </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="global_cooldown_seconds">{t("rewards.twitchSettings.cooldownLabel", "Cooldown (s)")}</Label>
-          <Input
-            id="global_cooldown_seconds"
-            type="number"
-            min={0}
-            value={form.global_cooldown_seconds ?? 60}
-            onChange={(e) => onChange({ global_cooldown_seconds: parseInt(e.target.value) || 0 })}
-          />
+      <details className="builder-advanced">
+        <summary>
+          {c(
+            "Twitch cooldown & stream limits",
+            "Кулдаун Twitch и лимиты стрима",
+          )}
+          <span>{form.global_cooldown_seconds || 0}s</span>
+        </summary>
+        <p>
+          {c(
+            "Cooldown applies to everyone on the channel. Zero stream limits mean unlimited; custom limits below still apply.",
+            "Кулдаун действует для всего канала. Нулевые лимиты стрима означают отсутствие ограничения; пользовательские лимиты ниже продолжают действовать.",
+          )}
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="global_cooldown_seconds">
+              {t("rewards.twitchSettings.cooldownLabel", "Cooldown (s)")}
+            </Label>
+            <Input
+              id="global_cooldown_seconds"
+              type="number"
+              min={0}
+              value={form.global_cooldown_seconds ?? 60}
+              onChange={(e) =>
+                onChange({
+                  global_cooldown_seconds: parseInt(e.target.value) || 0,
+                })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="max_per_stream">
+              {t("rewards.twitchSettings.maxStreamLabel", "Max / Stream")}
+            </Label>
+            <Input
+              id="max_per_stream"
+              type="number"
+              min={0}
+              value={form.max_redemptions_per_stream ?? 0}
+              onChange={(e) =>
+                onChange({
+                  max_redemptions_per_stream: parseInt(e.target.value) || 0,
+                })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="max_per_user">
+              {t("rewards.twitchSettings.maxUserLabel", "Max / User")}
+            </Label>
+            <Input
+              id="max_per_user"
+              type="number"
+              min={0}
+              value={form.max_redemptions_per_user_per_stream ?? 0}
+              onChange={(e) =>
+                onChange({
+                  max_redemptions_per_user_per_stream:
+                    parseInt(e.target.value) || 0,
+                })
+              }
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="max_per_stream">{t("rewards.twitchSettings.maxStreamLabel", "Max / Stream")}</Label>
-          <Input
-            id="max_per_stream"
-            type="number"
-            min={0}
-            value={form.max_redemptions_per_stream ?? 0}
-            onChange={(e) => onChange({ max_redemptions_per_stream: parseInt(e.target.value) || 0 })}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="max_per_user">{t("rewards.twitchSettings.maxUserLabel", "Max / User")}</Label>
-          <Input
-            id="max_per_user"
-            type="number"
-            min={0}
-            value={form.max_redemptions_per_user_per_stream ?? 0}
-            onChange={(e) => onChange({ max_redemptions_per_user_per_stream: parseInt(e.target.value) || 0 })}
-          />
-        </div>
-      </div>
+      </details>
       <div className="flex items-center gap-6 flex-wrap">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
@@ -1596,7 +2152,9 @@ function StepTwitchSettings({
             onChange={(e) => onChange({ market_autobuy: e.target.checked })}
             className="rounded accent-primary"
           />
-          <span className="text-sm">{t("rewards.twitchSettings.autobuy", "Auto-buy from market")}</span>
+          <span className="text-sm">
+            {t("rewards.twitchSettings.autobuy", "Auto-buy from market")}
+          </span>
         </label>
         {!isEdit && (
           <label className="flex items-center gap-2 cursor-pointer">
@@ -1606,7 +2164,9 @@ function StepTwitchSettings({
               onChange={(e) => onChange({ is_paused: e.target.checked })}
               className="rounded accent-primary"
             />
-            <span className="text-sm">{t("rewards.twitchSettings.createAsPaused", "Create as paused")}</span>
+            <span className="text-sm">
+              {t("rewards.twitchSettings.createAsPaused", "Create as paused")}
+            </span>
           </label>
         )}
         <label className="flex items-center gap-2 cursor-pointer">
@@ -1616,7 +2176,9 @@ function StepTwitchSettings({
             onChange={(e) => onChange({ is_public: e.target.checked })}
             className="rounded accent-primary"
           />
-          <span className="text-sm">{t("rewards.twitchSettings.isPublic", "Show in public catalog")}</span>
+          <span className="text-sm">
+            {t("rewards.twitchSettings.isPublic", "Show in public catalog")}
+          </span>
         </label>
       </div>
     </div>
@@ -1642,75 +2204,121 @@ function StepChatRequirements({
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-xs flex items-start gap-2.5">
         <span className="text-base leading-none">💬</span>
         <div className="space-y-0.5">
-          <p className="font-semibold text-foreground">{t("rewards.chatReq.bannerTitle", "Twitch Chat Activity Requirements")}</p>
+          <p className="font-semibold text-foreground">
+            {t(
+              "rewards.chatReq.bannerTitle",
+              "Twitch Chat Activity Requirements",
+            )}
+          </p>
           <p className="text-muted-foreground leading-relaxed">
-            {t("rewards.chatReq.bannerDesc", "Limit redemptions to active stream viewers. Leave message and character counts empty or 0 if you don't want to enforce any chat requirements for this reward.")}
+            {t(
+              "rewards.chatReq.bannerDesc",
+              "Limit redemptions to active stream viewers. Leave message and character counts empty or 0 if you don't want to enforce any chat requirements for this reward.",
+            )}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="chat_min_messages">{t("rewards.chatReq.minMessages", "Minimum Messages")}</Label>
+          <Label htmlFor="chat_min_messages">
+            {t("rewards.chatReq.minMessages", "Minimum Messages")}
+          </Label>
           <Input
             id="chat_min_messages"
             type="number"
             min={0}
             placeholder="e.g. 50 (optional)"
-            value={form.chat_min_messages && form.chat_min_messages > 0 ? form.chat_min_messages : ""}
+            value={
+              form.chat_min_messages && form.chat_min_messages > 0
+                ? form.chat_min_messages
+                : ""
+            }
             onChange={(e) => {
               const val = e.target.value.trim();
               const num = parseInt(val);
-              onChange({ chat_min_messages: val === "" || isNaN(num) || num <= 0 ? null : num });
+              onChange({
+                chat_min_messages:
+                  val === "" || isNaN(num) || num <= 0 ? null : num,
+              });
             }}
           />
           <p className="text-[11px] text-muted-foreground">
-            {t("rewards.chatReq.minMessagesDesc", "Minimum number of chat messages sent by the viewer.")}
+            {t(
+              "rewards.chatReq.minMessagesDesc",
+              "Minimum number of chat messages sent by the viewer.",
+            )}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="chat_min_characters">{t("rewards.chatReq.minCharacters", "Minimum Characters")}</Label>
+          <Label htmlFor="chat_min_characters">
+            {t("rewards.chatReq.minCharacters", "Minimum Characters")}
+          </Label>
           <Input
             id="chat_min_characters"
             type="number"
             min={0}
             placeholder="e.g. 500 (optional)"
-            value={form.chat_min_characters && form.chat_min_characters > 0 ? form.chat_min_characters : ""}
+            value={
+              form.chat_min_characters && form.chat_min_characters > 0
+                ? form.chat_min_characters
+                : ""
+            }
             onChange={(e) => {
               const val = e.target.value.trim();
               const num = parseInt(val);
-              onChange({ chat_min_characters: val === "" || isNaN(num) || num <= 0 ? null : num });
+              onChange({
+                chat_min_characters:
+                  val === "" || isNaN(num) || num <= 0 ? null : num,
+              });
             }}
           />
           <p className="text-[11px] text-muted-foreground">
-            {t("rewards.chatReq.minCharactersDesc", "Minimum total length of chat messages in characters.")}
+            {t(
+              "rewards.chatReq.minCharactersDesc",
+              "Minimum total length of chat messages in characters.",
+            )}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="chat_time_window_hours">{t("rewards.chatReq.timeWindow", "Time Window (hours)")}</Label>
+          <Label htmlFor="chat_time_window_hours">
+            {t("rewards.chatReq.timeWindow", "Time Window (hours)")}
+          </Label>
           <Input
             id="chat_time_window_hours"
             type="number"
             min={1}
             placeholder="e.g. 24 (leave empty for all-time)"
-            value={form.chat_time_window_hours && form.chat_time_window_hours > 0 ? form.chat_time_window_hours : ""}
+            value={
+              form.chat_time_window_hours && form.chat_time_window_hours > 0
+                ? form.chat_time_window_hours
+                : ""
+            }
             onChange={(e) => {
               const val = e.target.value.trim();
               const num = parseInt(val);
-              onChange({ chat_time_window_hours: val === "" || isNaN(num) || num <= 0 ? null : num });
+              onChange({
+                chat_time_window_hours:
+                  val === "" || isNaN(num) || num <= 0 ? null : num,
+              });
             }}
           />
           <p className="text-[11px] text-muted-foreground">
-            {t("rewards.chatReq.timeWindowDesc", "Count chat activity within the last N hours. Empty = all-time activity.")}
+            {t(
+              "rewards.chatReq.timeWindowDesc",
+              "Count chat activity within the last N hours. Empty = all-time activity.",
+            )}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label>{t("rewards.chatReq.logicOperator", "Requirement Logic")}</Label>
+          <Label>
+            {t("rewards.chatReq.logicOperator", "Requirement Logic")}
+          </Label>
           <div className="flex items-center gap-2 pt-0.5">
             <button
               type="button"
@@ -1719,7 +2327,7 @@ function StepChatRequirements({
                 "flex-1 px-3 py-2 text-xs font-medium rounded-lg border transition-all select-none text-center",
                 (form.chat_logical_operator ?? "AND") === "AND"
                   ? "border-primary bg-primary/10 text-primary font-semibold shadow-sm"
-                  : "border-border bg-card hover:bg-muted/50 text-muted-foreground"
+                  : "border-border bg-card hover:bg-muted/50 text-muted-foreground",
               )}
             >
               {t("rewards.chatReq.logicBoth", "AND (Both)")}
@@ -1731,7 +2339,7 @@ function StepChatRequirements({
                 "flex-1 px-3 py-2 text-xs font-medium rounded-lg border transition-all select-none text-center",
                 form.chat_logical_operator === "OR"
                   ? "border-primary bg-primary/10 text-primary font-semibold shadow-sm"
-                  : "border-border bg-card hover:bg-muted/50 text-muted-foreground"
+                  : "border-border bg-card hover:bg-muted/50 text-muted-foreground",
               )}
             >
               {t("rewards.chatReq.logicEither", "OR (Either)")}
@@ -1739,8 +2347,14 @@ function StepChatRequirements({
           </div>
           <p className="text-[11px] text-muted-foreground">
             {(form.chat_logical_operator ?? "AND") === "AND"
-              ? t("rewards.chatReq.logicBothDesc", "Viewer must meet BOTH messages and characters requirements.")
-              : t("rewards.chatReq.logicEitherDesc", "Viewer can meet EITHER messages OR characters requirement.")}
+              ? t(
+                  "rewards.chatReq.logicBothDesc",
+                  "Viewer must meet BOTH messages and characters requirements.",
+                )
+              : t(
+                  "rewards.chatReq.logicEitherDesc",
+                  "Viewer can meet EITHER messages OR characters requirement.",
+                )}
           </p>
         </div>
       </div>
@@ -1750,15 +2364,23 @@ function StepChatRequirements({
           <input
             type="checkbox"
             checked={form.refund_if_chat_req_failed ?? true}
-            onChange={(e) => onChange({ refund_if_chat_req_failed: e.target.checked })}
+            onChange={(e) =>
+              onChange({ refund_if_chat_req_failed: e.target.checked })
+            }
             className="mt-0.5 rounded accent-primary"
           />
           <div className="text-xs space-y-0.5">
             <span className="font-medium text-foreground block">
-              {t("rewards.chatReq.refundIfFailed", "Auto-refund Channel Points if requirement fails")}
+              {t(
+                "rewards.chatReq.refundIfFailed",
+                "Auto-refund Channel Points if requirement fails",
+              )}
             </span>
             <span className="text-muted-foreground block leading-normal">
-              {t("rewards.chatReq.refundIfFailedDesc", "If enabled, points are immediately returned to the viewer if their chat activity doesn't meet the requirement.")}
+              {t(
+                "rewards.chatReq.refundIfFailedDesc",
+                "If enabled, points are immediately returned to the viewer if their chat activity doesn't meet the requirement.",
+              )}
             </span>
           </div>
         </label>
@@ -1766,12 +2388,26 @@ function StepChatRequirements({
 
       {hasRequirements && (
         <div className="rounded-lg bg-muted/40 border border-border/80 px-3.5 py-2.5 text-xs flex items-center gap-2">
-          <span className="text-primary font-bold">{t("rewards.chatReq.rulePreview", "Rule Preview:")}</span>
+          <span className="text-primary font-bold">
+            {t("rewards.chatReq.rulePreview", "Rule Preview:")}
+          </span>
           <span className="text-foreground">
             {t("rewards.chatReq.viewerNeeds", "Viewer needs")}{" "}
-            {(form.chat_min_messages ?? 0) > 0 ? <strong>{form.chat_min_messages} {t("chatUser.messages", "messages")}</strong> : null}
-            {(form.chat_min_messages ?? 0) > 0 && (form.chat_min_characters ?? 0) > 0 ? ` ${form.chat_logical_operator ?? "AND"} ` : null}
-            {(form.chat_min_characters ?? 0) > 0 ? <strong>{form.chat_min_characters} {t("chatUser.characters", "characters")}</strong> : null}
+            {(form.chat_min_messages ?? 0) > 0 ? (
+              <strong>
+                {form.chat_min_messages} {t("chatUser.messages", "messages")}
+              </strong>
+            ) : null}
+            {(form.chat_min_messages ?? 0) > 0 &&
+            (form.chat_min_characters ?? 0) > 0
+              ? ` ${form.chat_logical_operator ?? "AND"} `
+              : null}
+            {(form.chat_min_characters ?? 0) > 0 ? (
+              <strong>
+                {form.chat_min_characters}{" "}
+                {t("chatUser.characters", "characters")}
+              </strong>
+            ) : null}
             {(form.chat_time_window_hours ?? 0) > 0
               ? ` ${t("rewards.chatReq.inTheLast", { hours: form.chat_time_window_hours })}`
               : ` ${t("rewards.chatReq.ofAllTime", "of all-time activity")}`}
@@ -1818,7 +2454,10 @@ function StepPurchaseLimits({
   const addUserRule = (maxRedemptions = 1, windowHours: number | null = 24) => {
     updateLimits({
       ...limits,
-      user: [...userRules, { max_redemptions: maxRedemptions, window_hours: windowHours }],
+      user: [
+        ...userRules,
+        { max_redemptions: maxRedemptions, window_hours: windowHours },
+      ],
     });
   };
 
@@ -1836,10 +2475,16 @@ function StepPurchaseLimits({
     });
   };
 
-  const addGlobalRule = (maxRedemptions = 10, windowHours: number | null = 24) => {
+  const addGlobalRule = (
+    maxRedemptions = 10,
+    windowHours: number | null = 24,
+  ) => {
     updateLimits({
       ...limits,
-      global: [...globalRules, { max_redemptions: maxRedemptions, window_hours: windowHours }],
+      global: [
+        ...globalRules,
+        { max_redemptions: maxRedemptions, window_hours: windowHours },
+      ],
     });
   };
 
@@ -1850,7 +2495,10 @@ function StepPurchaseLimits({
     });
   };
 
-  const updateGlobalRule = (index: number, patch: Partial<PurchaseLimitRule>) => {
+  const updateGlobalRule = (
+    index: number,
+    patch: Partial<PurchaseLimitRule>,
+  ) => {
     updateLimits({
       ...limits,
       global: globalRules.map((r, i) => (i === index ? { ...r, ...patch } : r)),
@@ -1863,9 +2511,14 @@ function StepPurchaseLimits({
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-xs flex items-start gap-2.5">
         <span className="text-base leading-none">⏳</span>
         <div className="space-y-0.5">
-          <p className="font-semibold text-foreground">{t("rewards.limitsStep.bannerTitle", "Custom Purchase Limits")}</p>
+          <p className="font-semibold text-foreground">
+            {t("rewards.limitsStep.bannerTitle", "Custom Purchase Limits")}
+          </p>
           <p className="text-muted-foreground leading-relaxed">
-            {t("rewards.limitsStep.bannerDesc", "Restrict how often viewers or the entire channel can redeem this reward within rolling time windows (e.g. 24 hours, 7 days) or across all time.")}
+            {t(
+              "rewards.limitsStep.bannerDesc",
+              "Restrict how often viewers or the entire channel can redeem this reward within rolling time windows (e.g. 24 hours, 7 days) or across all time.",
+            )}
           </p>
         </div>
       </div>
@@ -1875,10 +2528,14 @@ function StepPurchaseLimits({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <span>👤</span> {t("rewards.limitsStep.userLimitsTitle", "Per-User Limits")}
+              <span>👤</span>{" "}
+              {t("rewards.limitsStep.userLimitsTitle", "Per-User Limits")}
             </h4>
             <p className="text-[11px] text-muted-foreground">
-              {t("rewards.limitsStep.perUserDesc", "Maximum redemptions allowed for each individual viewer")}
+              {t(
+                "rewards.limitsStep.perUserDesc",
+                "Maximum redemptions allowed for each individual viewer",
+              )}
             </p>
           </div>
           {/* Quick preset buttons */}
@@ -1909,7 +2566,10 @@ function StepPurchaseLimits({
 
         {userRules.length === 0 ? (
           <p className="text-xs text-muted-foreground/80 py-2 italic">
-            {t("rewards.limitsStep.noUserLimits", "No per-user limits configured. Viewers can redeem subject only to Twitch settings.")}
+            {t(
+              "rewards.limitsStep.noUserLimits",
+              "No per-user limits configured. Viewers can redeem subject only to Twitch settings.",
+            )}
           </p>
         ) : (
           <div className="space-y-2 pt-1">
@@ -1919,42 +2579,56 @@ function StepPurchaseLimits({
                 className="flex flex-wrap items-center gap-2.5 p-2.5 rounded-lg border border-border/70 bg-muted/20 text-xs"
               >
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-muted-foreground shrink-0 font-medium">{t("rewards.limitsStep.maxLabel", "Max")}</span>
+                  <span className="text-muted-foreground shrink-0 font-medium">
+                    {t("rewards.limitsStep.maxLabel", "Max")}
+                  </span>
                   <Input
                     type="number"
                     min={1}
                     value={rule.max_redemptions}
                     onChange={(e) =>
                       updateUserRule(idx, {
-                        max_redemptions: Math.max(1, parseInt(e.target.value) || 1),
+                        max_redemptions: Math.max(
+                          1,
+                          parseInt(e.target.value) || 1,
+                        ),
                       })
                     }
                     className="w-18 h-8 text-xs bg-card"
                   />
                   <span className="text-muted-foreground shrink-0">
-                    {rule.max_redemptions > 1 ? t("rewards.limitsStep.redemptionPlural", "redemptions") : t("rewards.limitsStep.redemptionSingle", "redemption")}
+                    {rule.max_redemptions > 1
+                      ? t("rewards.limitsStep.redemptionPlural", "redemptions")
+                      : t("rewards.limitsStep.redemptionSingle", "redemption")}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-muted-foreground shrink-0 font-medium">{t("rewards.limitsStep.windowLabel", "Window:")}</span>
+                  <span className="text-muted-foreground shrink-0 font-medium">
+                    {t("rewards.limitsStep.windowLabel", "Window:")}
+                  </span>
                   <select
                     value={
                       rule.window_hours == null
                         ? "all-time"
                         : [24, 168, 720].includes(rule.window_hours)
-                        ? String(rule.window_hours)
-                        : "custom"
+                          ? String(rule.window_hours)
+                          : "custom"
                     }
                     onChange={(e) => {
                       const v = e.target.value;
-                      if (v === "all-time") updateUserRule(idx, { window_hours: null });
-                      else if (v === "24") updateUserRule(idx, { window_hours: 24 });
-                      else if (v === "168") updateUserRule(idx, { window_hours: 168 });
-                      else if (v === "720") updateUserRule(idx, { window_hours: 720 });
+                      if (v === "all-time")
+                        updateUserRule(idx, { window_hours: null });
+                      else if (v === "24")
+                        updateUserRule(idx, { window_hours: 24 });
+                      else if (v === "168")
+                        updateUserRule(idx, { window_hours: 168 });
+                      else if (v === "720")
+                        updateUserRule(idx, { window_hours: 720 });
                       else {
                         const next =
-                          rule.window_hours != null && ![24, 168, 720].includes(rule.window_hours)
+                          rule.window_hours != null &&
+                          ![24, 168, 720].includes(rule.window_hours)
                             ? rule.window_hours
                             : 12;
                         updateUserRule(idx, { window_hours: next });
@@ -1962,11 +2636,21 @@ function StepPurchaseLimits({
                     }}
                     className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus:outline-none"
                   >
-                    <option value="24">{t("rewards.limitsStep.opt24h", "24 hours (1 day)")}</option>
-                    <option value="168">{t("rewards.limitsStep.opt168h", "168 hours (7 days)")}</option>
-                    <option value="720">{t("rewards.limitsStep.opt720h", "720 hours (30 days)")}</option>
-                    <option value="all-time">{t("rewards.limitsStep.optAllTime", "All time (forever)")}</option>
-                    <option value="custom">{t("rewards.limitsStep.optCustom", "Custom hours")}</option>
+                    <option value="24">
+                      {t("rewards.limitsStep.opt24h", "24 hours (1 day)")}
+                    </option>
+                    <option value="168">
+                      {t("rewards.limitsStep.opt168h", "168 hours (7 days)")}
+                    </option>
+                    <option value="720">
+                      {t("rewards.limitsStep.opt720h", "720 hours (30 days)")}
+                    </option>
+                    <option value="all-time">
+                      {t("rewards.limitsStep.optAllTime", "All time (forever)")}
+                    </option>
+                    <option value="custom">
+                      {t("rewards.limitsStep.optCustom", "Custom hours")}
+                    </option>
                   </select>
                 </div>
 
@@ -1979,12 +2663,17 @@ function StepPurchaseLimits({
                         value={rule.window_hours}
                         onChange={(e) =>
                           updateUserRule(idx, {
-                            window_hours: Math.max(1, parseInt(e.target.value) || 1),
+                            window_hours: Math.max(
+                              1,
+                              parseInt(e.target.value) || 1,
+                            ),
                           })
                         }
                         className="w-18 h-8 text-xs bg-card"
                       />
-                      <span className="text-muted-foreground text-[11px]">{t("rewards.limitsStep.hours", "hours")}</span>
+                      <span className="text-muted-foreground text-[11px]">
+                        {t("rewards.limitsStep.hours", "hours")}
+                      </span>
                     </div>
                   )}
 
@@ -2015,10 +2704,17 @@ function StepPurchaseLimits({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <span>🌐</span> {t("rewards.limitsStep.globalLimitsTitle", "Global Channel Limits")}
+              <span>🌐</span>{" "}
+              {t(
+                "rewards.limitsStep.globalLimitsTitle",
+                "Global Channel Limits",
+              )}
             </h4>
             <p className="text-[11px] text-muted-foreground">
-              {t("rewards.limitsStep.globalDesc", "Maximum total redemptions across all viewers on the channel")}
+              {t(
+                "rewards.limitsStep.globalDesc",
+                "Maximum total redemptions across all viewers on the channel",
+              )}
             </p>
           </div>
           {/* Quick preset buttons */}
@@ -2049,7 +2745,10 @@ function StepPurchaseLimits({
 
         {globalRules.length === 0 ? (
           <p className="text-xs text-muted-foreground/80 py-2 italic">
-            {t("rewards.limitsStep.noGlobalLimits", "No global limits configured. Total redemptions are subject only to Twitch stream limits.")}
+            {t(
+              "rewards.limitsStep.noGlobalLimits",
+              "No global limits configured. Total redemptions are subject only to Twitch stream limits.",
+            )}
           </p>
         ) : (
           <div className="space-y-2 pt-1">
@@ -2059,42 +2758,56 @@ function StepPurchaseLimits({
                 className="flex flex-wrap items-center gap-2.5 p-2.5 rounded-lg border border-border/70 bg-muted/20 text-xs"
               >
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-muted-foreground shrink-0 font-medium">{t("rewards.limitsStep.maxLabel", "Max")}</span>
+                  <span className="text-muted-foreground shrink-0 font-medium">
+                    {t("rewards.limitsStep.maxLabel", "Max")}
+                  </span>
                   <Input
                     type="number"
                     min={1}
                     value={rule.max_redemptions}
                     onChange={(e) =>
                       updateGlobalRule(idx, {
-                        max_redemptions: Math.max(1, parseInt(e.target.value) || 1),
+                        max_redemptions: Math.max(
+                          1,
+                          parseInt(e.target.value) || 1,
+                        ),
                       })
                     }
                     className="w-18 h-8 text-xs bg-card"
                   />
                   <span className="text-muted-foreground shrink-0">
-                    {rule.max_redemptions > 1 ? t("rewards.limitsStep.redemptionPlural", "redemptions") : t("rewards.limitsStep.redemptionSingle", "redemption")}
+                    {rule.max_redemptions > 1
+                      ? t("rewards.limitsStep.redemptionPlural", "redemptions")
+                      : t("rewards.limitsStep.redemptionSingle", "redemption")}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-muted-foreground shrink-0 font-medium">{t("rewards.limitsStep.windowLabel", "Window:")}</span>
+                  <span className="text-muted-foreground shrink-0 font-medium">
+                    {t("rewards.limitsStep.windowLabel", "Window:")}
+                  </span>
                   <select
                     value={
                       rule.window_hours == null
                         ? "all-time"
                         : [24, 168, 720].includes(rule.window_hours)
-                        ? String(rule.window_hours)
-                        : "custom"
+                          ? String(rule.window_hours)
+                          : "custom"
                     }
                     onChange={(e) => {
                       const v = e.target.value;
-                      if (v === "all-time") updateGlobalRule(idx, { window_hours: null });
-                      else if (v === "24") updateGlobalRule(idx, { window_hours: 24 });
-                      else if (v === "168") updateGlobalRule(idx, { window_hours: 168 });
-                      else if (v === "720") updateGlobalRule(idx, { window_hours: 720 });
+                      if (v === "all-time")
+                        updateGlobalRule(idx, { window_hours: null });
+                      else if (v === "24")
+                        updateGlobalRule(idx, { window_hours: 24 });
+                      else if (v === "168")
+                        updateGlobalRule(idx, { window_hours: 168 });
+                      else if (v === "720")
+                        updateGlobalRule(idx, { window_hours: 720 });
                       else {
                         const next =
-                          rule.window_hours != null && ![24, 168, 720].includes(rule.window_hours)
+                          rule.window_hours != null &&
+                          ![24, 168, 720].includes(rule.window_hours)
                             ? rule.window_hours
                             : 12;
                         updateGlobalRule(idx, { window_hours: next });
@@ -2102,11 +2815,21 @@ function StepPurchaseLimits({
                     }}
                     className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus:outline-none"
                   >
-                    <option value="24">{t("rewards.limitsStep.opt24h", "24 hours (1 day)")}</option>
-                    <option value="168">{t("rewards.limitsStep.opt168h", "168 hours (7 days)")}</option>
-                    <option value="720">{t("rewards.limitsStep.opt720h", "720 hours (30 days)")}</option>
-                    <option value="all-time">{t("rewards.limitsStep.optAllTime", "All time (forever)")}</option>
-                    <option value="custom">{t("rewards.limitsStep.optCustom", "Custom hours")}</option>
+                    <option value="24">
+                      {t("rewards.limitsStep.opt24h", "24 hours (1 day)")}
+                    </option>
+                    <option value="168">
+                      {t("rewards.limitsStep.opt168h", "168 hours (7 days)")}
+                    </option>
+                    <option value="720">
+                      {t("rewards.limitsStep.opt720h", "720 hours (30 days)")}
+                    </option>
+                    <option value="all-time">
+                      {t("rewards.limitsStep.optAllTime", "All time (forever)")}
+                    </option>
+                    <option value="custom">
+                      {t("rewards.limitsStep.optCustom", "Custom hours")}
+                    </option>
                   </select>
                 </div>
 
@@ -2119,12 +2842,17 @@ function StepPurchaseLimits({
                         value={rule.window_hours}
                         onChange={(e) =>
                           updateGlobalRule(idx, {
-                            window_hours: Math.max(1, parseInt(e.target.value) || 1),
+                            window_hours: Math.max(
+                              1,
+                              parseInt(e.target.value) || 1,
+                            ),
                           })
                         }
                         className="w-18 h-8 text-xs bg-card"
                       />
-                      <span className="text-muted-foreground text-[11px]">{t("rewards.limitsStep.hours", "hours")}</span>
+                      <span className="text-muted-foreground text-[11px]">
+                        {t("rewards.limitsStep.hours", "hours")}
+                      </span>
                     </div>
                   )}
 
@@ -2146,7 +2874,10 @@ function StepPurchaseLimits({
           onClick={() => addGlobalRule(10, 24)}
           className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1 pt-1"
         >
-          {t("rewards.limitsStep.addGlobalRule", "+ Add custom global limit rule")}
+          {t(
+            "rewards.limitsStep.addGlobalRule",
+            "+ Add custom global limit rule",
+          )}
         </button>
       </div>
     </div>
@@ -2154,107 +2885,47 @@ function StepPurchaseLimits({
 }
 
 // ── Multi-step Reward Wizard ───────────────────────────────────────────────
-const STEPS = [
-  {
-    title: "Type & Skin",
-    subtitle: "Select reward type and CS2 skin item",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-        <line x1="12" y1="22.08" x2="12" y2="12" />
-      </svg>
-    ),
-  },
-  {
-    title: "Pricing",
-    subtitle: "Configure market pricing strategy and markup",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="1" x2="12" y2="23" />
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-      </svg>
-    ),
-  },
-  {
-    title: "Twitch Settings",
-    subtitle: "Title, cooldowns and stream limits",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="4" y1="21" x2="4" y2="14" />
-        <line x1="4" y1="10" x2="4" y2="3" />
-        <line x1="12" y1="21" x2="12" y2="12" />
-        <line x1="12" y1="8" x2="12" y2="3" />
-        <line x1="20" y1="21" x2="20" y2="16" />
-        <line x1="20" y1="12" x2="20" y2="3" />
-        <line x1="1" y1="14" x2="7" y2="14" />
-        <line x1="9" y1="8" x2="15" y2="8" />
-        <line x1="17" y1="16" x2="23" y2="16" />
-      </svg>
-    ),
-  },
-  {
-    title: "Chat Requirements",
-    subtitle: "Require viewer chat activity before redemption",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Purchase Limits",
-    subtitle: "Custom rolling window and all-time limits",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </svg>
-    ),
-  },
-] as const;
-type StepIndex = 0 | 1 | 2 | 3 | 4;
-
 function RewardWizard({
   initial,
   channelId,
   onSubmit,
   loading,
   isEdit,
+  draftKey,
+  currency,
 }: {
   initial?: Partial<CreateRewardBody>;
   channelId: string;
   onSubmit: (data: CreateRewardBody) => void;
   loading: boolean;
   isEdit: boolean;
+  draftKey: string;
+  currency?: string;
 }) {
   const { t } = useTranslation();
-  const [step, setStep] = useState<StepIndex>(0);
-
-  const stepInfo = [
-    {
-      title: t("rewards.wizard.steps.type.title", "Type & Skin"),
-      subtitle: t("rewards.wizard.steps.type.subtitle", "Select reward type and CS skin item"),
-    },
-    {
-      title: t("rewards.wizard.steps.pricing.title", "Pricing"),
-      subtitle: t("rewards.wizard.steps.pricing.subtitle", "Configure market pricing strategy and markup"),
-    },
-    {
-      title: t("rewards.wizard.steps.twitch.title", "Twitch Settings"),
-      subtitle: t("rewards.wizard.steps.twitch.subtitle", "Title, cooldowns and stream limits"),
-    },
-    {
-      title: t("rewards.wizard.steps.chat.title", "Chat Requirements"),
-      subtitle: t("rewards.wizard.steps.chat.subtitle", "Require viewer chat activity before redemption"),
-    },
-    {
-      title: t("rewards.wizard.steps.limits.title", "Purchase Limits"),
-      subtitle: t("rewards.wizard.steps.limits.subtitle", "Custom rolling window and all-time limits"),
-    },
+  const c = useCopy();
+  const balance = useQuery({
+    queryKey: ["balance", channelId],
+    queryFn: () => broadcastersApi.getBalance(channelId).then((r) => r.data),
+    enabled: !currency,
+    staleTime: 60_000,
+  });
+  const activeCurrency = currency || balance.data?.currency;
+  const [step, setStep] = useState(isEdit ? 1 : 0);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [restored, setRestored] = useState(() => {
+    try {
+      return !!sessionStorage.getItem(draftKey);
+    } catch {
+      return false;
+    }
+  });
+  const stages = [
+    c("Choose items", "Выбор предметов"),
+    c("Configure behavior", "Настройка поведения"),
+    c("Review & save", "Проверка и сохранение"),
   ];
-
-  const [form, setForm] = useState<Partial<CreateRewardBody>>({
+  const defaults: Partial<CreateRewardBody> = {
     reward_type: "FIXED",
     pricing_mode: "AUTO",
     price_strategy: "AVERAGE",
@@ -2275,28 +2946,76 @@ function RewardWizard({
     purchase_limits: null,
     is_public: true,
     ...initial,
+  };
+  const [changes, setChanges] = useState<Partial<CreateRewardBody>>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(draftKey) || "{}");
+    } catch {
+      return {};
+    }
   });
-
-  const patch = (p: Partial<CreateRewardBody>) =>
-    setForm((f) => ({ ...f, ...p }));
-
-  const canNext = (): boolean => {
-    if (step === 0) {
-      if (form.reward_type === "FIXED") return !!(form.market_item_name?.trim());
-      if (form.reward_type === "POOL") return (form.pool_items?.length ?? 0) > 0 && form.pool_items!.every((it) => it.market_hash_name.trim());
-      if (form.reward_type === "FILTER") return !!(form.filter_config?.max_price && form.filter_config.max_price > 0);
+  const form = { ...defaults, ...changes };
+  const [resetOpen, setResetOpen] = useState(false);
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (errors.length) errorRef.current?.focus();
+  }, [errors]);
+  useEffect(() => {
+    const protect = (event: BeforeUnloadEvent) => {
+      if (Object.keys(changes).length) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", protect);
+    return () => window.removeEventListener("beforeunload", protect);
+  }, [changes]);
+  const patch = (change: Partial<CreateRewardBody>) => {
+    const next = { ...changes, ...change };
+    setChanges(next);
+    setErrors([]);
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify(next));
+    } catch {
+      /* Form remains usable. */
     }
-    if (step === 1) {
-      if (form.pricing_mode === "MANUAL") return !!(form.manual_twitch_points && form.manual_twitch_points > 0);
-      return true;
-    }
-    if (step === 2) {
-      return !!(form.twitch_title?.trim());
-    }
-    return true;
+  };
+  const check = (stage: "items" | "all") => {
+    const found = rewardErrors(form, stage);
+    setErrors(found);
+    return found.length === 0;
+  };
+  const errorCopy: Record<string, string> = {
+    item: c("Choose a market item.", "Выберите предмет маркета."),
+    pool: c(
+      "Add pool items with names, positive weights and deviations from 0–100%.",
+      "Укажите предметы пула, положительные веса и отклонения 0–100%.",
+    ),
+    filter: c(
+      "Set a valid price range: minimum must not exceed maximum.",
+      "Укажите диапазон цен: минимум не должен превышать максимум.",
+    ),
+    title: c(
+      "Enter a reward title (1–45 characters).",
+      "Укажите название (1–45 символов).",
+    ),
+    description: c(
+      "Keep the description within 200 characters.",
+      "Описание должно содержать не более 200 символов.",
+    ),
+    points: c(
+      "Channel Points must be a positive whole number.",
+      "Баллы должны быть положительным целым числом.",
+    ),
+    pricing: c(
+      "Check the markup, deviation and price safety range.",
+      "Проверьте наценку, отклонение и диапазон защиты цен.",
+    ),
+    limits: c(
+      "Limits must be whole numbers; custom limits and windows must be greater than zero.",
+      "Лимиты должны быть целыми; пользовательские лимиты и окна должны быть больше нуля.",
+    ),
   };
 
   const handleSubmit = () => {
+    if (!check("all") || loading) return;
     const hasUserLimits = (form.purchase_limits?.user?.length ?? 0) > 0;
     const hasGlobalLimits = (form.purchase_limits?.global?.length ?? 0) > 0;
     let purchaseLimitsPayload: RewardPurchaseLimitsConfig | null = null;
@@ -2319,30 +3038,35 @@ function RewardWizard({
       pricing_mode: form.pricing_mode ?? "AUTO",
       price_strategy: form.price_strategy ?? null,
       manual_twitch_points: form.manual_twitch_points ?? null,
-      market_item_name: form.market_item_name ?? null,
-      pool_items: form.pool_items ?? null,
-      filter_config: form.filter_config ?? null,
+      market_item_name:
+        form.reward_type === "FIXED" ? (form.market_item_name ?? null) : null,
+      pool_items:
+        form.reward_type === "POOL" ? (form.pool_items ?? null) : null,
+      filter_config:
+        form.reward_type === "FILTER" ? (form.filter_config ?? null) : null,
       twitch_title: form.twitch_title ?? "",
       twitch_description: form.twitch_description ?? "",
       min_market_price: form.min_market_price ?? null,
       max_market_price: form.max_market_price ?? null,
-      permissible_market_price_deviation: form.permissible_market_price_deviation ?? 10,
+      permissible_market_price_deviation:
+        form.permissible_market_price_deviation ?? 10,
       twitch_price_markup_percentage: form.twitch_price_markup_percentage ?? 50,
       global_cooldown_seconds: form.global_cooldown_seconds ?? 60,
       max_redemptions_per_stream: form.max_redemptions_per_stream ?? 0,
-      max_redemptions_per_user_per_stream: form.max_redemptions_per_user_per_stream ?? 0,
+      max_redemptions_per_user_per_stream:
+        form.max_redemptions_per_user_per_stream ?? 0,
       market_autobuy: form.market_autobuy ?? true,
       is_paused: form.is_paused ?? false,
       chat_min_messages:
-        (form.chat_min_messages != null && form.chat_min_messages > 0)
+        form.chat_min_messages != null && form.chat_min_messages > 0
           ? form.chat_min_messages
           : 0,
       chat_min_characters:
-        (form.chat_min_characters != null && form.chat_min_characters > 0)
+        form.chat_min_characters != null && form.chat_min_characters > 0
           ? form.chat_min_characters
           : 0,
       chat_time_window_hours:
-        (form.chat_time_window_hours != null && form.chat_time_window_hours > 0)
+        form.chat_time_window_hours != null && form.chat_time_window_hours > 0
           ? form.chat_time_window_hours
           : 0,
       chat_logical_operator: form.chat_logical_operator ?? "AND",
@@ -2350,83 +3074,240 @@ function RewardWizard({
       purchase_limits: purchaseLimitsPayload,
       is_public: form.is_public ?? true,
     };
-    onSubmit(body);
+    if (isEdit) {
+      const keys = new Set(Object.keys(changes));
+      if (keys.has("reward_type"))
+        ["market_item_name", "pool_items", "filter_config"].forEach((key) =>
+          keys.add(key),
+        );
+      onSubmit(
+        Object.fromEntries(
+          Object.entries(body).filter(([key]) => keys.has(key)),
+        ) as CreateRewardBody,
+      );
+    } else onSubmit(body);
   };
 
   return (
-    <div className="space-y-5">
-      <nav className="wizard-progress" aria-label={t("rewards.wizard.stepOf", { current: step + 1, total: STEPS.length })}>
-        {STEPS.map((_, idx) => <button key={idx} type="button" disabled={!isEdit && idx > step}
-          aria-current={idx === step ? "step" : undefined} aria-label={stepInfo[idx].title}
-          onClick={() => setStep(idx as StepIndex)}>
-          <span>{String(idx + 1).padStart(2, "0")}</span><span>{stepInfo[idx].title}</span>
-        </button>)}
-      </nav>
-      <div className="wizard-heading"><h3>{stepInfo[step].title}</h3><p>{stepInfo[step].subtitle}</p></div>
-
-      {/* Step content */}
-      <div>
-        {step === 0 && <StepTypeAndSkins form={form} onChange={patch} />}
-        {step === 1 && <StepPricing form={form} channelId={channelId} onChange={patch} />}
-        {step === 2 && <StepTwitchSettings form={form} onChange={patch} isEdit={isEdit} />}
-        {step === 3 && <StepChatRequirements form={form} onChange={patch} />}
-        {step === 4 && <StepPurchaseLimits form={form} onChange={patch} isEdit={isEdit} />}
-      </div>
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between pt-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setStep((s) => (s > 0 ? (s - 1) as StepIndex : s))}
-          disabled={step === 0}
+    <div className="reward-builder">
+      <ConfirmAction
+        open={resetOpen}
+        onClose={() => setResetOpen(false)}
+        onConfirm={() => {
+          setChanges({});
+          setErrors([]);
+          setStep(isEdit ? 1 : 0);
+          setRestored(false);
+          try {
+            sessionStorage.removeItem(draftKey);
+          } catch {
+            /* optional storage */
+          }
+          setResetOpen(false);
+        }}
+        title={c("Discard this draft?", "Удалить черновик?")}
+        description={c(
+          "Your unsaved reward changes will be removed. The saved reward will not change.",
+          "Несохранённые изменения будут удалены. Сохранённая награда не изменится.",
+        )}
+        label={c("Discard draft", "Удалить черновик")}
+        destructive
+      />
+      <div className="builder-workspace">
+        <nav
+          className="wizard-progress"
+          aria-label={c("Reward setup", "Настройка награды")}
         >
-          {t("rewards.backStep", "Back")}
-        </Button>
-        <div className="flex items-center gap-2">
-          {isEdit ? (
-            <>
-              {step < 4 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setStep((s) => (s < 4 ? (s + 1) as StepIndex : s))}
-                  disabled={!canNext()}
-                >
-                  {t("rewards.nextStep", "Next →")}
-                </Button>
-              )}
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleSubmit}
-                disabled={loading || !canNext()}
-              >
-                {loading ? t("rewards.saving", "Saving…") : t("rewards.saveChanges", "Save Changes")}
-              </Button>
-            </>
-          ) : step < 4 ? (
-            <Button
+          {stages.map((title, index) => (
+            <button
+              key={title}
               type="button"
-              size="sm"
-              onClick={() => setStep((s) => (s < 4 ? (s + 1) as StepIndex : s))}
-              disabled={!canNext()}
+              aria-current={step === index ? "step" : undefined}
+              onClick={() => {
+                if (index < step || check(index === 1 ? "items" : "all"))
+                  setStep(index);
+              }}
             >
-              {t("rewards.nextStep", "Next →")}
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <span>{title}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="flex justify-between items-center gap-3 text-xs text-muted-foreground py-3">
+          <span>
+            {restored
+              ? c(
+                  "Draft restored in this browser tab",
+                  "Черновик восстановлен в этой вкладке",
+                )
+              : c(
+                  "Changes stay in this tab until saved",
+                  "Изменения остаются в этой вкладке до сохранения",
+                )}
+          </span>
+          <Button size="sm" variant="ghost" onClick={() => setResetOpen(true)}>
+            {c("Reset draft", "Сбросить черновик")}
+          </Button>
+        </div>
+        {errors.length > 0 && (
+          <div
+            role="alert"
+            ref={errorRef}
+            tabIndex={-1}
+            className="builder-errors"
+          >
+            <strong>{c("Before continuing", "Перед продолжением")}</strong>
+            <ul>
+              {errors.map((error) => (
+                <li key={error}>{errorCopy[error]}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <fieldset disabled={loading} className="space-y-6 min-w-0">
+          {step === 0 && (
+            <>
+              <div className="wizard-heading">
+                <h3>
+                  {c("What will viewers receive?", "Что получит зритель?")}
+                </h3>
+                <p>
+                  {c(
+                    "Choose an exact item, a weighted drop pool, or a market filter.",
+                    "Выберите предмет, пул с весами или фильтр маркета.",
+                  )}
+                </p>
+              </div>
+              <StepTypeAndSkins form={form} onChange={patch} />
+            </>
+          )}
+          {step === 1 && (
+            <>
+              <section className="builder-section">
+                <h3>
+                  {c("Price & purchase protection", "Цена и защита покупки")}
+                </h3>
+                <StepPricing
+                  form={form}
+                  channelId={channelId}
+                  currency={activeCurrency}
+                  onChange={patch}
+                />
+              </section>
+              <section className="builder-section">
+                <h3>
+                  {c(
+                    "How it appears on Twitch",
+                    "Как награда выглядит в Twitch",
+                  )}
+                </h3>
+                <StepTwitchSettings
+                  form={form}
+                  onChange={patch}
+                  isEdit={isEdit}
+                />
+              </section>
+              <details className="builder-advanced">
+                <summary>
+                  {c("Viewer eligibility", "Требования к зрителю")}
+                  <span>
+                    {form.chat_min_messages || form.chat_min_characters
+                      ? c("Configured", "Настроено")
+                      : c("Optional", "Необязательно")}
+                  </span>
+                </summary>
+                <p>
+                  {c(
+                    "Restrict this reward to viewers with enough chat activity. These rules are separate from purchase limits.",
+                    "Ограничьте награду по активности чата. Это отдельные правила, не лимиты покупок.",
+                  )}
+                </p>
+                <StepChatRequirements form={form} onChange={patch} />
+              </details>
+              <details className="builder-advanced">
+                <summary>
+                  {c(
+                    "Rolling & lifetime purchase limits",
+                    "Лимиты за период и за всё время",
+                  )}
+                  <span>
+                    {form.purchase_limits?.user?.length ||
+                    form.purchase_limits?.global?.length
+                      ? c("Configured", "Настроено")
+                      : c("Optional", "Необязательно")}
+                  </span>
+                </summary>
+                <p>
+                  {c(
+                    "These limits apply in addition to Twitch's per-stream limits. Every applicable limit must allow the purchase.",
+                    "Эти лимиты действуют вместе с лимитами Twitch за стрим. Покупку должны разрешать все применимые правила.",
+                  )}
+                </p>
+                <StepPurchaseLimits
+                  form={form}
+                  onChange={patch}
+                  isEdit={isEdit}
+                />
+              </details>
+            </>
+          )}
+          {step === 2 && (
+            <div className="space-y-5">
+              <div className="wizard-heading">
+                <h3>
+                  {c("Ready for your channel?", "Всё готово для канала?")}
+                </h3>
+                <p>
+                  {isEdit
+                    ? c(
+                        "Saving updates this reward on Twitch and changes future redemption behavior.",
+                        "Сохранение обновит награду Twitch и поведение будущих активаций.",
+                      )
+                    : c(
+                        "Creating this reward publishes it to Twitch with the availability shown below.",
+                        "Создание опубликует награду в Twitch с указанной ниже доступностью.",
+                      )}
+                </p>
+              </div>
+              <RewardSummary value={form} currency={activeCurrency} />
+            </div>
+          )}
+        </fieldset>
+        <div className="builder-footer">
+          <Button
+            variant="outline"
+            disabled={step === 0 || loading}
+            onClick={() => setStep(step - 1)}
+          >
+            {c("Back", "Назад")}
+          </Button>
+          {step < 2 ? (
+            <Button
+              disabled={loading}
+              onClick={() => {
+                if (check(step === 0 ? "items" : "all")) setStep(step + 1);
+              }}
+            >
+              {step === 0
+                ? c("Configure reward", "Настроить награду")
+                : c("Review reward", "Проверить награду")}
             </Button>
           ) : (
-            <Button
-              type="button"
-              onClick={handleSubmit}
-              disabled={loading || !canNext()}
-            >
-              {loading ? t("rewards.saving", "Saving…") : t("rewards.createReward", "Create Reward")}
+            <Button disabled={loading} onClick={handleSubmit}>
+              {loading
+                ? t("rewards.saving")
+                : isEdit
+                  ? t("rewards.saveChanges")
+                  : t("rewards.createReward")}
             </Button>
           )}
         </div>
       </div>
+      {step !== 2 && (
+        <aside className="builder-preview">
+          <RewardSummary value={form} currency={activeCurrency} />
+        </aside>
+      )}
     </div>
   );
 }
@@ -2469,43 +3350,70 @@ function RewardEditDialog({
     },
   });
 
+  const [detailTab, setDetailTab] = useState("overview");
+  const c = useCopy();
+  const userId = useAppStore((state) => state.currentUser?.twitch_id);
+  const draftKey = `reward-draft:v2:${userId}:${channelId}:${reward?.twitch_id}`;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showIconDownloader, setShowIconDownloader] = useState(false);
   const [shortCopied, setShortCopied] = useState(false);
 
   const { broadcasters } = useAppStore();
-  const currentBroadcaster = broadcasters.find((b) => b.channel_id === channelId);
+  const currentBroadcaster = broadcasters.find(
+    (b) => b.channel_id === channelId,
+  );
   const channelLogin = currentBroadcaster?.channel_login || channelId;
-  const shortUrl = reward ? getShortRewardUrl(channelLogin, reward.twitch_id) : "";
+  const shortUrl = reward
+    ? getShortRewardUrl(channelLogin, reward.twitch_id)
+    : "";
 
   if (!reward) return null;
 
   const type = reward.reward_type ?? "FIXED";
   const iconDownloadSkin =
     type === "FIXED"
-      ? reward.market_item_name ?? null
+      ? (reward.market_item_name ?? null)
       : type === "POOL" && reward.pool_items?.length
-      ? mostExpensivePoolItem(reward.pool_items)?.market_hash_name ?? null
-      : null;
+        ? (mostExpensivePoolItem(reward.pool_items)?.market_hash_name ?? null)
+        : null;
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-xl sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <Dialog
+        open={open}
+        onOpenChange={(o) =>
+          !o &&
+          !updateMutation.isPending &&
+          !deleteMutation.isPending &&
+          !updatePriceMutation.isPending &&
+          onClose()
+        }
+      >
+        <DialogContent className="max-w-5xl sm:max-w-5xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader className="pr-6">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                <DialogTitle className="text-lg">{reward.twitch_title}</DialogTitle>
-                <Badge variant="outline" className={cn(
-                  "text-xs font-mono",
-                  type === "FIXED" ? "border-slate-500/30 text-slate-400" :
-                  type === "POOL" ? "border-violet-500/30 text-violet-400" :
-                  "border-cyan-500/30 text-cyan-400"
-                )}>
+                <DialogTitle className="text-lg">
+                  {reward.twitch_title}
+                </DialogTitle>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-xs font-mono",
+                    type === "FIXED"
+                      ? "border-slate-500/30 text-slate-400"
+                      : type === "POOL"
+                        ? "border-violet-500/30 text-violet-400"
+                        : "border-cyan-500/30 text-cyan-400",
+                  )}
+                >
                   {type}
                 </Badge>
                 {reward.pricing_mode === "MANUAL" && (
-                  <Badge variant="outline" className="text-xs border-blue-500/30 text-blue-400">
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-blue-500/30 text-blue-400"
+                  >
                     {t("rewards.card.manualPrice", "Manual price")}
                   </Badge>
                 )}
@@ -2518,16 +3426,19 @@ function RewardEditDialog({
                     reward.pause_reason === "NO_MONEY"
                       ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
                       : reward.pause_reason === "PRICE_LIMIT"
-                      ? "border-orange-500/30 text-orange-400 bg-orange-500/10"
-                      : "status-failed-refund"
+                        ? "border-orange-500/30 text-orange-400 bg-orange-500/10"
+                        : "status-failed-refund",
                   )}
                 >
                   <IconPause />
                   {reward.pause_reason === "NO_MONEY"
                     ? t("rewards.card.pausedNoMoney", "Paused (No balance)")
                     : reward.pause_reason === "PRICE_LIMIT"
-                    ? t("rewards.card.pausedPriceLimit", "Paused (Price limit)")
-                    : t("rewards.card.pausedGeneral", "Paused")}
+                      ? t(
+                          "rewards.card.pausedPriceLimit",
+                          "Paused (Price limit)",
+                        )
+                      : t("rewards.card.pausedGeneral", "Paused")}
                 </Badge>
               )}
             </div>
@@ -2540,20 +3451,36 @@ function RewardEditDialog({
                   className="text-primary hover:underline inline-flex items-center gap-1 font-medium max-w-full min-w-0"
                   title={reward.market_item_name}
                 >
-                  <span className="truncate min-w-0">{reward.market_item_name}</span>
+                  <span className="truncate min-w-0">
+                    {reward.market_item_name}
+                  </span>
                   <IconExternalLink className="shrink-0" />
                 </a>
               ) : type === "POOL" ? (
-                <span>{t("rewards.card.itemsInPool", { count: reward.pool_items?.length ?? 0 })}</span>
+                <span>
+                  {t("rewards.card.itemsInPool", {
+                    count: reward.pool_items?.length ?? 0,
+                  })}
+                </span>
               ) : type === "FILTER" && reward.filter_config ? (
-                <span>Filter: {reward.filter_config.min_price.toFixed(2)} – {reward.filter_config.max_price.toFixed(2)} {reward.currency}</span>
+                <span>
+                  Filter: {reward.filter_config.min_price.toFixed(2)} –{" "}
+                  {reward.filter_config.max_price.toFixed(2)} {reward.currency}
+                </span>
               ) : null}
               <span>·</span>
-              <span>{formatMinorCurrency(reward.current_market_price, reward.currency)}</span>
+              <span>
+                {formatMinorCurrency(
+                  reward.current_market_price,
+                  reward.currency,
+                )}
+              </span>
               {reward.price_strategy && (
                 <>
                   <span>·</span>
-                  <span className="text-muted-foreground">{strategyLabel(reward.price_strategy)}</span>
+                  <span className="text-muted-foreground">
+                    {strategyLabel(reward.price_strategy)}
+                  </span>
                 </>
               )}
             </DialogDescription>
@@ -2566,7 +3493,7 @@ function RewardEditDialog({
               variant="outline"
               className="gap-1.5 text-xs"
               onClick={() => updatePriceMutation.mutate()}
-              disabled={updatePriceMutation.isPending}
+              disabled={updateMutation.isPending || updatePriceMutation.isPending || deleteMutation.isPending || detailTab === "edit"}
             >
               <IconRefresh />
               {t("rewards.updatePrice", "Update Price")}
@@ -2578,10 +3505,12 @@ function RewardEditDialog({
               onClick={() =>
                 updateMutation.mutate({ is_paused: !reward.is_paused })
               }
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || updatePriceMutation.isPending || deleteMutation.isPending || detailTab === "edit"}
             >
               {reward.is_paused ? <IconPlay /> : <IconPause />}
-              {reward.is_paused ? t("rewards.unpauseReward", "Unpause") : t("rewards.pauseReward", "Pause")}
+              {reward.is_paused
+                ? t("rewards.unpauseReward", "Unpause")
+                : t("rewards.pauseReward", "Pause")}
             </Button>
             <Button
               size="sm"
@@ -2590,7 +3519,7 @@ function RewardEditDialog({
               onClick={() => {
                 setConfirmDelete(true);
               }}
-              disabled={deleteMutation.isPending}
+              disabled={updateMutation.isPending || updatePriceMutation.isPending || deleteMutation.isPending || detailTab === "edit"}
             >
               <IconTrash />
               {t("rewards.deleteReward", "Delete")}
@@ -2618,195 +3547,446 @@ function RewardEditDialog({
                 }}
                 title={shortUrl}
               >
-                {shortCopied ? <IconCheck className="text-emerald-400" /> : <IconLink />}
-                <span>{shortCopied ? t("rewards.shortLinkCopied", "Link Copied!") : t("rewards.copyShortLink", "Short Link")}</span>
+                {shortCopied ? (
+                  <IconCheck className="text-emerald-400" />
+                ) : (
+                  <IconLink />
+                )}
+                <span>
+                  {shortCopied
+                    ? t("rewards.shortLinkCopied", "Link Copied!")
+                    : t("rewards.copyShortLink", "Short Link")}
+                </span>
               </Button>
             )}
           </div>
 
           <Separator className="my-2" />
 
-          <ConfirmAction open={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={() => { if (!deleteMutation.isPending) deleteMutation.mutate(); }} pending={deleteMutation.isPending} destructive title={t("rewards.deleteConfirmSingle", { title: reward.twitch_title })} description={t("ops.deleteRewardDesc")} label={t("common.delete")} />
-          <Tabs defaultValue="overview" className="w-full min-w-0">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="overview">{t("rewards.tabs.overview", "Overview")}</TabsTrigger>
-              <TabsTrigger value="edit">{t("rewards.tabs.edit", "Edit Reward")}</TabsTrigger>
-              <TabsTrigger value="redemptions">{t("rewards.tabs.redemptions", "Recent Redemptions")}</TabsTrigger>
+          <ConfirmAction
+            open={confirmDelete}
+            onClose={() => setConfirmDelete(false)}
+            onConfirm={() => {
+              if (!deleteMutation.isPending) deleteMutation.mutate();
+            }}
+            pending={deleteMutation.isPending}
+            destructive
+            title={t("rewards.deleteConfirmSingle", {
+              title: reward.twitch_title,
+            })}
+            description={t("ops.deleteRewardDesc")}
+            label={t("common.delete")}
+          />
+          <Tabs
+            value={detailTab}
+            onValueChange={(value) => setDetailTab(String(value))}
+            className="w-full min-w-0"
+          >
+            <TabsList className="reward-detail-tabs w-full justify-start">
+              <TabsTrigger value="overview">
+                {t("rewards.tabs.overview", "Overview")}
+              </TabsTrigger>
+              <TabsTrigger value="edit">
+                {t("rewards.tabs.edit", "Edit Reward")}
+              </TabsTrigger>
+              <TabsTrigger value="redemptions">
+                {t("rewards.tabs.redemptions", "Recent Redemptions")}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-4 space-y-5 min-w-0">
-              {/* Chat Activity Requirements card */}
-              {((reward.chat_min_messages ?? 0) > 0 || (reward.chat_min_characters ?? 0) > 0) && (
-                <div className="space-y-2 rounded-xl border border-violet-500/30 bg-violet-500/5 p-3.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">💬</span>
-                    <p className="text-xs font-semibold text-violet-300">{t("rewards.chatReq.title", "Chat Activity Requirements")}</p>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <div className="reward-price">
-                      <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.minMessages", "Min Messages")}</p>
-                      <p className="font-medium text-foreground">
-                        {(reward.chat_min_messages ?? 0) > 0 ? reward.chat_min_messages : t("rewards.chatReq.none", "None")}
-                      </p>
-                    </div>
-                    <div className="reward-price">
-                      <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.minCharacters", "Min Characters")}</p>
-                      <p className="font-medium text-foreground">
-                        {(reward.chat_min_characters ?? 0) > 0 ? reward.chat_min_characters : t("rewards.chatReq.none", "None")}
-                      </p>
-                    </div>
-                    <div className="reward-price">
-                      <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.logicOperator", "Logic Operator")}</p>
-                      <p className="font-medium text-foreground">{reward.chat_logical_operator ?? "AND"}</p>
-                    </div>
-                    <div className="reward-price">
-                      <p className="text-muted-foreground mb-0.5">{t("rewards.chatReq.timeWindow", "Time Window")}</p>
-                      <p className="font-medium text-foreground">
-                        {(reward.chat_time_window_hours ?? 0) > 0 ? `${reward.chat_time_window_hours}h` : t("rewards.chatReq.allTime", "All time")}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("rewards.chatReq.refundIfFailed", "Auto-refund Channel Points if requirement fails")}: <strong className="text-foreground">{reward.refund_if_chat_req_failed !== false ? t("rewards.chatReq.yes", "Yes") : t("rewards.chatReq.no", "No")}</strong>
-                  </p>
-                </div>
-              )}
-
-              {/* Purchase Limits card */}
-              {((reward.purchase_limits?.user?.length ?? 0) > 0 || (reward.purchase_limits?.global?.length ?? 0) > 0) && (
-                <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">⏳</span>
-                    <p className="text-xs font-semibold text-amber-300">{t("rewards.limitsStep.bannerTitle", "Custom Purchase Limits")}</p>
-                  </div>
-                  <div className="space-y-2 text-xs">
-                    {(reward.purchase_limits?.user?.length ?? 0) > 0 && (
-                      <div>
-                        <p className="text-muted-foreground font-medium mb-1">{t("rewards.limitsStep.userLimitsTitle", "Per-User Limits")}:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {reward.purchase_limits!.user!.map((u, i) => (
-                            <span key={i} className="px-2.5 py-1 rounded-lg bg-background/60 border border-border">
-                              {t("rewards.limitsStep.maxLabel", "Max")} <strong>{u.max_redemptions}</strong> {u.max_redemptions > 1 ? t("rewards.limitsStep.redemptionPlural", "redemptions") : t("rewards.limitsStep.redemptionSingle", "redemption")}
-                              {u.window_hours ? ` ${t("rewards.limitsStep.everyHoursRule", { hours: u.window_hours })}` : ` ${t("rewards.limitsStep.allTimeRule", "all-time")}`}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {(reward.purchase_limits?.global?.length ?? 0) > 0 && (
-                      <div>
-                        <p className="text-muted-foreground font-medium mb-1">{t("rewards.limitsStep.globalLimitsTitle", "Global Channel Limits")}:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {reward.purchase_limits!.global!.map((g, i) => (
-                            <span key={i} className="px-2.5 py-1 rounded-lg bg-background/60 border border-border">
-                              {t("rewards.limitsStep.maxLabel", "Max")} <strong>{g.max_redemptions}</strong> {g.max_redemptions > 1 ? t("rewards.limitsStep.redemptionPlural", "redemptions") : t("rewards.limitsStep.redemptionSingle", "redemption")}
-                              {g.window_hours ? ` ${t("rewards.limitsStep.everyHoursRule", { hours: g.window_hours })}` : ` ${t("rewards.limitsStep.allTimeRule", "all-time")}`}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* PRICE_LIMIT warning alert if reward is auto-paused by price limit */}
-              {reward.is_paused && reward.pause_reason === "PRICE_LIMIT" && (
-                <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3.5 text-xs text-orange-200 flex items-start gap-2.5">
-                  <span className="text-base leading-none">⚠️</span>
-                  <div className="space-y-1">
-                    <p className="font-semibold text-orange-300">{t("rewards.editDialog.autoPausedByPriceLimit", "Auto-paused by Market Price Limit")}</p>
-                    <p className="text-orange-200/90 leading-relaxed">
-                      {t("rewards.editDialog.autoPausedByPriceLimitDesc", { current: formatMinorCurrency(reward.current_market_price, reward.currency) })}
-                      {reward.min_market_price != null && ` (Min: ${formatMinorCurrency(reward.min_market_price, reward.currency)})`}
-                      {reward.max_market_price != null && ` (Max: ${formatMinorCurrency(reward.max_market_price, reward.currency)})`}.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* POOL: pool items detail */}
-              {type === "POOL" && reward.pool_items?.length ? (
-                <PoolItemsDetail items={reward.pool_items} currency={reward.currency} />
-              ) : null}
-
-              {/* FILTER: filter config summary + live preview */}
-              {type === "FILTER" && reward.filter_config ? (
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">{t("rewards.editDialog.filterConfig", "Filter Configuration")}</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {[
-                      { label: t("rewards.steps.minPriceCurrency", "Min Price"), val: `${reward.filter_config.min_price.toFixed(2)} ${reward.currency}` },
-                      { label: t("rewards.steps.maxPriceCurrency", "Max Price"), val: `${reward.filter_config.max_price.toFixed(2)} ${reward.currency}` },
-                      { label: t("rewards.steps.nameContains", "Name Contains"), val: reward.filter_config.name_contains ?? "–" },
-                      { label: t("rewards.steps.namePrefix", "Name Prefix"), val: reward.filter_config.name_prefix ?? "–" },
-                      { label: t("rewards.steps.minVolume", "Min Volume"), val: reward.filter_config.min_volume?.toString() ?? "–" },
-                    ].map(({ label, val }) => (
-                      <div key={label} className="reward-price">
-                        <p className="text-muted-foreground mb-0.5">{label}</p>
-                        <p className="font-medium text-foreground">{val}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <FilterPreviewBlock
+              <div className="reward-overview-layout">
+                <RewardSummary value={reward} currency={reward.currency} />
+                <section>
+                  <h3 className="section-title">
+                    {c("Recent activity", "Последние активации")}
+                  </h3>
+                  <RedemptionList
                     channelId={channelId}
-                    filterConfig={reward.filter_config}
-                    priceStrategy={reward.price_strategy ?? null}
-                    markupPct={reward.twitch_price_markup_percentage}
+                    rewardId={reward.twitch_id}
+                    pageSize={5}
+                    compact
                   />
-                </div>
-              ) : null}
-
-              {/* FIXED: skin info */}
-              {type === "FIXED" && reward.market_item_name ? (
-                <div className="flex gap-4">
-                  <SkinImage
-                    marketItemName={reward.market_item_name}
-                    size={300}
-                    objectFit="contain"
-                    className="rounded-xl shrink-0"
-                    style={{ width: 140, height: 105 }}
-                  />
-                  <div className="flex-1 space-y-2 text-sm">
-                    <p className="font-medium">{reward.market_item_name}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {t("rewards.card.marketPrice", "Market price")}: {formatMinorCurrency(reward.current_market_price, reward.currency)}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {t("rewards.pricing.deviationPercent", "Max deviation")}: {reward.permissible_market_price_deviation}%
-                    </p>
-                    <a
-                      href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                    >
-                      {t("rewards.editDialog.viewOnMarket", "View on Market")} <IconExternalLink />
-                    </a>
-                  </div>
-                </div>
-              ) : null}
-
-              {/* General info grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                {[
-                  { label: t("rewards.twitchSettings.cooldownLabel", "Cooldown"), val: `${reward.global_cooldown_seconds}s` },
-                  { label: t("rewards.twitchSettings.maxStreamLabel", "Max / Stream"), val: String(reward.max_redemptions_per_stream) },
-                  { label: t("rewards.twitchSettings.maxUserLabel", "Max / User"), val: String(reward.max_redemptions_per_user_per_stream) },
-                  { label: t("rewards.card.autobuy", "Auto-buy"), val: reward.market_autobuy ? t("rewards.chatReq.yes", "Yes") : t("rewards.chatReq.no", "No") },
-                  { label: t("rewards.pricing.pricingMode", "Pricing"), val: reward.pricing_mode === "MANUAL" ? t("rewards.pricing.modeManual", "Manual") : t("rewards.pricing.modeAuto", "Auto") },
-                  reward.pricing_mode === "MANUAL"
-                    ? { label: t("rewards.card.twitchPoints", "Twitch Points"), val: reward.manual_twitch_points != null ? `${reward.manual_twitch_points.toLocaleString()} pts` : "–" }
-                    : { label: t("rewards.card.markup", "Markup"), val: `+${reward.twitch_price_markup_percentage}%` },
-                  { label: t("rewards.pricing.minMarketPrice", "Min Price Limit"), val: reward.min_market_price != null ? formatMinorCurrency(reward.min_market_price, reward.currency) : t("rewards.chatReq.none", "None") },
-                  { label: t("rewards.pricing.maxMarketPrice", "Max Price Limit"), val: reward.max_market_price != null ? formatMinorCurrency(reward.max_market_price, reward.currency) : t("rewards.chatReq.none", "None") },
-                ].map(({ label, val }) => (
-                  <div key={label} className="reward-price">
-                    <p className="text-muted-foreground mb-0.5">{label}</p>
-                    <p className="font-medium text-foreground">{val}</p>
-                  </div>
-                ))}
+                </section>
               </div>
+              <details className="builder-advanced">
+                <summary>
+                  {c(
+                    "Item configuration & technical details",
+                    "Настройки предметов и подробности",
+                  )}
+                </summary>
+                {/* Chat Activity Requirements card */}
+                {((reward.chat_min_messages ?? 0) > 0 ||
+                  (reward.chat_min_characters ?? 0) > 0) && (
+                  <div className="space-y-2 rounded-xl border border-violet-500/30 bg-violet-500/5 p-3.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">💬</span>
+                      <p className="text-xs font-semibold text-violet-300">
+                        {t(
+                          "rewards.chatReq.title",
+                          "Chat Activity Requirements",
+                        )}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      <div className="reward-price">
+                        <p className="text-muted-foreground mb-0.5">
+                          {t("rewards.chatReq.minMessages", "Min Messages")}
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {(reward.chat_min_messages ?? 0) > 0
+                            ? reward.chat_min_messages
+                            : t("rewards.chatReq.none", "None")}
+                        </p>
+                      </div>
+                      <div className="reward-price">
+                        <p className="text-muted-foreground mb-0.5">
+                          {t("rewards.chatReq.minCharacters", "Min Characters")}
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {(reward.chat_min_characters ?? 0) > 0
+                            ? reward.chat_min_characters
+                            : t("rewards.chatReq.none", "None")}
+                        </p>
+                      </div>
+                      <div className="reward-price">
+                        <p className="text-muted-foreground mb-0.5">
+                          {t("rewards.chatReq.logicOperator", "Logic Operator")}
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {reward.chat_logical_operator ?? "AND"}
+                        </p>
+                      </div>
+                      <div className="reward-price">
+                        <p className="text-muted-foreground mb-0.5">
+                          {t("rewards.chatReq.timeWindow", "Time Window")}
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {(reward.chat_time_window_hours ?? 0) > 0
+                            ? `${reward.chat_time_window_hours}h`
+                            : t("rewards.chatReq.allTime", "All time")}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {t(
+                        "rewards.chatReq.refundIfFailed",
+                        "Auto-refund Channel Points if requirement fails",
+                      )}
+                      :{" "}
+                      <strong className="text-foreground">
+                        {reward.refund_if_chat_req_failed !== false
+                          ? t("rewards.chatReq.yes", "Yes")
+                          : t("rewards.chatReq.no", "No")}
+                      </strong>
+                    </p>
+                  </div>
+                )}
+
+                {/* Purchase Limits card */}
+                {((reward.purchase_limits?.user?.length ?? 0) > 0 ||
+                  (reward.purchase_limits?.global?.length ?? 0) > 0) && (
+                  <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">⏳</span>
+                      <p className="text-xs font-semibold text-amber-300">
+                        {t(
+                          "rewards.limitsStep.bannerTitle",
+                          "Custom Purchase Limits",
+                        )}
+                      </p>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      {(reward.purchase_limits?.user?.length ?? 0) > 0 && (
+                        <div>
+                          <p className="text-muted-foreground font-medium mb-1">
+                            {t(
+                              "rewards.limitsStep.userLimitsTitle",
+                              "Per-User Limits",
+                            )}
+                            :
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {reward.purchase_limits!.user!.map((u, i) => (
+                              <span
+                                key={i}
+                                className="px-2.5 py-1 rounded-lg bg-background/60 border border-border"
+                              >
+                                {t("rewards.limitsStep.maxLabel", "Max")}{" "}
+                                <strong>{u.max_redemptions}</strong>{" "}
+                                {u.max_redemptions > 1
+                                  ? t(
+                                      "rewards.limitsStep.redemptionPlural",
+                                      "redemptions",
+                                    )
+                                  : t(
+                                      "rewards.limitsStep.redemptionSingle",
+                                      "redemption",
+                                    )}
+                                {u.window_hours
+                                  ? ` ${t("rewards.limitsStep.everyHoursRule", { hours: u.window_hours })}`
+                                  : ` ${t("rewards.limitsStep.allTimeRule", "all-time")}`}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {(reward.purchase_limits?.global?.length ?? 0) > 0 && (
+                        <div>
+                          <p className="text-muted-foreground font-medium mb-1">
+                            {t(
+                              "rewards.limitsStep.globalLimitsTitle",
+                              "Global Channel Limits",
+                            )}
+                            :
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {reward.purchase_limits!.global!.map((g, i) => (
+                              <span
+                                key={i}
+                                className="px-2.5 py-1 rounded-lg bg-background/60 border border-border"
+                              >
+                                {t("rewards.limitsStep.maxLabel", "Max")}{" "}
+                                <strong>{g.max_redemptions}</strong>{" "}
+                                {g.max_redemptions > 1
+                                  ? t(
+                                      "rewards.limitsStep.redemptionPlural",
+                                      "redemptions",
+                                    )
+                                  : t(
+                                      "rewards.limitsStep.redemptionSingle",
+                                      "redemption",
+                                    )}
+                                {g.window_hours
+                                  ? ` ${t("rewards.limitsStep.everyHoursRule", { hours: g.window_hours })}`
+                                  : ` ${t("rewards.limitsStep.allTimeRule", "all-time")}`}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* PRICE_LIMIT warning alert if reward is auto-paused by price limit */}
+                {reward.is_paused && reward.pause_reason === "PRICE_LIMIT" && (
+                  <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3.5 text-xs text-orange-200 flex items-start gap-2.5">
+                    <span className="text-base leading-none">⚠️</span>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-orange-300">
+                        {t(
+                          "rewards.editDialog.autoPausedByPriceLimit",
+                          "Auto-paused by Market Price Limit",
+                        )}
+                      </p>
+                      <p className="text-orange-200/90 leading-relaxed">
+                        {t("rewards.editDialog.autoPausedByPriceLimitDesc", {
+                          current: formatMinorCurrency(
+                            reward.current_market_price,
+                            reward.currency,
+                          ),
+                        })}
+                        {reward.min_market_price != null &&
+                          ` (Min: ${formatMinorCurrency(reward.min_market_price, reward.currency)})`}
+                        {reward.max_market_price != null &&
+                          ` (Max: ${formatMinorCurrency(reward.max_market_price, reward.currency)})`}
+                        .
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* POOL: pool items detail */}
+                {type === "POOL" && reward.pool_items?.length ? (
+                  <PoolItemsDetail
+                    items={reward.pool_items}
+                    currency={reward.currency}
+                  />
+                ) : null}
+
+                {/* FILTER: filter config summary + live preview */}
+                {type === "FILTER" && reward.filter_config ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">
+                      {t(
+                        "rewards.editDialog.filterConfig",
+                        "Filter Configuration",
+                      )}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {[
+                        {
+                          label: t(
+                            "rewards.steps.minPriceCurrency",
+                            "Min Price",
+                          ),
+                          val: `${reward.filter_config.min_price.toFixed(2)} ${reward.currency}`,
+                        },
+                        {
+                          label: t(
+                            "rewards.steps.maxPriceCurrency",
+                            "Max Price",
+                          ),
+                          val: `${reward.filter_config.max_price.toFixed(2)} ${reward.currency}`,
+                        },
+                        {
+                          label: t(
+                            "rewards.steps.nameContains",
+                            "Name Contains",
+                          ),
+                          val: reward.filter_config.name_contains ?? "–",
+                        },
+                        {
+                          label: t("rewards.steps.namePrefix", "Name Prefix"),
+                          val: reward.filter_config.name_prefix ?? "–",
+                        },
+                        {
+                          label: t("rewards.steps.minVolume", "Min Volume"),
+                          val:
+                            reward.filter_config.min_volume?.toString() ?? "–",
+                        },
+                      ].map(({ label, val }) => (
+                        <div key={label} className="reward-price">
+                          <p className="text-muted-foreground mb-0.5">
+                            {label}
+                          </p>
+                          <p className="font-medium text-foreground">{val}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <FilterPreviewBlock
+                      channelId={channelId}
+                      filterConfig={reward.filter_config}
+                      priceStrategy={reward.price_strategy ?? null}
+                      markupPct={reward.twitch_price_markup_percentage}
+                    />
+                  </div>
+                ) : null}
+
+                {/* FIXED: skin info */}
+                {type === "FIXED" && reward.market_item_name ? (
+                  <div className="flex gap-4">
+                    <SkinImage
+                      marketItemName={reward.market_item_name}
+                      size={300}
+                      objectFit="contain"
+                      className="rounded-xl shrink-0"
+                      style={{ width: 140, height: 105 }}
+                    />
+                    <div className="flex-1 space-y-2 text-sm">
+                      <p className="font-medium">{reward.market_item_name}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {t("rewards.card.marketPrice", "Market price")}:{" "}
+                        {formatMinorCurrency(
+                          reward.current_market_price,
+                          reward.currency,
+                        )}
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        {t("rewards.pricing.deviationPercent", "Max deviation")}
+                        : {reward.permissible_market_price_deviation}%
+                      </p>
+                      <a
+                        href={`https://market.csgo.com/en/?search=${encodeURIComponent(reward.market_item_name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        {t("rewards.editDialog.viewOnMarket", "View on Market")}{" "}
+                        <IconExternalLink />
+                      </a>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* General info grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                  {[
+                    {
+                      label: t(
+                        "rewards.twitchSettings.cooldownLabel",
+                        "Cooldown",
+                      ),
+                      val: `${reward.global_cooldown_seconds}s`,
+                    },
+                    {
+                      label: t(
+                        "rewards.twitchSettings.maxStreamLabel",
+                        "Max / Stream",
+                      ),
+                      val: String(reward.max_redemptions_per_stream),
+                    },
+                    {
+                      label: t(
+                        "rewards.twitchSettings.maxUserLabel",
+                        "Max / User",
+                      ),
+                      val: String(reward.max_redemptions_per_user_per_stream),
+                    },
+                    {
+                      label: t("rewards.card.autobuy", "Auto-buy"),
+                      val: reward.market_autobuy
+                        ? t("rewards.chatReq.yes", "Yes")
+                        : t("rewards.chatReq.no", "No"),
+                    },
+                    {
+                      label: t("rewards.pricing.pricingMode", "Pricing"),
+                      val:
+                        reward.pricing_mode === "MANUAL"
+                          ? t("rewards.pricing.modeManual", "Manual")
+                          : t("rewards.pricing.modeAuto", "Auto"),
+                    },
+                    reward.pricing_mode === "MANUAL"
+                      ? {
+                          label: t(
+                            "rewards.card.twitchPoints",
+                            "Twitch Points",
+                          ),
+                          val:
+                            reward.manual_twitch_points != null
+                              ? `${reward.manual_twitch_points.toLocaleString()} pts`
+                              : "–",
+                        }
+                      : {
+                          label: t("rewards.card.markup", "Markup"),
+                          val: `+${reward.twitch_price_markup_percentage}%`,
+                        },
+                    {
+                      label: t(
+                        "rewards.pricing.minMarketPrice",
+                        "Min Price Limit",
+                      ),
+                      val:
+                        reward.min_market_price != null
+                          ? formatMinorCurrency(
+                              reward.min_market_price,
+                              reward.currency,
+                            )
+                          : t("rewards.chatReq.none", "None"),
+                    },
+                    {
+                      label: t(
+                        "rewards.pricing.maxMarketPrice",
+                        "Max Price Limit",
+                      ),
+                      val:
+                        reward.max_market_price != null
+                          ? formatMinorCurrency(
+                              reward.max_market_price,
+                              reward.currency,
+                            )
+                          : t("rewards.chatReq.none", "None"),
+                    },
+                  ].map(({ label, val }) => (
+                    <div key={label} className="reward-price">
+                      <p className="text-muted-foreground mb-0.5">{label}</p>
+                      <p className="font-medium text-foreground">{val}</p>
+                    </div>
+                  ))}
+                </div>
+              </details>
             </TabsContent>
 
             <TabsContent value="edit" className="mt-4 min-w-0">
@@ -2815,7 +3995,8 @@ function RewardEditDialog({
                   reward_type: reward.reward_type,
                   pricing_mode: reward.pricing_mode,
                   price_strategy: reward.price_strategy ?? undefined,
-                  manual_twitch_points: reward.manual_twitch_points ?? undefined,
+                  manual_twitch_points:
+                    reward.manual_twitch_points ?? undefined,
                   market_item_name: reward.market_item_name ?? undefined,
                   pool_items: reward.pool_items ?? undefined,
                   filter_config: reward.filter_config ?? undefined,
@@ -2823,18 +4004,33 @@ function RewardEditDialog({
                   twitch_description: reward.twitch_description,
                   min_market_price: reward.min_market_price ?? undefined,
                   max_market_price: reward.max_market_price ?? undefined,
-                  permissible_market_price_deviation: reward.permissible_market_price_deviation,
-                  twitch_price_markup_percentage: reward.twitch_price_markup_percentage,
+                  permissible_market_price_deviation:
+                    reward.permissible_market_price_deviation,
+                  twitch_price_markup_percentage:
+                    reward.twitch_price_markup_percentage,
                   global_cooldown_seconds: reward.global_cooldown_seconds,
                   max_redemptions_per_stream: reward.max_redemptions_per_stream,
-                  max_redemptions_per_user_per_stream: reward.max_redemptions_per_user_per_stream,
+                  max_redemptions_per_user_per_stream:
+                    reward.max_redemptions_per_user_per_stream,
                   market_autobuy: reward.market_autobuy,
                   is_paused: reward.is_paused,
-                  chat_min_messages: (reward.chat_min_messages && reward.chat_min_messages > 0) ? reward.chat_min_messages : undefined,
-                  chat_min_characters: (reward.chat_min_characters && reward.chat_min_characters > 0) ? reward.chat_min_characters : undefined,
-                  chat_time_window_hours: (reward.chat_time_window_hours && reward.chat_time_window_hours > 0) ? reward.chat_time_window_hours : undefined,
-                  chat_logical_operator: reward.chat_logical_operator ?? undefined,
-                  refund_if_chat_req_failed: reward.refund_if_chat_req_failed ?? true,
+                  chat_min_messages:
+                    reward.chat_min_messages && reward.chat_min_messages > 0
+                      ? reward.chat_min_messages
+                      : undefined,
+                  chat_min_characters:
+                    reward.chat_min_characters && reward.chat_min_characters > 0
+                      ? reward.chat_min_characters
+                      : undefined,
+                  chat_time_window_hours:
+                    reward.chat_time_window_hours &&
+                    reward.chat_time_window_hours > 0
+                      ? reward.chat_time_window_hours
+                      : undefined,
+                  chat_logical_operator:
+                    reward.chat_logical_operator ?? undefined,
+                  refund_if_chat_req_failed:
+                    reward.refund_if_chat_req_failed ?? true,
                   purchase_limits: reward.purchase_limits ?? undefined,
                   is_public: reward.is_public ?? true,
                 }}
@@ -2842,15 +4038,30 @@ function RewardEditDialog({
                 onSubmit={(data) => {
                   // eslint-disable-next-line @typescript-eslint/no-unused-vars
                   const { is_paused: _, ...updateData } = data;
-                  updateMutation.mutate(updateData as UpdateRewardBody);
+                  updateMutation.mutate(updateData as UpdateRewardBody, {
+                    onSuccess: () => {
+                      try {
+                        sessionStorage.removeItem(draftKey);
+                      } catch {
+                        /* optional storage */
+                      }
+                      setDetailTab("overview");
+                    },
+                  });
                 }}
                 loading={updateMutation.isPending}
+                draftKey={draftKey}
+                currency={reward.currency}
                 isEdit={true}
               />
             </TabsContent>
 
             <TabsContent value="redemptions" className="mt-4">
-              <RedemptionList channelId={channelId} rewardId={reward.twitch_id} compact />
+              <RedemptionList
+                channelId={channelId}
+                rewardId={reward.twitch_id}
+                compact
+              />
             </TabsContent>
           </Tabs>
         </DialogContent>
@@ -2868,6 +4079,14 @@ function RewardEditDialog({
 }
 
 // ── Create Modal ───────────────────────────────────────────────────────────
+function rewardSaveError(error: unknown): string {
+  if (isAxiosError(error)) {
+    const message = error.response?.data?.error?.message;
+    if (typeof message === "string") return message;
+  }
+  return error instanceof Error ? error.message : "Unable to save reward";
+}
+
 function CreateRewardModal({
   channelId,
   open,
@@ -2879,21 +4098,36 @@ function CreateRewardModal({
 }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const userId = useAppStore((state) => state.currentUser?.twitch_id);
+  const draftKey = `reward-draft:v2:${userId}:${channelId}:new`;
   const createMutation = useMutation({
     mutationFn: (body: CreateRewardBody) => rewardsApi.create(channelId, body),
     onSuccess: () => {
+      try {
+        sessionStorage.removeItem(draftKey);
+      } catch {
+        /* optional storage */
+      }
       qc.invalidateQueries({ queryKey: ["rewards", channelId] });
       onClose();
     },
   });
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+    <Dialog
+      open={open}
+      onOpenChange={(o) => !o && !createMutation.isPending && onClose()}
+    >
+      <DialogContent className="max-w-5xl sm:max-w-5xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle>{t("rewards.wizard.createTitle", "Create New Reward")}</DialogTitle>
+          <DialogTitle>
+            {t("rewards.wizard.createTitle", "Create New Reward")}
+          </DialogTitle>
           <DialogDescription>
-            {t("rewards.wizard.createDesc", "Choose the type of skin reward and configure pricing for your channel.")}
+            {t(
+              "rewards.wizard.createDesc",
+              "Choose the type of skin reward and configure pricing for your channel.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="mt-2">
@@ -2901,11 +4135,12 @@ function CreateRewardModal({
             channelId={channelId}
             onSubmit={(data) => createMutation.mutate(data)}
             loading={createMutation.isPending}
+            draftKey={draftKey}
             isEdit={false}
           />
           {createMutation.error && (
             <p className="text-sm text-destructive mt-3">
-              {(createMutation.error as Error).message}
+              {rewardSaveError(createMutation.error)}
             </p>
           )}
         </div>
@@ -2942,7 +4177,10 @@ function BulkActionBar({
       <div className="flex items-center gap-2 pr-1">
         <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
         <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-          {count} <span className="text-muted-foreground font-normal">{t("rewards.bulk.selected", "selected")}</span>
+          {count}{" "}
+          <span className="text-muted-foreground font-normal">
+            {t("rewards.bulk.selected", "selected")}
+          </span>
         </span>
       </div>
 
@@ -2957,7 +4195,11 @@ function BulkActionBar({
         title="Select all matching rewards"
       >
         <IconCheckAll />
-        <span>{allFilteredSelected ? t("rewards.bulk.allSelected", "All selected") : t("rewards.bulk.selectAll", "Select all")}</span>
+        <span>
+          {allFilteredSelected
+            ? t("rewards.bulk.allSelected", "All selected")
+            : t("rewards.bulk.selectAll", "Select all")}
+        </span>
       </Button>
 
       <Button
@@ -3020,18 +4262,29 @@ export default function RewardsPage() {
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
-  const [filterPaused, setFilterPaused] = useState<"all" | "paused" | "active">("all");
-  const [filterPauseReason, setFilterPauseReason] = useState<"all" | PauseReason>("all");
+  const [filterPaused, setFilterPaused] = useState<"all" | "paused" | "active">(
+    "all",
+  );
+  const [filterPauseReason, setFilterPauseReason] = useState<
+    "all" | PauseReason
+  >("all");
   const [filterType, setFilterType] = useState<"all" | RewardType>("all");
   const [showDeleted, setShowDeleted] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const lastSelectedIdRef = useRef<string | null>(null);
 
-  const [editingReward, setEditingReward] = useState<RewardResponse | null>(null);
+  const [editingReward, setEditingReward] = useState<RewardResponse | null>(
+    null,
+  );
   const [showCreate, setShowCreate] = useState(false);
   const [confirmBatch, setConfirmBatch] = useState(false);
 
-  const { data: rewards = [], isLoading, isError, refetch } = useQuery({
+  const {
+    data: rewards = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["rewards", channelId, showDeleted],
     queryFn: () =>
       rewardsApi
@@ -3069,7 +4322,8 @@ export default function RewardsPage() {
       } else if (filterPaused === "active") {
         if (r.is_paused) return false;
       }
-      if (filterType !== "all" && (r.reward_type ?? "FIXED") !== filterType) return false;
+      if (filterType !== "all" && (r.reward_type ?? "FIXED") !== filterType)
+        return false;
       if (!q) return true;
       return (
         r.twitch_title.toLowerCase().includes(q) ||
@@ -3079,21 +4333,24 @@ export default function RewardsPage() {
     });
   }, [rewards, search, filterPaused, filterPauseReason, filterType]);
 
-  const handleToggleSelect = useCallback((id: string) => {
-    const r = rewards.find((item) => item.twitch_id === id);
-    if (r?.is_deleted) return;
+  const handleToggleSelect = useCallback(
+    (id: string) => {
+      const r = rewards.find((item) => item.twitch_id === id);
+      if (r?.is_deleted) return;
 
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-    lastSelectedIdRef.current = id;
-  }, [rewards]);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        return next;
+      });
+      lastSelectedIdRef.current = id;
+    },
+    [rewards],
+  );
 
   const handleRangeSelect = useCallback(
     (targetId: string) => {
@@ -3104,16 +4361,22 @@ export default function RewardsPage() {
       if (targetIndex === -1) return;
 
       const anchorId = lastSelectedIdRef.current;
-      let anchorIndex = anchorId ? filtered.findIndex((r) => r.twitch_id === anchorId) : -1;
+      let anchorIndex = anchorId
+        ? filtered.findIndex((r) => r.twitch_id === anchorId)
+        : -1;
 
       if (anchorIndex === -1) {
         const visibleSelectedIndices = filtered
-          .map((r, idx) => (!r.is_deleted && selectedIds.has(r.twitch_id) ? idx : -1))
+          .map((r, idx) =>
+            !r.is_deleted && selectedIds.has(r.twitch_id) ? idx : -1,
+          )
           .filter((idx) => idx !== -1);
 
         if (visibleSelectedIndices.length > 0) {
           anchorIndex = visibleSelectedIndices.reduce((prev, curr) =>
-            Math.abs(curr - targetIndex) < Math.abs(prev - targetIndex) ? curr : prev
+            Math.abs(curr - targetIndex) < Math.abs(prev - targetIndex)
+              ? curr
+              : prev,
           );
         } else {
           anchorIndex = targetIndex;
@@ -3138,7 +4401,7 @@ export default function RewardsPage() {
 
       lastSelectedIdRef.current = targetId;
     },
-    [filtered, selectedIds]
+    [filtered, selectedIds],
   );
 
   const handleSelectAll = useCallback(() => {
@@ -3176,7 +4439,7 @@ export default function RewardsPage() {
 
   const selectableFiltered = useMemo(
     () => filtered.filter((r) => !r.is_deleted),
-    [filtered]
+    [filtered],
   );
 
   const allFilteredSelected =
@@ -3207,20 +4470,44 @@ export default function RewardsPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editingReward, showCreate, selectedIds.size, selectableFiltered.length, handleClearSelection, handleSelectAll]);
+  }, [
+    editingReward,
+    showCreate,
+    selectedIds.size,
+    selectableFiltered.length,
+    handleClearSelection,
+    handleSelectAll,
+  ]);
 
   if (!channelId) {
     return (
       <div className="page-shell flex items-center justify-center min-h-96">
-        <p className="text-muted-foreground">{t("rewards.selectChannelFirst", "Select a broadcaster channel first.")}</p>
+        <p className="text-muted-foreground">
+          {t(
+            "rewards.selectChannelFirst",
+            "Select a broadcaster channel first.",
+          )}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="page-shell space-y-6 pb-28">
-      <PageHeader eyebrow={t("ops.configuration")} title={t("rewards.title")} description={t("ops.rewardDesc")} actions={<Button onClick={() => setShowCreate(true)}><IconPlus />{t("rewards.newReward")}</Button>} />
-      <p className="text-xs text-muted-foreground">{t("rewards.countRewards", { count: filtered.length })}</p>
+      <PageHeader
+        eyebrow={t("ops.configuration")}
+        title={t("rewards.title")}
+        description={t("ops.rewardDesc")}
+        actions={
+          <Button onClick={() => setShowCreate(true)}>
+            <IconPlus />
+            {t("rewards.newReward")}
+          </Button>
+        }
+      />
+      <p className="text-xs text-muted-foreground">
+        {t("rewards.countRewards", { count: filtered.length })}
+      </p>
       {/* Filters */}
       <div className="reward-toolbar flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-56 max-w-sm">
@@ -3230,7 +4517,10 @@ export default function RewardsPage() {
           <Input
             className="pl-9"
             aria-label={t("rewards.searchPlaceholder")}
-            placeholder={t("rewards.searchPlaceholder", "Search by title, skin, description…")}
+            placeholder={t(
+              "rewards.searchPlaceholder",
+              "Search by title, skin, description…",
+            )}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -3250,10 +4540,14 @@ export default function RewardsPage() {
                 "px-3 py-1 rounded-lg text-xs font-medium capitalize transition-all",
                 filterPaused === f
                   ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {f === "all" ? t("rewards.status.all", "all") : f === "active" ? t("rewards.status.active", "active") : t("rewards.status.paused", "paused")}
+              {f === "all"
+                ? t("rewards.status.all", "all")
+                : f === "active"
+                  ? t("rewards.status.active", "active")
+                  : t("rewards.status.paused", "paused")}
             </button>
           ))}
         </div>
@@ -3261,12 +4555,29 @@ export default function RewardsPage() {
         {/* Pause reason filter (visible when paused is selected) */}
         {filterPaused === "paused" && (
           <div className="reward-filter-group">
-            {([
-              { key: "all", label: t("rewards.pauseReasonFilter.all", "All reasons") },
-              { key: "MANUAL", label: t("rewards.pauseReasonFilter.manual", "Manual") },
-              { key: "NO_MONEY", label: t("rewards.pauseReasonFilter.noMoney", "No balance") },
-              { key: "PRICE_LIMIT", label: t("rewards.pauseReasonFilter.priceLimit", "Price limit") },
-            ] as const).map(({ key, label }) => (
+            {(
+              [
+                {
+                  key: "all",
+                  label: t("rewards.pauseReasonFilter.all", "All reasons"),
+                },
+                {
+                  key: "MANUAL",
+                  label: t("rewards.pauseReasonFilter.manual", "Manual"),
+                },
+                {
+                  key: "NO_MONEY",
+                  label: t("rewards.pauseReasonFilter.noMoney", "No balance"),
+                },
+                {
+                  key: "PRICE_LIMIT",
+                  label: t(
+                    "rewards.pauseReasonFilter.priceLimit",
+                    "Price limit",
+                  ),
+                },
+              ] as const
+            ).map(({ key, label }) => (
               <button
                 key={key}
                 aria-pressed={filterPauseReason === key}
@@ -3275,7 +4586,7 @@ export default function RewardsPage() {
                   "px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
                   filterPauseReason === key
                     ? "bg-orange-500/20 text-orange-300 font-semibold border border-orange-500/40"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {label}
@@ -3295,10 +4606,16 @@ export default function RewardsPage() {
                 "px-3 py-1 rounded-lg text-xs font-medium transition-all",
                 filterType === f
                   ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {f === "all" ? t("rewards.types.all", "All types") : f === "FIXED" ? t("rewards.types.fixed", "Fixed") : f === "POOL" ? t("rewards.types.pool", "Pool") : t("rewards.types.filter", "Filter")}
+              {f === "all"
+                ? t("rewards.types.all", "All types")
+                : f === "FIXED"
+                  ? t("rewards.types.fixed", "Fixed")
+                  : f === "POOL"
+                    ? t("rewards.types.pool", "Pool")
+                    : t("rewards.types.filter", "Filter")}
             </button>
           ))}
         </div>
@@ -3315,16 +4632,37 @@ export default function RewardsPage() {
       </div>
 
       {/* Grid */}
-      {isError ? <QueryError onRetry={() => void refetch()} /> : isLoading ? (
+      {isError ? (
+        <QueryError onRetry={() => void refetch()} />
+      ) : isLoading ? (
         <div className="reward-grid">
           {Array.from({ length: 10 }).map((_, i) => (
             <Skeleton key={i} className="h-52 rounded-xl" />
           ))}
         </div>
-      ) : rewards.length === 0 && !showDeleted ? <EmptyState title={t("ops.rewardEmpty")} description={t("ops.rewardEmptyDesc")} action={<Button onClick={() => setShowCreate(true)}>{t("rewards.newReward")}</Button>} /> : filtered.length === 0 ? (
+      ) : rewards.length === 0 && !showDeleted ? (
+        <EmptyState
+          title={t("ops.rewardEmpty")}
+          description={t("ops.rewardEmptyDesc")}
+          action={
+            <Button onClick={() => setShowCreate(true)}>
+              {t("rewards.newReward")}
+            </Button>
+          }
+        />
+      ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-64 text-center space-y-3">
-          <p className="text-muted-foreground">{t("rewards.noRewards", "No rewards found")}</p>
-          <Button variant="outline" onClick={() => { setSearch(""); setFilterPaused("all"); setFilterType("all"); }}>
+          <p className="text-muted-foreground">
+            {t("rewards.noRewards", "No rewards found")}
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSearch("");
+              setFilterPaused("all");
+              setFilterType("all");
+            }}
+          >
             {t("rewards.clearFilters", "Clear filters")}
           </Button>
         </div>
@@ -3363,11 +4701,29 @@ export default function RewardsPage() {
         />
       )}
 
-      <ConfirmAction open={confirmBatch} onClose={() => setConfirmBatch(false)} onConfirm={() => { if (!batchMutation.isPending) batchMutation.mutate("delete"); }} pending={batchMutation.isPending} destructive title={t("rewards.deleteConfirmBatch", { count: selectedIds.size })} description={t("ops.deleteRewardDesc")} label={t("common.delete")} context={rewards.filter(r => selectedIds.has(r.twitch_id)).map(r => r.twitch_title).join("\n")} />
+      <ConfirmAction
+        open={confirmBatch}
+        onClose={() => setConfirmBatch(false)}
+        onConfirm={() => {
+          if (!batchMutation.isPending) batchMutation.mutate("delete");
+        }}
+        pending={batchMutation.isPending}
+        destructive
+        title={t("rewards.deleteConfirmBatch", { count: selectedIds.size })}
+        description={t("ops.deleteRewardDesc")}
+        label={t("common.delete")}
+        context={rewards
+          .filter((r) => selectedIds.has(r.twitch_id))
+          .map((r) => r.twitch_title)
+          .join("\n")}
+      />
       {/* Modals */}
       <RewardEditDialog
         key={editingReward?.twitch_id ?? "none"}
-        reward={rewards.find(r => r.twitch_id === editingReward?.twitch_id) ?? editingReward}
+        reward={
+          rewards.find((r) => r.twitch_id === editingReward?.twitch_id) ??
+          editingReward
+        }
         channelId={channelId}
         open={!!editingReward}
         onClose={() => setEditingReward(null)}
