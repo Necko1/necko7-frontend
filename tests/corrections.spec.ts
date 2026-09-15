@@ -329,18 +329,34 @@ for (const path of ["/chat", "/chat/users/900?view=chat"])
       ).toHaveCount(0);
   });
 
-test("one-channel and wide profiles retain a bounded readable composition", async ({
+test("profile surfaces retain a bounded, balanced composition", async ({
   page,
 }) => {
   await correctionApi(page);
-  for (const width of [1920, 768, 390]) {
+  for (const width of [1920, 1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
-    await page.goto("/me");
-    await expect(page.locator(".community-list li")).toHaveCount(1);
-    await expect(page.locator(".identity-avatar img")).toBeVisible();
-    await capture(page, "global-one", width);
-    const box = await page.locator(".profile-shell").boundingBox();
-    expect(box!.width).toBeLessThanOrEqual(1240);
+    for (const [name, path] of [
+      ["global-one", "/me"],
+      ["channel", "/c/necko/profile"],
+      ["operator", "/chat/users/900"],
+    ]) {
+      await page.goto(path);
+      await expect(page.locator(".identity-avatar img")).toBeVisible();
+      await capture(page, name, width);
+      const main = await page.locator("main").boundingBox();
+      const profile = await page.locator(".profile-shell").boundingBox();
+      expect(profile!.width).toBeLessThanOrEqual(1240);
+      expect(
+        Math.abs(
+          2 * (profile!.x - main!.x) - (main!.width - profile!.width),
+        ),
+      ).toBeLessThanOrEqual(1);
+      const overflow = await page.evaluate(() => ({
+        document: document.documentElement.scrollWidth,
+        viewport: innerWidth,
+      }));
+      expect(overflow.document, path).toBeLessThanOrEqual(overflow.viewport + 1);
+    }
   }
 });
 
