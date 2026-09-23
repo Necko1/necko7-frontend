@@ -7,7 +7,7 @@ const item = (status: string, index: number) => ({
   redemption_id: `a1b2c3d4-e5f6-7890-abcd-ef12345678${String(index).padStart(2, "0")}`,
   viewer_id: "123", item_name: index ? longName : "AK-47 | Redline (Field-Tested)",
   fixed_price: 2750, currency: "USD", market_order_id: index ? null : "11392691554",
-  lifecycle_status: status, fulfillment_mode: "AUTO", buyer_retry_allowed: false, has_buyer_revert: false,
+  lifecycle_status: status, fulfillment_mode: "AUTO", buyer_retry_allowed: false,
   market_custom_id: index ? null : "a1b2c3d4-e5f6-7890-abcd-ef1234567800",
   latest_attempt_custom_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567800",
   latest_attempt_max_price: 2750, latest_attempt_status: status === "DELIVERED" ? "DELIVERED" : "REJECTED", latest_attempt_outcome_kind: status === "INSUFFICIENT_FUNDS" ? "no_money" : null, attempt_count: 1,
@@ -147,11 +147,11 @@ for (const width of [1440, 390]) test(`durable Market transaction states at ${wi
     { ...item("TRADE_WAITING", 1), latest_attempt_status: "TRADE_WAITING", latest_market_stage: "1", latest_trade_id: "trade-123", latest_receive_until: "2026-09-23T12:00:00Z" },
     { ...item("TRADE_ACCEPTED", 2), latest_attempt_status: "TRADE_ACCEPTED", latest_market_stage: "1", latest_settlement: "2026-09-23T12:01:00Z" },
     { ...item("RETRY_AVAILABLE", 3), latest_attempt_status: "SELLER_FAILED", latest_attempt_outcome_kind: "seller_reverted", latest_market_stage: "5", latest_market_refund: { seller: { amount: 1.25, currency: "RUB" } } },
-    { ...item("RETRY_AVAILABLE", 4), latest_attempt_status: "BUYER_FAILED", latest_attempt_outcome_kind: "buyer_reverted", latest_market_stage: "5", buyer_retry_allowed: true, has_buyer_revert: true },
+    { ...item("RETRY_AVAILABLE", 4), latest_attempt_status: "BUYER_FAILED", latest_attempt_outcome_kind: "buyer_reverted", latest_market_stage: "5", buyer_retry_allowed: true },
     { ...item("OPERATOR_REVIEW", 5), latest_attempt_status: "TERMINAL_UNCLASSIFIED", latest_attempt_outcome_kind: "terminal_unclassified", latest_market_stage: "5" },
     { ...item("DELIVERED", 6), latest_attempt_status: "DELIVERED", latest_market_stage: "2" },
     { ...item("OPERATOR_REVIEW", 7), latest_attempt_status: "TERMINAL_UNCLASSIFIED", latest_attempt_outcome_kind: "terminal_unclassified", latest_market_stage: "5", redemption_status: "COMPLETED" },
-    { ...item("RETRY_AVAILABLE", 8), latest_attempt_status: "SELLER_FAILED", latest_attempt_outcome_kind: "seller_not_sent", latest_market_stage: "5", buyer_retry_allowed: true, has_buyer_revert: true },
+    { ...item("RETRY_AVAILABLE", 8), latest_attempt_status: "SELLER_FAILED", latest_attempt_outcome_kind: "seller_not_sent", latest_market_stage: "5", buyer_retry_allowed: true },
   ];
   await page.route("**/api/v1/me/inventory**", route => route.fulfill({ json: cards }));
   await page.route("**/api/v1/broadcasters/123/chat/users/900/inventory**", route => route.fulfill({ json: cards }));
@@ -166,8 +166,12 @@ for (const width of [1440, 390]) test(`durable Market transaction states at ${wi
   await expect(page.locator(".inventory-item").nth(4).getByText("You cannot retry delivery or return Channel Points after reverting an accepted trade.", { exact: false })).toBeVisible();
   await expect(page.locator(".inventory-item").nth(5).getByRole("button", { name: "Try delivery again" })).toHaveCount(0);
   await expect(page.locator(".inventory-item").nth(5).getByRole("button", { name: "Return Channel Points" })).toBeVisible();
+  await expect(page.locator(".inventory-item").nth(5).getByText("Market confirmed that this attempt ended", { exact: false })).toBeVisible();
   await expect(page.locator(".inventory-item").nth(7).getByRole("button")).toHaveCount(0);
-  await expect(page.locator(".inventory-item").nth(8).getByRole("button")).toHaveCount(0);
+  await expect(page.locator(".inventory-item").nth(7).getByText("This redemption is already marked completed", { exact: false })).toBeVisible();
+  await expect(page.locator(".inventory-item").nth(8).getByRole("button", { name: "Try delivery again" })).toBeVisible();
+  await expect(page.locator(".inventory-item").nth(8).getByRole("button", { name: "Return Channel Points" })).toBeVisible();
+  await expect(page.locator(".inventory-item").nth(8).getByText("reverting an accepted trade", { exact: false })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
   await page.screenshot({ path: `test-results/inventory/${width}-trade-states.png`, fullPage: true });
   await page.goto("/chat/users/900?view=inventory");

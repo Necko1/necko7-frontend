@@ -701,7 +701,6 @@ export interface InventoryItem {
   lifecycle_status: string;
   fulfillment_mode: string;
   buyer_retry_allowed: boolean;
-  has_buyer_revert: boolean;
   market_order_id?: string | null;
   market_custom_id?: string | null;
   latest_attempt_custom_id?: string | null;
