@@ -43,6 +43,24 @@ test("settings validate numeric ranges and save only changes", async ({ page }) 
   expect(mutations[0].body).toEqual({ update_prices_period: 600 });
 });
 
+test("Market errors keep their specific editable chat templates", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/v1/broadcasters/*/messages", route => route.fulfill({
+    json: {
+      channel_id: "123",
+      messages: { market_errors: { inventory_hidden: "@{buyer} Open your Steam inventory for {item}. Your points remain pending." } },
+      custom_messages: {},
+      default_messages: { market_errors: { inventory_hidden: "@{buyer} Open your Steam inventory for {item}. Your points remain pending." } },
+      placeholders: { market_errors: { inventory_hidden: ["buyer", "item"] } },
+    },
+  }));
+  await page.goto("/broadcasters/123/settings");
+  await page.getByRole("tab", { name: "Chat Messages" }).click();
+  await page.getByRole("button", { name: "Market Errors" }).click();
+  await expect(page.getByText("Steam inventory is private")).toBeVisible();
+  await expect(page.locator("#msg-input-market_errors-inventory_hidden")).toHaveValue(/points remain pending/);
+});
+
 test("editors can configure the bot but cannot manage access", async ({ page }) => {
   await mockApi(page, { role: "EDITOR" });
   await page.goto("/broadcasters/123/settings");
