@@ -579,6 +579,7 @@ h1, h2, h3 { text-wrap: balance; }
 
 /* Intrinsic sizing must not let user-provided names widen profile columns. */
 .profile-global-layout>section,.profile-channel-layout>section,.community-list,.community-list li,.community-list a{min-width:0;overflow-wrap:anywhere}.profile-shell .profile-global-layout,.profile-shell .profile-channel-layout{min-width:0}@media(max-width:1000px){.profile-shell .profile-global-layout,.profile-shell .profile-channel-layout{grid-template-columns:minmax(0,1fr)}}
+.inventory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:18px}.inventory-item{min-width:0;border:1px solid var(--border);padding:16px;background:var(--card)}.inventory-art{height:190px;background:var(--muted);display:flex;align-items:center;justify-content:center;margin-bottom:16px}.inventory-item h3{font:600 22px/1.15 var(--font-heading);overflow-wrap:anywhere}.inventory-facts{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px;font-size:13px}.inventory-facts span{font-weight:700}.inventory-facts small{display:block;font-weight:400;color:var(--muted-foreground)}.inventory-facts time{color:var(--muted-foreground)}
 
 @media(pointer:coarse){.author-filter{min-width:36px;min-height:36px}}
 .manifest-tools>span{white-space:nowrap}

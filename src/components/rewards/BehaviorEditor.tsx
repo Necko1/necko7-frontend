@@ -191,6 +191,11 @@ export default function BehaviorEditor({
                 </p>
               )}
               {toggle(
+                c("Allow viewer retry after missed trade", "Разрешить зрителю повторить после пропущенного обмена"),
+                form.retry_on_buyer_failure === true,
+                (v) => onChange({ retry_on_buyer_failure: v }),
+              )}
+              {toggle(
                 c("Show in public catalog", "Показывать в каталоге"),
                 form.is_public !== false,
                 (v) => onChange({ is_public: v }),

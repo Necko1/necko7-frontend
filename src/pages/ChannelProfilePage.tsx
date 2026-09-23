@@ -1,4 +1,5 @@
 import ProfileIdentity from "@/components/profiles/ProfileIdentity";
+import InventoryList from "@/components/profiles/InventoryList";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { viewerApi, publicApi, authApi } from "@/lib/apiClient";
@@ -147,6 +148,7 @@ export default function ChannelProfilePage() {
               </details>
             </aside>
           </div>
+          <section className="space-y-4"><h2 className="section-title">{c("Inventory on this channel", "Инвентарь на этом канале")}</h2><InventoryList channelId={id} /></section>
         </>
       )}
     </div>

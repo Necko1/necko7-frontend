@@ -163,11 +163,13 @@ export default function AppLayout() {
       { label: t("ops.settings"), to: `/broadcasters/${selected!.channel_id}/settings`, icon: <IconSettings /> },
     ] },
     { label: t("ops.community"), items: [
+      { label: t("nav.inventory"), to: "/inventory", icon: <IconGift /> },
       { label: t("nav.chat"), to: "/chat", icon: <IconChat /> },
       { label: t("nav.leaderboard"), to: "/leaderboard", icon: <IconTrophy /> },
       { label: t("ops.publicLink"), to: catalog, icon: <IconGift />, end: true },
     ] },
   ] : [{ label: t("ops.community"), items: publicRoute || selected ? [
+    ...(meData ? [{ label: t("nav.inventory"), to: "/inventory", icon: <IconGift /> }] : []),
     { label: t("nav.rewards"), to: catalog, icon: <IconGift />, end: true },
     ...(meData ? [{ label: t("nav.profile"), to: `${catalog}/profile`, icon: <IconUser /> }] : []),
   ] : [] }];

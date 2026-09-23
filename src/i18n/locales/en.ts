@@ -50,6 +50,7 @@ export const en = {
     leaderboard: "Leaderboard",
     chat: "Chat",
     profile: "Profile",
+    inventory: "Inventory",
     switchChannel: "Switch channel",
     selectChannel: "Select channel",
     myProfile: "My profile",

@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 
 const now = new Date(Date.now() - 3600000).toISOString();
 export const channel = { channel_id: "123", channel_login: "necko", display_name: "Necko", profile_image_url: null, role: "OWNER" };
-export const settings = { ...channel, is_active: true, market_api_key_set: true, base_price_multiplier: 100, update_prices_period: 300, refund_on_buyer_fail: true, refund_if_no_money: false, pause_reward_if_no_money: true, market_chance_to_transfer: 80, add_bot_badge: false, chat_messages: {}, public_rewards_config: { enabled: true } };
+export const settings = { ...channel, is_active: true, market_api_key_set: true, base_price_multiplier: 100, update_prices_period: 300, pause_reward_if_no_money: true, market_chance_to_transfer: 80, add_bot_badge: false, chat_messages: {}, public_rewards_config: { enabled: true } };
 export const rewards = ["AK-47 | Redline (Field-Tested)", "USP-S | Cortex (Minimal Wear)", "AWP | Atheris (Field-Tested)", "M4A1-S | Decimator (Field-Tested)"].map((name, i) => ({
   id: `reward-${i}`, twitch_id: `550e8400-e29b-41d4-a716-44665544000${i}`, streamer_id: "123", twitch_title: ["Redline drop", "Cortex delivery", "AWP surprise", "Decimator reward"][i], twitch_description: "Redeem for a CS item. Enter your Steam trade URL.", reward_type: i === 2 ? "POOL" : i === 3 ? "FILTER" : "FIXED", pricing_mode: "MANUAL", manual_twitch_points: 25000 * (i + 1), market_item_name: name, is_paused: i === 1, pause_reason: i === 1 ? "NO_MONEY" : null, is_deleted: false, current_market_price: 2450, permissible_market_price_deviation: 10, twitch_price_markup_percentage: 15, global_cooldown_seconds: 60, max_redemptions_per_stream: 5, max_redemptions_per_user_per_stream: 1, market_autobuy: true, currency: "USD", is_public: true, created_at: now, updated_at: now, pool_items: [{ market_hash_name: name, weight: 1, permissible_market_price_deviation: 10, current_market_price: 2450 }], filter_config: { min_price: 10, max_price: 30 },
 }));
@@ -20,6 +20,7 @@ export async function mockApi(page: Page, options: { role?: string; tour?: boole
   const mutations: { path: string; body: unknown }[] = [];
   const role = options.role || "OWNER";
   let currentSettings = structuredClone(settings);
+  let currentViewerSettings = { viewer_id: "123", auto_buy_enabled: true, trade_link: null as string | null, updated_at: now };
   const rows = options.empty ? [] : structuredClone(redemptions);
   await page.addInitScript(({ role, tour }) => {
     localStorage.setItem("necko_lang", "en");
@@ -32,10 +33,12 @@ export async function mockApi(page: Page, options: { role?: string; tour?: boole
     const req = route.request(); const url = new URL(req.url()); const path = url.pathname;
     const send = (data: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(data) });
     if (options.fail && path.endsWith(options.fail)) return send({ error: { message: "Service unavailable" } }, 503);
+    if (path === "/api/v1/users/me/settings" && req.method() === "GET") return send(currentViewerSettings);
     if (path.endsWith("/users/me")) return options.guest ? send({}, 401) : send({ twitch_id: "123", login: "necko", avatar_url: null });
     if (path === "/api/v1/broadcasters") return send([{ ...channel, role }]);
     if (req.method() !== "GET") {
       mutations.push({ path, body: req.postDataJSON() });
+      if (path === "/api/v1/users/me/settings") { currentViewerSettings = { ...currentViewerSettings, ...req.postDataJSON() }; return send(currentViewerSettings); }
       if (path.endsWith("/settings")) { currentSettings = { ...currentSettings, ...req.postDataJSON() }; return send(currentSettings); }
       if (/\/(retry|refund|penalty)$/.test(path)) {
         const row = rows.find(r => path.includes(r.twitch_redemption_id));
@@ -47,6 +50,7 @@ export async function mockApi(page: Page, options: { role?: string; tour?: boole
     if (path.endsWith("/market/balance")) return send({ money: 284.75, money_settlement: 24.5, currency: "USD", updated_at: now });
     if (path.endsWith("/stats") && !path.includes("/chat/")) return send({ total_redemptions: 128, completed: 112, failed: 10, total_spent: 268540, total_points_earned: 3240000 });
     if (path.endsWith("/me/redemptions")) return send(rows.slice(0, 3).map(r => ({ ...r, ...channel, reward_title: "Redline drop" })));
+    if (path.endsWith("/inventory")) return send([]);
     if (path.endsWith("/redemptions")) {
       const filtered = rows.filter(r => (!url.searchParams.get("status") || r.status === url.searchParams.get("status")) && (!url.searchParams.get("user_id") || r.user_id === url.searchParams.get("user_id")) && (!url.searchParams.get("reward_id") || r.twitch_reward_id === url.searchParams.get("reward_id")));
       const offset = Number(url.searchParams.get("offset") || 0), limit = Number(url.searchParams.get("limit") || 25);

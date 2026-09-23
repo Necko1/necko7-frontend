@@ -21,6 +21,7 @@ const LogsPage = lazy(() => import("@/pages/LogsPage"));
 const PublicRewardsPage = lazy(() => import("@/pages/PublicRewardsPage"));
 const ChannelProfilePage = lazy(() => import("@/pages/ChannelProfilePage"));
 const GlobalProfilePage = lazy(() => import("@/pages/GlobalProfilePage"));
+const InventoryPage = lazy(() => import("@/pages/InventoryPage"));
 const ShortRewardRedirect = lazy(() => import("@/pages/ShortRewardRedirect"));
 
 const queryClient = new QueryClient({
@@ -75,6 +76,7 @@ export default function App() {
                 <Route path="/c/:identifier/rewards/:rewardId" element={<PublicRewardsPage />} />
                 <Route path="/c/:identifier/profile" element={<ChannelProfilePage />} />
                 <Route path="/me" element={<GlobalProfilePage />} />
+                <Route path="/inventory" element={<InventoryPage />} />
               </Route>
 
               {/* Catch-all */}

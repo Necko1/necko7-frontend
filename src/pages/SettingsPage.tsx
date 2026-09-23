@@ -99,8 +99,7 @@ function GeneralTab({ channelId }: { channelId: string }) {
   const [draft, setDraft] = useState<UpdateBroadcasterSettingsBody>({});
   const base: UpdateBroadcasterSettingsBody = settings ? {
     is_active: settings.is_active, base_price_multiplier: settings.base_price_multiplier,
-    update_prices_period: settings.update_prices_period, refund_on_buyer_fail: settings.refund_on_buyer_fail,
-    refund_if_no_money: settings.refund_if_no_money, pause_reward_if_no_money: settings.pause_reward_if_no_money,
+    update_prices_period: settings.update_prices_period, pause_reward_if_no_money: settings.pause_reward_if_no_money,
     market_chance_to_transfer: settings.market_chance_to_transfer, add_bot_badge: settings.add_bot_badge,
   } : {};
   const form = { ...base, ...draft };
@@ -223,24 +222,8 @@ function GeneralTab({ channelId }: { channelId: string }) {
         </div>
       </Section>
 
-      <Section title={t("settings.general.refunds")} description={t("settings.general.refundsDesc")}>
+      <Section title={t("settings.general.pauseIfNoMoney")} description={t("settings.general.pauseIfNoMoneyDesc")}>
         <div className="space-y-4">
-          <ToggleField
-            id="refund_on_buyer_fail"
-            label={t("settings.general.refundOnBuyerFail")}
-            description={t("settings.general.refundOnBuyerFailDesc")}
-            checked={form.refund_on_buyer_fail ?? true}
-            onChange={(v) => set("refund_on_buyer_fail", v)}
-          />
-          <Separator />
-          <ToggleField
-            id="refund_if_no_money"
-            label={t("settings.general.refundIfNoMoney")}
-            description={t("settings.general.refundIfNoMoneyDesc")}
-            checked={form.refund_if_no_money ?? false}
-            onChange={(v) => set("refund_if_no_money", v)}
-          />
-          <Separator />
           <ToggleField
             id="pause_reward_if_no_money"
             label={t("settings.general.pauseIfNoMoney")}

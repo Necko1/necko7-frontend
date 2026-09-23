@@ -66,8 +66,6 @@ export interface BroadcasterSettingsResponse {
   market_api_key_set: boolean;
   base_price_multiplier: number;
   update_prices_period: number;
-  refund_on_buyer_fail: boolean;
-  refund_if_no_money: boolean;
   pause_reward_if_no_money: boolean;
   market_chance_to_transfer: number;
   add_bot_badge: boolean;
@@ -80,8 +78,6 @@ export interface UpdateBroadcasterSettingsBody {
   market_api_key?: string | null;
   base_price_multiplier?: number | null;
   update_prices_period?: number | null;
-  refund_on_buyer_fail?: boolean | null;
-  refund_if_no_money?: boolean | null;
   pause_reward_if_no_money?: boolean | null;
   market_chance_to_transfer?: number | null;
   add_bot_badge?: boolean | null;
@@ -217,6 +213,7 @@ export interface RewardResponse {
   max_redemptions_per_stream: number;
   max_redemptions_per_user_per_stream: number;
   market_autobuy: boolean;
+  retry_on_buyer_failure: boolean;
   currency: string;
   // Chat activity requirements (v0.4.0)
   chat_min_messages?: number | null;
@@ -250,6 +247,7 @@ export interface CreateRewardBody {
   max_redemptions_per_stream: number;
   max_redemptions_per_user_per_stream: number;
   market_autobuy: boolean;
+  retry_on_buyer_failure?: boolean;
   is_paused: boolean;
   // Chat activity requirements (v0.4.0)
   chat_min_messages?: number | null;
@@ -282,6 +280,7 @@ export interface UpdateRewardBody {
   max_redemptions_per_stream?: number | null;
   max_redemptions_per_user_per_stream?: number | null;
   market_autobuy?: boolean | null;
+  retry_on_buyer_failure?: boolean | null;
   is_paused?: boolean | null;
   pause_reason?: PauseReason | null;
   // Chat activity requirements (v0.4.0)
@@ -689,6 +688,40 @@ export interface ViewerGlobalRedemption {
   fail_cause?: string | null;
   fail_description?: string | null;
   created_at: string;
+  updated_at: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  redemption_id: string;
+  viewer_id: string;
+  item_name: string;
+  fixed_price: number;
+  currency: string;
+  lifecycle_status: string;
+  fulfillment_mode: string;
+  buyer_retry_allowed: boolean;
+  market_order_id?: string | null;
+  market_custom_id?: string | null;
+  latest_attempt_custom_id?: string | null;
+  latest_attempt_max_price?: number | null;
+  latest_attempt_status?: string | null;
+  latest_attempt_outcome_kind?: string | null;
+  attempt_count: number;
+  created_at: string;
+  acquired_at?: string | null;
+  channel_id: string;
+  channel_login: string;
+  reward_title: string;
+  redemption_status: string;
+  fail_cause?: string | null;
+  fail_description?: string | null;
+}
+
+export interface ViewerSettings {
+  viewer_id: string;
+  auto_buy_enabled: boolean;
+  trade_link?: string | null;
   updated_at: string;
 }
 

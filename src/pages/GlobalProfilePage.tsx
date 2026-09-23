@@ -48,7 +48,7 @@ export default function GlobalProfilePage() {
           "Ваши сообщества и история наград. Баллы и доступность наград относятся к конкретному каналу.",
         )}
         actions={
-          <Link to="/channels">{c("Browse channels", "Открыть каналы")} →</Link>
+          <div className="flex gap-4"><Link to="/inventory">{c("Inventory", "Инвентарь")} →</Link><Link to="/channels">{c("Browse channels", "Открыть каналы")} →</Link></div>
         }
       />
       {!profile ? (

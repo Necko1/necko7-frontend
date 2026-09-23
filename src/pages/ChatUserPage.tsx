@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ViewerLimits } from "@/components/profiles/ViewerHistory";
 import RedemptionList from "@/components/redemptions/RedemptionList";
 import ChatHistory from "@/components/chat/ChatHistory";
+import InventoryList from "@/components/profiles/InventoryList";
 export default function ChatUserPage() {
   const c = useCopy();
   const { userId = "" } = useParams();
@@ -108,6 +109,7 @@ export default function ChatUserPage() {
       >
         {[
           ["redemptions", c("Purchases & cases", "Покупки и проверки")],
+          ["inventory", c("Inventory", "Инвентарь")],
           ["chat", c("Chat history", "История чата")],
           ["eligibility", c("Eligibility & limits", "Требования и лимиты")],
         ].map(([key, title]) => (
@@ -120,7 +122,9 @@ export default function ChatUserPage() {
           </button>
         ))}
       </nav>
-      {tab === "chat" ? (
+      {tab === "inventory" ? (
+        <InventoryList channelId={id} userId={userId} operator />
+      ) : tab === "chat" ? (
         <ChatHistory
           key={`${id}:${userId}`}
           channelId={id}

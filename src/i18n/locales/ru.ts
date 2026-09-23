@@ -50,6 +50,7 @@ export const ru = {
     leaderboard: "Таблица лидеров",
     chat: "Чат",
     profile: "Профиль",
+    inventory: "Инвентарь",
     switchChannel: "Сменить канал",
     selectChannel: "Выбрать канал",
     myProfile: "Мой профиль",

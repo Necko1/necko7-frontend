@@ -47,6 +47,8 @@ import type {
   ViewerChannelRedemption,
   ViewerGlobalProfileResponse,
   ViewerGlobalRedemption,
+  InventoryItem,
+  ViewerSettings,
 } from "@/types/api";
 import { config } from "@/config";
 
@@ -63,6 +65,9 @@ export const authApi = {
 
 export const usersApi = {
   me: () => api.get<UserResponse>("/api/v1/users/me"),
+  getSettings: () => api.get<ViewerSettings>("/api/v1/users/me/settings"),
+  updateSettings: (body: { auto_buy_enabled: boolean; trade_link: string | null }) =>
+    api.put<ViewerSettings>("/api/v1/users/me/settings", body),
 };
 
 // ===== Broadcasters =====
@@ -296,6 +301,18 @@ export const publicApi = {
 // ===== Viewer Profiles (v0.6.0) =====
 
 export const viewerApi = {
+  getInventory: (params?: { limit?: number; offset?: number; status?: string; search?: string; channel?: string }) =>
+    api.get<InventoryItem[]>("/api/v1/me/inventory", { params }),
+  getChannelInventory: (channelId: string, params?: { limit?: number; offset?: number; status?: string; search?: string }) =>
+    api.get<InventoryItem[]>(`/api/v1/broadcasters/${channelId}/me/inventory`, { params }),
+  getOperatorInventory: (channelId: string, userId: string, params?: { limit?: number; offset?: number; status?: string; search?: string }) =>
+    api.get<InventoryItem[]>(`/api/v1/broadcasters/${channelId}/chat/users/${userId}/inventory`, { params }),
+  requestAttempt: (inventoryId: string, useSavedLink = false) => api.post(`/api/v1/me/inventory/${inventoryId}/attempt`, null, { params: { use_saved_link: useSavedLink } }),
+  requestRefund: (inventoryId: string) => api.post(`/api/v1/me/inventory/${inventoryId}/refund`),
+  operatorAttempt: (channelId: string, userId: string, inventoryId: string, useSavedLink = false) =>
+    api.post(`/api/v1/broadcasters/${channelId}/chat/users/${userId}/inventory/${inventoryId}/attempt`, null, { params: { use_saved_link: useSavedLink } }),
+  operatorRefund: (channelId: string, userId: string, inventoryId: string) =>
+    api.post(`/api/v1/broadcasters/${channelId}/chat/users/${userId}/inventory/${inventoryId}/refund`),
   getChannelProfile: (channelId: string) =>
     api.get<ViewerChannelProfileResponse>(
       `/api/v1/broadcasters/${channelId}/me/profile`

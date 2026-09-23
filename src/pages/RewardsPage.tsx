@@ -1691,6 +1691,7 @@ function RewardWizard({
     max_redemptions_per_stream: 0,
     max_redemptions_per_user_per_stream: 0,
     market_autobuy: true,
+    retry_on_buyer_failure: false,
     is_paused: false,
     min_market_price: null,
     max_market_price: null,
@@ -1813,6 +1814,7 @@ function RewardWizard({
       max_redemptions_per_user_per_stream:
         form.max_redemptions_per_user_per_stream ?? 0,
       market_autobuy: form.market_autobuy ?? true,
+      retry_on_buyer_failure: form.retry_on_buyer_failure ?? false,
       is_paused: form.is_paused ?? false,
       chat_min_messages:
         form.chat_min_messages != null && form.chat_min_messages > 0
@@ -2384,6 +2386,7 @@ function RewardEditDialog({
                   max_redemptions_per_user_per_stream:
                     reward.max_redemptions_per_user_per_stream,
                   market_autobuy: reward.market_autobuy,
+                  retry_on_buyer_failure: reward.retry_on_buyer_failure,
                   is_paused: reward.is_paused,
                   chat_min_messages:
                     reward.chat_min_messages && reward.chat_min_messages > 0
