@@ -18,12 +18,23 @@ const labels: Record<string, [string, string]> = {
   TRADE_LINK_REQUIRED: ["Trade link required", "Нужна ссылка обмена"],
   ORDER_PENDING: ["Market order in progress", "Заказ на маркете"],
   TRADE_WAITING: ["Steam trade waiting", "Ожидается обмен Steam"],
+  TRADE_ACCEPTED: ["Accepted, awaiting final Market confirmation", "Принят, ожидает итогового подтверждения маркета"],
   RETRY_AVAILABLE: ["Delivery attempt ended", "Попытка доставки завершилась"],
   INSUFFICIENT_FUNDS: ["Market balance insufficient", "Недостаточно средств на маркете"],
   RECONCILIATION_REQUIRED: ["Checking Market state", "Проверка состояния маркета"],
+  OPERATOR_REVIEW: ["Trade outcome needs review", "Итог обмена требует проверки"],
   DELIVERED: ["Delivered", "Доставлено"],
   REFUNDING: ["Returning Channel Points", "Возврат баллов"],
   REFUNDED: ["Channel Points returned", "Баллы возвращены"],
+};
+
+const attemptLabels: Record<string, [string, string]> = {
+  seller_not_sent: ["Seller did not send the trade", "Продавец не отправил обмен"],
+  buyer_not_accepted: ["Trade was not accepted", "Обмен не был принят"],
+  seller_cancelled: ["Seller cancelled the trade", "Продавец отменил обмен"],
+  buyer_reverted: ["You reverted the accepted trade", "Вы отменили принятый обмен"],
+  seller_reverted: ["Seller reverted the accepted trade", "Продавец отменил принятый обмен"],
+  terminal_unclassified: ["Trade ended; operator review needed", "Обмен завершён; требуется проверка оператора"],
 };
 
 export default function InventoryList({ channelId, userId, operator = false }: { channelId?: string; userId?: string; operator?: boolean }) {
@@ -72,12 +83,14 @@ export default function InventoryList({ channelId, userId, operator = false }: {
   if (query.isError) return <section className="space-y-4">{filters}<QueryError onRetry={() => query.refetch()} /></section>;
   if (!query.data) return <section className="space-y-4">{filters}<p role="status" className="text-muted-foreground">{c("Loading inventory…", "Загрузка инвентаря…")}</p></section>;
   const canAttempt = (item: InventoryItem) => {
+    if (item.redemption_status !== "PENDING") return false;
+    if (!operator && item.has_buyer_revert) return false;
     if (item.fulfillment_mode === "LEGACY_REVIEW" || (!operator && item.fulfillment_mode === "OPERATOR")) return false;
     if (!operator && item.lifecycle_status === "TRADE_LINK_REQUIRED" && !viewerSettings.data?.trade_link) return false;
     if (item.latest_attempt_status === "BUYER_FAILED" && !operator && !item.buyer_retry_allowed) return false;
     return ["WAITING_VIEWER", "WAITING_OPERATOR", "TRADE_LINK_REQUIRED", "RETRY_AVAILABLE", "INSUFFICIENT_FUNDS"].includes(item.lifecycle_status);
   };
-  const canRefund = (item: InventoryItem) => ["WAITING_VIEWER", "WAITING_OPERATOR", "TRADE_LINK_REQUIRED", "RETRY_AVAILABLE", "INSUFFICIENT_FUNDS"].includes(item.lifecycle_status) && item.fulfillment_mode !== "LEGACY_REVIEW";
+  const canRefund = (item: InventoryItem) => item.redemption_status === "PENDING" && (operator || !item.has_buyer_revert) && ["WAITING_VIEWER", "WAITING_OPERATOR", "TRADE_LINK_REQUIRED", "RETRY_AVAILABLE", "INSUFFICIENT_FUNDS", "OPERATOR_REVIEW"].includes(item.lifecycle_status) && item.fulfillment_mode !== "LEGACY_REVIEW";
   return <section aria-label={c("Inventory items", "Предметы инвентаря")} className="space-y-4">
     {filters}
     {!query.data.length && offset === 0 ? <EmptyState title={c("No matching inventory items", "Подходящих предметов нет")} description={c("Items appear here when a reward resolves a concrete skin.", "Предмет появится здесь после выбора конкретного скина для награды.")} /> : <ul className="inventory-grid">{query.data.map(item => <li key={item.id} className="inventory-item">
@@ -87,12 +100,14 @@ export default function InventoryList({ channelId, userId, operator = false }: {
         <h3>{item.item_name}</h3>
         <p className="text-xs text-muted-foreground">{item.reward_title} · <Link to={`/c/${item.channel_login}/profile`}>{item.channel_login}</Link></p>
         <div className="inventory-facts"><span>{formatMinorCurrency(item.fixed_price, item.currency)} <small>{item.fulfillment_mode === "LEGACY_REVIEW" ? c("historical recorded value", "историческая запись стоимости") : c("fixed value", "зафиксированная стоимость")}</small></span><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString()}</time></div>
+        {item.latest_attempt_outcome_kind && attemptLabels[item.latest_attempt_outcome_kind] && <p className="text-xs text-muted-foreground">{c(...attemptLabels[item.latest_attempt_outcome_kind])}</p>}
         {item.fulfillment_mode === "LEGACY_REVIEW" && <p className="text-xs text-amber-300">{c("This older item needs operator review before its original value can be trusted for a new action.", "Для этого старого предмета требуется проверка оператора, прежде чем использовать его стоимость для нового действия.")}</p>}
         {item.lifecycle_status === "TRADE_LINK_REQUIRED" && !operator && <Link className="text-sm text-lime-300" to="/inventory">{c("Add a Steam trade link in settings", "Добавьте ссылку обмена в настройках")}</Link>}
-        {item.latest_attempt_status === "BUYER_FAILED" && !item.buyer_retry_allowed && !operator && <p className="text-xs text-muted-foreground">{c("Viewer retry is disabled for this reward.", "Повторная попытка зрителем отключена для этой награды.")}</p>}
+        {item.has_buyer_revert && !operator && item.redemption_status === "PENDING" && <p className="text-xs text-muted-foreground">{c("You cannot retry delivery or return Channel Points after reverting an accepted trade. Contact the channel operator for help.", "После отмены принятого обмена нельзя повторить доставку или самостоятельно вернуть баллы. Обратитесь к оператору канала.")}</p>}
+        {item.latest_attempt_status === "BUYER_FAILED" && !item.has_buyer_revert && !item.buyer_retry_allowed && !operator && <p className="text-xs text-muted-foreground">{c("Viewer retry is disabled for this reward.", "Повторная попытка зрителем отключена для этой награды.")}</p>}
         {item.fail_cause && <p className="text-xs text-amber-300 break-words">{item.fail_description || item.fail_cause}</p>}
         {(canAttempt(item) || canRefund(item)) && <div className="flex flex-wrap gap-2 pt-1">{canAttempt(item) && <Button size="sm" onClick={() => setAction({ item, kind: "attempt", useSavedLink: item.latest_attempt_outcome_kind === "trade_link" && (operator || !!viewerSettings.data?.trade_link) })}>{item.latest_attempt_outcome_kind === "trade_link" && (operator || viewerSettings.data?.trade_link) ? c("Try saved trade link", "Использовать сохранённую ссылку") : c(item.attempt_count ? "Try delivery again" : "Start delivery", item.attempt_count ? "Повторить доставку" : "Начать доставку")}</Button>}{canRefund(item) && <Button size="sm" variant="outline" onClick={() => setAction({ item, kind: "refund" })}>{c("Return Channel Points", "Вернуть баллы")}</Button>}</div>}
-        {operator && <details className="builder-advanced"><summary>{c("Market references", "Данные Маркета")}</summary><dl className="preview-facts"><div><dt>Inventory ID</dt><dd className="break-all">{item.id}</dd></div><div><dt>Redemption ID</dt><dd className="break-all">{item.redemption_id}</dd></div><div><dt>{c("Attempts", "Попытки")}</dt><dd>{item.attempt_count}</dd></div><div><dt>{c("Latest attempt", "Последняя попытка")}</dt><dd className="break-all">{item.latest_attempt_custom_id || "—"}</dd></div><div><dt>{c("Attempt state", "Состояние попытки")}</dt><dd>{item.latest_attempt_status || "—"}</dd></div><div><dt>{c("Latest ceiling", "Последний лимит")}</dt><dd>{item.latest_attempt_max_price == null ? "—" : formatMinorCurrency(item.latest_attempt_max_price, item.currency)}</dd></div><div><dt>Market custom ID</dt><dd className="break-all">{item.market_custom_id || "—"}</dd></div><div><dt>Market order ID</dt><dd className="break-all">{item.market_order_id || "—"}</dd></div></dl></details>}
+        {operator && <details className="builder-advanced"><summary>{c("Market references", "Данные Маркета")}</summary><dl className="preview-facts"><div><dt>Inventory ID</dt><dd className="break-all">{item.id}</dd></div><div><dt>Redemption ID</dt><dd className="break-all">{item.redemption_id}</dd></div><div><dt>{c("Attempts", "Попытки")}</dt><dd>{item.attempt_count}</dd></div><div><dt>{c("Latest attempt", "Последняя попытка")}</dt><dd className="break-all">{item.latest_attempt_custom_id || "—"}</dd></div><div><dt>{c("Attempt state", "Состояние попытки")}</dt><dd>{item.latest_attempt_status || "—"}</dd></div><div><dt>{c("Latest ceiling", "Последний лимит")}</dt><dd>{item.latest_attempt_max_price == null ? "—" : formatMinorCurrency(item.latest_attempt_max_price, item.currency)}</dd></div><div><dt>Market custom ID</dt><dd className="break-all">{item.market_custom_id || "—"}</dd></div><div><dt>Market order ID</dt><dd className="break-all">{item.market_order_id || "—"}</dd></div><div><dt>Market stage</dt><dd>{item.latest_market_stage || "—"}</dd></div><div><dt>Trade ID</dt><dd className="break-all">{item.latest_trade_id || "—"}</dd></div><div><dt>Send until</dt><dd>{item.latest_send_until ? new Date(item.latest_send_until).toLocaleString() : "—"}</dd></div><div><dt>Receive until</dt><dd>{item.latest_receive_until ? new Date(item.latest_receive_until).toLocaleString() : "—"}</dd></div><div><dt>Settlement</dt><dd>{item.latest_settlement ? new Date(item.latest_settlement).toLocaleString() : "—"}</dd></div><div><dt>Causer</dt><dd>{item.latest_causer || "—"}</dd></div><div><dt>Cancellation reason</dt><dd className="break-words">{item.latest_cancellation_reason || "—"}</dd></div><div><dt>Market refund / penalty</dt><dd className="break-all">{item.latest_market_refund ? JSON.stringify(item.latest_market_refund) : "—"}</dd></div></dl></details>}
       </div>
     </li>)}</ul>}
     {!!query.data.length && <div className="flex items-center gap-4"><Button variant="outline" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))}>{c("Previous", "Назад")}</Button><span className="text-xs text-muted-foreground">{c("Page", "Страница")} {Math.floor(offset / limit) + 1}</span><Button variant="outline" disabled={query.data.length < limit} onClick={() => setOffset(offset + limit)}>{c("Next", "Далее")}</Button></div>}

@@ -379,6 +379,8 @@ export const en = {
         refunded: "Channel points refunded",
         failed_buyer: "Buyer-side trade failure",
         failed_seller: "Trade ended without delivery",
+        reverted_buyer: "Buyer reverted accepted trade",
+        reverted_seller: "Seller reverted accepted trade",
         unknown: "Unknown Market response",
         trade_link_check_failed: "Trade link verification failed",
         inventory_hidden: "Steam inventory is private",

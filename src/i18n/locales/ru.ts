@@ -381,6 +381,8 @@ export const ru = {
         refunded: "Возврат баллов канала",
         failed_buyer: "Ошибка обмена на стороне покупателя",
         failed_seller: "Обмен завершился без доставки",
+        reverted_buyer: "Покупатель отменил принятый обмен",
+        reverted_seller: "Продавец отменил принятый обмен",
         unknown: "Неопределённый ответ маркета",
         trade_link_check_failed: "Не удалось проверить ссылку обмена",
         inventory_hidden: "Инвентарь Steam скрыт",

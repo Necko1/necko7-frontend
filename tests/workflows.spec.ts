@@ -50,15 +50,18 @@ test("Market errors keep their specific editable chat templates", async ({ page 
       channel_id: "123",
       messages: {
         orders: { unavailable: "@{buyer} {item} is unavailable at {price}." },
+        trades: { reverted_buyer: "@{buyer} Contact the channel operator about {item}.", reverted_seller: "@{buyer} Try delivery of {item} again." },
         market_errors: { inventory_hidden: "@{buyer} Open your Steam inventory for {item}. Your points remain pending." },
       },
       custom_messages: {},
       default_messages: {
         orders: { unavailable: "@{buyer} {item} is unavailable at {price}." },
+        trades: { reverted_buyer: "@{buyer} Contact the channel operator about {item}.", reverted_seller: "@{buyer} Try delivery of {item} again." },
         market_errors: { inventory_hidden: "@{buyer} Open your Steam inventory for {item}. Your points remain pending." },
       },
       placeholders: {
         orders: { unavailable: ["buyer", "item", "price"] },
+        trades: { reverted_buyer: ["buyer", "item"], reverted_seller: ["buyer", "item"] },
         market_errors: { inventory_hidden: ["buyer", "item"] },
       },
     },
@@ -71,6 +74,10 @@ test("Market errors keep their specific editable chat templates", async ({ page 
   await page.getByRole("button", { name: "Orders" }).click();
   await expect(page.locator("#msg-input-orders-unavailable")).toHaveValue(/\{price\}/);
   await expect(page.getByTitle("Click to insert {price} at cursor")).toBeVisible();
+  await page.getByRole("button", { name: "Trades" }).click();
+  await expect(page.getByText("Buyer reverted accepted trade")).toBeVisible();
+  await expect(page.getByText("Seller reverted accepted trade")).toBeVisible();
+  await expect(page.locator("#msg-input-trades-reverted_buyer")).toHaveValue(/Contact the channel operator/);
 });
 
 test("editors can configure the bot but cannot manage access", async ({ page }) => {
