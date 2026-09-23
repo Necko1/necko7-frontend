@@ -48,10 +48,19 @@ test("Market errors keep their specific editable chat templates", async ({ page 
   await page.route("**/api/v1/broadcasters/*/messages", route => route.fulfill({
     json: {
       channel_id: "123",
-      messages: { market_errors: { inventory_hidden: "@{buyer} Open your Steam inventory for {item}. Your points remain pending." } },
+      messages: {
+        orders: { unavailable: "@{buyer} {item} is unavailable at {price}." },
+        market_errors: { inventory_hidden: "@{buyer} Open your Steam inventory for {item}. Your points remain pending." },
+      },
       custom_messages: {},
-      default_messages: { market_errors: { inventory_hidden: "@{buyer} Open your Steam inventory for {item}. Your points remain pending." } },
-      placeholders: { market_errors: { inventory_hidden: ["buyer", "item"] } },
+      default_messages: {
+        orders: { unavailable: "@{buyer} {item} is unavailable at {price}." },
+        market_errors: { inventory_hidden: "@{buyer} Open your Steam inventory for {item}. Your points remain pending." },
+      },
+      placeholders: {
+        orders: { unavailable: ["buyer", "item", "price"] },
+        market_errors: { inventory_hidden: ["buyer", "item"] },
+      },
     },
   }));
   await page.goto("/broadcasters/123/settings");
@@ -59,6 +68,9 @@ test("Market errors keep their specific editable chat templates", async ({ page 
   await page.getByRole("button", { name: "Market Errors" }).click();
   await expect(page.getByText("Steam inventory is private")).toBeVisible();
   await expect(page.locator("#msg-input-market_errors-inventory_hidden")).toHaveValue(/points remain pending/);
+  await page.getByRole("button", { name: "Orders" }).click();
+  await expect(page.locator("#msg-input-orders-unavailable")).toHaveValue(/\{price\}/);
+  await expect(page.getByTitle("Click to insert {price} at cursor")).toBeVisible();
 });
 
 test("editors can configure the bot but cannot manage access", async ({ page }) => {
