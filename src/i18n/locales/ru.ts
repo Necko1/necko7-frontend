@@ -364,6 +364,8 @@ export const ru = {
         ordersDesc: "Создание заказов на маркете, фильтрация цен и результаты покупок.",
         trades: "Обмены Steam",
         tradesDesc: "Отправка trade offer, принятие, отклонение и таймауты.",
+        market_errors: "Ошибки маркета",
+        market_errorsDesc: "Ошибки API CS2 Market и проверки инвентаря Steam.",
         chat_requirements: "Требования чата",
         chat_requirementsDesc: "Требования к активности зрителя в чате (сообщения и символы).",
         limits: "Лимиты",
@@ -381,6 +383,9 @@ export const ru = {
         refunded: "Возврат баллов канала",
         failed_buyer: "Ошибка обмена на стороне покупателя",
         failed_seller: "Обмен завершился без доставки",
+        pool_created: "Дроп из пула наград",
+        manual_hold: "Ручное удержание выкупа",
+        retrying: "Повтор заказа на маркете",
       },
     },
     permissionsTab: {

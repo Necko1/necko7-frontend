@@ -264,6 +264,11 @@ const CATEGORY_META: Record<string, CategoryMeta> = {
     label: "Trades",
     description: "Steam trade offer delivery, acceptance, declines, and timeouts.",
   },
+  market_errors: {
+    id: "market_errors",
+    label: "Market Errors",
+    description: "CS2 Market API and Steam inventory verification error messages.",
+  },
   chat_requirements: {
     id: "chat_requirements",
     label: "Chat Requirements",
@@ -333,7 +338,7 @@ function ChatMessagesTab({ channelId }: { channelId: string }) {
 
   const categories = useMemo(() => {
     if (!data?.default_messages) return [];
-    const desiredOrder = ["orders", "trades", "chat_requirements", "limits"];
+    const desiredOrder = ["orders", "trades", "market_errors", "chat_requirements", "limits"];
     const serverCategories = Object.keys(data.default_messages);
     return [
       ...desiredOrder.filter((k) => serverCategories.includes(k)),

@@ -362,6 +362,8 @@ export const en = {
         ordersDesc: "Market order creation, price filtering, and purchase outcomes.",
         trades: "Trades",
         tradesDesc: "Steam trade offer delivery, acceptance, declines, and timeouts.",
+        market_errors: "Market Errors",
+        market_errorsDesc: "CS2 Market API and Steam inventory verification error messages.",
         chat_requirements: "Chat Requirements",
         chat_requirementsDesc: "Viewer chat activity requirements (messages and character count).",
         limits: "Limits",
@@ -379,6 +381,9 @@ export const en = {
         refunded: "Channel points refunded",
         failed_buyer: "Buyer-side trade failure",
         failed_seller: "Trade ended without delivery",
+        pool_created: "Pool Reward Drop Announcement",
+        manual_hold: "Redemption Manual Hold Notice",
+        retrying: "Retrying Market Order",
       },
     },
     permissionsTab: {
