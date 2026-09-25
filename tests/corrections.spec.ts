@@ -80,7 +80,7 @@ for (const width of [1440, 390])
     await page.goto("/redemptions?status=MANUAL_HOLD");
     await page.locator(".ledger-summary").first().click();
     await expect(page.locator(".case-timeline")).toContainText(
-      "Purchase retry requested",
+      "Operator requested delivery",
     );
     await page
       .locator(".redemption-case")
@@ -254,7 +254,7 @@ test("large pool discovery preserves probabilities and retained case details sta
     "REDEMPTION_STATUS_CHANGED",
   );
   await expect(page.locator(".redemption-case")).toContainText(
-    "not a complete audit trail",
+    "Earlier events are not reconstructed",
   );
 });
 

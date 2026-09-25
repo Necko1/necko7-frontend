@@ -18,6 +18,7 @@ import type {
   PreviewFilterBody,
   PreviewFilterResponse,
   RedemptionResponse,
+  FulfillmentAuditEvent,
   PaginatedRedemptionsResponse,
   ListRedemptionsQuery,
   StatsResponse,
@@ -178,6 +179,8 @@ export const proxyApi = {
 // ===== Redemptions =====
 
 export const redemptionsApi = {
+  audit: (channelId: string, redemptionId: string) =>
+    api.get<FulfillmentAuditEvent[]>(`/api/v1/broadcasters/${channelId}/redemptions/${redemptionId}/audit`),
   list: (channelId: string, query: ListRedemptionsQuery = {}) =>
     api.get<PaginatedRedemptionsResponse>(
       `/api/v1/broadcasters/${channelId}/redemptions`,

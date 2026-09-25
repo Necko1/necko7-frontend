@@ -372,6 +372,7 @@ export const ru = {
         limitsDesc: "Оповещения об общих и персональных лимитах активаций.",
       },
       templates: {
+        redeemed: "Награда активирована",
         waiting_viewer: "Автопокупка выключена у зрителя",
         waiting_operator: "Автопокупка выключена у награды",
         trade_link_required: "Нужна ссылка обмена Steam",

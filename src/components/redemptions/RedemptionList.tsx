@@ -1,5 +1,6 @@
 import ItemArtwork from "@/components/common/SkinImage";
 import RedemptionCase from "./RedemptionCase";
+import { inventoryLabels, attemptLabels } from "@/lib/inventoryLabels";
 import ConfirmAction from "@/components/common/ConfirmAction";
 import { EmptyState, QueryError } from "@/components/common/Page";
 import { useAppStore } from "@/store/useAppStore";
@@ -211,8 +212,17 @@ function RedemptionRow({
   const isManualHold =
     redemption.status === "MANUAL_HOLD" ||
     redemption.status === "ManualHold";
+  const lifecycle = redemption.inventory_lifecycle_status;
+  const outcome = redemption.latest_attempt_outcome_kind;
+  const languageIndex = i18n.language.startsWith("ru") ? 1 : 0;
 
   const getStatusLabel = (status: RedemptionStatus) => {
+    if (lifecycle) {
+      if ((lifecycle === "RETRY_AVAILABLE" || lifecycle === "OPERATOR_REVIEW") && outcome && attemptLabels[outcome]) {
+        return attemptLabels[outcome][languageIndex];
+      }
+      if (inventoryLabels[lifecycle]) return inventoryLabels[lifecycle][languageIndex];
+    }
     switch (status) {
       case "PENDING":
       case "Pending":
@@ -236,11 +246,16 @@ function RedemptionRow({
         return status;
     }
   };
+  const statusClass = lifecycle === "DELIVERED" ? "status-completed"
+    : lifecycle === "REFUNDED" ? "status-failed-refund"
+    : lifecycle && ["RETRY_AVAILABLE", "INSUFFICIENT_FUNDS", "OPERATOR_REVIEW", "RECONCILIATION_REQUIRED"].includes(lifecycle) ? "status-manual-hold"
+    : lifecycle && ["ORDER_PENDING", "TRADE_WAITING", "TRADE_ACCEPTED"].includes(lifecycle) ? "status-order-created"
+    : STATUS_CLASSES[redemption.status] || "status-pending";
 
   return (
     <div className="ledger-row">
       <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={`detail-${redemption.twitch_redemption_id}`} className="ledger-summary">
-        <span className="ledger-status"><Badge className={cn("text-xs rounded px-2 py-1 font-medium", STATUS_CLASSES[redemption.status] || "status-pending")}>{getStatusLabel(redemption.status)}</Badge></span>
+        <span className="ledger-status"><Badge className={cn("text-xs rounded px-2 py-1 font-medium", statusClass)}>{getStatusLabel(redemption.status)}</Badge></span>
         <span className="ledger-person min-w-0"><span className="ledger-art"><ItemArtwork key={redemption.market_item_name} marketItemName={redemption.market_item_name}/></span><span className="block text-sm font-semibold truncate">{redemption.market_item_name || t("ops.unknownItem")}</span><span className="mt-1 block text-xs text-muted-foreground truncate">@{redemption.user_login}{redemption.retry_count > 0 && ` · ${redemption.retry_count} ${t("redemptions.retriesMany")}`}</span>{isManualHold && redemption.fail_cause && <span className="mt-1 block text-xs text-amber-300 truncate">{FAIL_CAUSE_I18N_KEYS[redemption.fail_cause] ? t(FAIL_CAUSE_I18N_KEYS[redemption.fail_cause]) : formatFailCause(redemption.fail_cause)}</span>}</span>
         <span className="ledger-date text-xs text-muted-foreground">{format(new Date(redemption.created_at), "dd MMM HH:mm")}</span>
         <span className="ledger-points text-xs tabular-nums text-right">{redemption.twitch_points_cost.toLocaleString()} <span className="text-muted-foreground">{t("common.pts")}</span></span>

@@ -370,6 +370,7 @@ export const en = {
         limitsDesc: "Global and per-user reward redemption rate limit alerts.",
       },
       templates: {
+        redeemed: "Reward redeemed",
         waiting_viewer: "Viewer auto-buy disabled",
         waiting_operator: "Reward auto-buy disabled",
         trade_link_required: "Steam trade link required",

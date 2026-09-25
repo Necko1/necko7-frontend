@@ -51,6 +51,15 @@ export async function mockApi(page: Page, options: { role?: string; tour?: boole
     if (path.endsWith("/stats") && !path.includes("/chat/")) return send({ total_redemptions: 128, completed: 112, failed: 10, total_spent: 268540, total_points_earned: 3240000 });
     if (path.endsWith("/me/redemptions")) return send(rows.slice(0, 3).map(r => ({ ...r, ...channel, reward_title: "Redline drop" })));
     if (path.endsWith("/inventory")) return send([]);
+    if (/\/redemptions\/[^/]+\/audit$/.test(path)) {
+      const redemptionId = path.split("/").at(-2)!;
+      return send([
+        { id: 1, event_key: `redemption:${redemptionId}:redeemed`, redemption_id: redemptionId, inventory_id: null, attempt_custom_id: null, event_type: "reward_redeemed", actor_kind: "viewer", actor_user_id: "900", created_at: now },
+        { id: 2, event_key: `inventory:${redemptionId}:created`, redemption_id: redemptionId, inventory_id: redemptionId, attempt_custom_id: null, event_type: "inventory_created", actor_kind: "system", actor_user_id: null, created_at: now },
+        { id: 3, event_key: `attempt:${redemptionId}:requested`, redemption_id: redemptionId, inventory_id: redemptionId, attempt_custom_id: redemptionId, event_type: "operator_order_requested", actor_kind: "operator", actor_user_id: "123", created_at: now },
+        { id: 4, event_key: `attempt:${redemptionId}:retry`, redemption_id: redemptionId, inventory_id: redemptionId, attempt_custom_id: redemptionId, event_type: "retry_attempt_created", actor_kind: "operator", actor_user_id: "123", created_at: now },
+      ]);
+    }
     if (path.endsWith("/redemptions")) {
       const filtered = rows.filter(r => (!url.searchParams.get("status") || r.status === url.searchParams.get("status")) && (!url.searchParams.get("user_id") || r.user_id === url.searchParams.get("user_id")) && (!url.searchParams.get("reward_id") || r.twitch_reward_id === url.searchParams.get("reward_id")));
       const offset = Number(url.searchParams.get("offset") || 0), limit = Number(url.searchParams.get("limit") || 25);

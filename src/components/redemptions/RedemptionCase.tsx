@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { logsApi, rewardsApi } from "@/lib/apiClient";
+import { logsApi, rewardsApi, redemptionsApi } from "@/lib/apiClient";
 import { useCopy } from "@/lib/useCopy";
 import { formatMinorCurrency } from "@/lib/currency";
 import type { RedemptionResponse } from "@/types/api";
@@ -38,6 +38,11 @@ export default function RedemptionCase({
         .then((res) => res.data),
     refetchInterval: 15_000,
   });
+  const audit = useQuery({
+    queryKey: ["fulfillment-audit", channelId, r.twitch_redemption_id],
+    queryFn: () => redemptionsApi.audit(channelId, r.twitch_redemption_id).then(res => res.data),
+    refetchInterval: 15_000,
+  });
   const rewards = useQuery({
     queryKey: ["rewards", channelId],
     queryFn: () => rewardsApi.list(channelId).then((res) => res.data),
@@ -49,47 +54,32 @@ export default function RedemptionCase({
   const events = [...(logs.data?.items || [])]
     .filter((event) => event.details?.redemption_id === r.twitch_redemption_id)
     .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id);
-  const eventTitles: Record<string, string> = {
-    STEAM_TRADE_OFFER_SENT: c(
-      "Steam trade offer sent",
-      "Предложение обмена Steam отправлено",
-    ),
-    REDEMPTION_ORDER_CREATED: c(
-      "Market order created",
-      "Заказ на маркете создан",
-    ),
-    REDEMPTION_COMPLETED: c("Delivery completed", "Доставка завершена"),
-    REDEMPTION_MANUAL_HOLD: c(
-      "Processing placed on hold",
-      "Обработка приостановлена",
-    ),
-    REDEMPTION_RETRY_REQUESTED: c(
-      "Purchase retry requested",
-      "Запрошена повторная покупка",
-    ),
-    REDEMPTION_MANUALLY_RETRIED: c(
-      "Manual retry recorded",
-      "Записана повторная попытка",
-    ),
-    REDEMPTION_MANUALLY_REFUNDED: c(
-      "Manual refund recorded",
-      "Записан ручной возврат",
-    ),
-    REDEMPTION_MANUALLY_PENALIZED: c(
-      "Closed without refund",
-      "Закрыто без возврата",
-    ),
+  const auditTitles: Record<string, string> = {
+    reward_redeemed: c("Viewer redeemed the reward", "Зритель активировал награду"),
+    inventory_created: c("Inventory item created", "Предмет добавлен в инвентарь"),
+    automatic_order_initiated: c("Automatic delivery started", "Автоматическая доставка начата"),
+    viewer_order_requested: c("Viewer requested delivery", "Зритель запросил доставку"),
+    operator_order_requested: c("Operator requested delivery", "Оператор запросил доставку"),
+    retry_attempt_created: c("New attempt created for the same item", "Создана новая попытка для того же предмета"),
+    market_order_created: c("Market order created", "Заказ на маркете создан"),
+    steam_trade_created: c("Steam trade sent", "Обмен Steam отправлен"),
+    buyer_accepted_trade: c("Buyer accepted; awaiting final Market confirmation", "Покупатель принял обмен; ожидается итог маркета"),
+    market_stage_2_delivered: c("Market confirmed delivery", "Маркет подтвердил доставку"),
+    seller_not_sent: c("Seller did not send the trade", "Продавец не отправил обмен"),
+    buyer_not_accepted: c("Buyer did not accept the trade", "Покупатель не принял обмен"),
+    seller_cancelled: c("Seller cancelled the trade", "Продавец отменил обмен"),
+    buyer_reverted: c("Buyer reverted the accepted trade", "Покупатель отменил принятый обмен"),
+    seller_reverted: c("Seller reverted the accepted trade", "Продавец отменил принятый обмен"),
+    terminal_unclassified: c("Trade ended; operator review needed", "Обмен завершён; нужна проверка оператора"),
+    market_order_rejected: c("Market rejected the order", "Маркет отклонил заказ"),
+    market_reconciliation_required: c("Checking an uncertain Market result", "Проверяется неопределённый итог маркета"),
+    viewer_refund_requested: c("Viewer requested Channel Points refund", "Зритель запросил возврат баллов"),
+    operator_refund_requested: c("Operator requested Channel Points refund", "Оператор запросил возврат баллов"),
+    twitch_refund_succeeded: c("Channel Points returned", "Баллы канала возвращены"),
+    twitch_refund_uncertain: c("Twitch refund result needs verification", "Результат возврата Twitch требует проверки"),
+    twitch_fulfillment_pending: c("Twitch completion pending recovery", "Завершение в Twitch ожидает повтора"),
+    twitch_fulfillment_succeeded: c("Twitch reward fulfilled", "Награда Twitch завершена"),
   };
-  const milestones: { title: string; at: string; count: number }[] = [];
-  for (const event of events) {
-    const title = eventTitles[event.event_type];
-    if (!title) continue;
-    const previous = milestones[milestones.length - 1];
-    if (previous?.title === title) {
-      previous.count++;
-      previous.at = event.created_at;
-    } else milestones.push({ title, at: event.created_at, count: 1 });
-  }
   const stateCopy: Record<string, string> = {
     PENDING: c(
       "The redemption is waiting for processing. No completed purchase is recorded.",
@@ -99,6 +89,19 @@ export default function RedemptionCase({
       "A market order was created. Delivery is still being monitored.",
       "Заказ на маркете создан. Бот отслеживает доставку.",
     ),
+    ORDER_PENDING: c("The Market order is being created or processed.", "Заказ на маркете создаётся или обрабатывается."),
+    WAITING_VIEWER: c("The item is in inventory and awaits the viewer's delivery request.", "Предмет в инвентаре и ожидает запроса зрителя на доставку."),
+    WAITING_OPERATOR: c("The item is in inventory and awaits operator review.", "Предмет в инвентаре и ожидает проверки оператора."),
+    TRADE_LINK_REQUIRED: c("A valid Steam trade link is needed before delivery can begin.", "Для начала доставки нужна действительная ссылка обмена Steam."),
+    TRADE_WAITING: c("The Steam trade was sent and is awaiting acceptance.", "Обмен Steam отправлен и ожидает принятия."),
+    TRADE_ACCEPTED: c("The trade was accepted. Market has not confirmed the final result yet.", "Обмен принят. Маркет ещё не подтвердил итог."),
+    RETRY_AVAILABLE: c("The last delivery attempt ended. Check the inventory action policy before retrying.", "Последняя попытка доставки завершилась. Проверьте доступные действия в инвентаре."),
+    OPERATOR_REVIEW: c("The trade ended, but its cause needs operator review.", "Обмен завершился, но его причину должен проверить оператор."),
+    INSUFFICIENT_FUNDS: c("Market rejected the attempt because the channel account lacks balance. The item remains in inventory.", "Маркет отклонил попытку из-за недостатка средств у канала. Предмет остаётся в инвентаре."),
+    RECONCILIATION_REQUIRED: c("The Market outcome is being checked before another action is safe.", "Итог маркета проверяется перед следующим действием."),
+    DELIVERED: c("Market confirmed final delivery.", "Маркет подтвердил окончательную доставку."),
+    REFUNDING: c("The Channel Points refund result is being confirmed.", "Результат возврата баллов канала подтверждается."),
+    REFUNDED: c("Channel Points were returned and inventory fulfillment was closed.", "Баллы канала возвращены, доставка закрыта."),
     MANUAL_HOLD: c(
       "Automatic processing stopped. Check the market history before retrying or closing this case.",
       "Автообработка остановлена. Проверьте историю маркета перед повтором или закрытием.",
@@ -163,7 +166,7 @@ export default function RedemptionCase({
         </div>
         <strong data-status={status}>{statusLabel}</strong>
       </div>
-      <p className="text-sm text-muted-foreground">{stateCopy[status]}</p>
+      <p className="text-sm text-muted-foreground">{stateCopy[r.inventory_lifecycle_status || status] || stateCopy[status]}</p>
       {canAct && actions.length > 0 && (
         <a
           className="text-xs text-primary inline-block mt-3"
@@ -279,60 +282,32 @@ export default function RedemptionCase({
             {c("Recorded history", "История событий")}
           </h4>
           <p className="text-xs text-muted-foreground mb-4">
-            {c(
-              "Matching retained logs, not a complete audit trail. Missing events are not evidence that an action did not happen.",
-              "Сохранённые связанные логи, не полный аудит. Отсутствие события не означает, что действие не произошло.",
-            )}
+            {c("Durable events recorded since the fulfillment audit was introduced. Earlier events are not reconstructed.",
+              "Постоянные события с момента введения журнала. Более ранние этапы не восстанавливаются задним числом.")}
           </p>
           <ol className="case-timeline">
-            <li>
-              <time>{new Date(r.created_at).toLocaleString()}</time>
-              <p>
-                {c("Viewer redeemed the reward", "Зритель активировал награду")}
-              </p>
-            </li>
-            {r.retry_count > 0 && (
-              <li>
-                <p>
-                  {c(
-                    "Retry attempts recorded",
-                    "Зафиксировано повторных попыток",
-                  )}
-                  : <strong>{r.retry_count}</strong>
-                </p>
-              </li>
-            )}
-            {logs.isLoading ? (
+            {audit.isLoading ? (
               <li>
                 <Skeleton className="h-12" />
               </li>
-            ) : logs.isError ? (
+            ) : audit.isError ? (
               <li>
-                <QueryError onRetry={() => logs.refetch()} />
+                <QueryError onRetry={() => audit.refetch()} />
               </li>
+            ) : !audit.data?.length ? (
+              <li><p>{c("No audit events recorded yet", "События пока не записаны")}</p></li>
             ) : (
-              milestones.map((event, i) => (
-                <li key={i}>
-                  <time>{new Date(event.at).toLocaleString()}</time>
+              audit.data.map((event) => (
+                <li key={event.event_key}>
+                  <time dateTime={event.created_at}>{new Date(event.created_at).toLocaleString()}</time>
                   <p>
-                    {event.title}
-                    {event.count > 1 && (
-                      <small>
-                        {" "}
-                        · {event.count} {c("records", "записей")}
-                      </small>
-                    )}
+                    {auditTitles[event.event_type] || c("Lifecycle event", "Событие доставки")}
+                    {event.actor_user_id && (event.actor_kind === "viewer" || event.actor_kind === "operator") &&
+                      <small> · {event.actor_kind === "viewer" ? c("viewer", "зритель") : c("operator", "оператор")}: {event.actor_user_id}</small>}
                   </p>
                 </li>
               ))
             )}
-            <li>
-              <time>{new Date(r.updated_at).toLocaleString()}</time>
-              <p>
-                {c("Latest recorded state", "Последнее состояние")}:{" "}
-                {statusLabel}
-              </p>
-            </li>
           </ol>
           <details className="case-retained">
             <summary>

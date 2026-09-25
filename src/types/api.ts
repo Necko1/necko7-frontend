@@ -338,6 +338,9 @@ export interface RedemptionResponse {
   fail_cause: string | null;
   fail_description: string | null;
   status: RedemptionStatus;
+  inventory_lifecycle_status?: string | null;
+  latest_attempt_status?: string | null;
+  latest_attempt_outcome_kind?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -689,6 +692,18 @@ export interface ViewerGlobalRedemption {
   fail_description?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface FulfillmentAuditEvent {
+  id: number;
+  event_key: string;
+  redemption_id: string;
+  inventory_id: string | null;
+  attempt_custom_id: string | null;
+  event_type: string;
+  actor_kind: "system" | "viewer" | "operator";
+  actor_user_id: string | null;
+  created_at: string;
 }
 
 export interface InventoryItem {
