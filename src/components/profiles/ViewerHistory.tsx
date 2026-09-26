@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import type { ViewerRewardLimitStatus } from "@/types/api";
 import { useAppStore } from "@/store/useAppStore";
+import { fulfillmentLabel } from "@/lib/inventoryLabels";
 
 export function ViewerLimits({
   limits,
@@ -83,7 +84,7 @@ export function ViewerLimits({
 
 export default function ViewerHistory({ channelId }: { channelId?: string }) {
   const c = useCopy();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const userId = useAppStore((s) => s.currentUser?.twitch_id);
   const [page, setPage] = useState(0);
   const query = useQuery({
@@ -133,6 +134,7 @@ export default function ViewerHistory({ channelId }: { channelId?: string }) {
             const status = r.status
               .replace(/([a-z])([A-Z])/g, "$1_$2")
               .toUpperCase();
+            const lifecycleLabel = fulfillmentLabel(r.inventory_lifecycle_status, r.latest_attempt_outcome_kind, i18n.language);
             return (
               <details
                 key={r.twitch_redemption_id}
@@ -145,8 +147,10 @@ export default function ViewerHistory({ channelId }: { channelId?: string }) {
                       marketItemName={r.market_item_name}
                     />
                   </span>
-                  <span className="history-status" data-status={status}>
-                    {t(`redemptions.statuses.${labels[status]}`, status)}
+                  <span className="history-status" data-status={r.inventory_lifecycle_status === "DELIVERED" ? "COMPLETED"
+                    : r.inventory_lifecycle_status === "REFUNDED" ? "FAILED_REFUND"
+                    : r.inventory_lifecycle_status && ["RETRY_AVAILABLE", "OPERATOR_REVIEW", "INSUFFICIENT_FUNDS", "RECONCILIATION_REQUIRED"].includes(r.inventory_lifecycle_status) ? "MANUAL_HOLD" : status}>
+                    {lifecycleLabel || t(`redemptions.statuses.${labels[status]}`, status)}
                   </span>
                   <span>
                     <strong>{r.reward_title}</strong>
@@ -170,7 +174,7 @@ export default function ViewerHistory({ channelId }: { channelId?: string }) {
                 </summary>
                 <div className="viewer-history-detail">
                   <p>
-                    {r.fail_description ||
+                    {lifecycleLabel || r.fail_description ||
                       (status === "MANUAL_HOLD"
                         ? c(
                             "The channel team needs to review this redemption.",

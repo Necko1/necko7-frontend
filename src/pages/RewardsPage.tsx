@@ -1736,7 +1736,7 @@ function RewardWizard({
     }
   };
   const check = (stage: "items" | "all") => {
-    const found = rewardErrors(form, stage);
+    const found = rewardErrors(form, stage, isEdit ? initial?.twitch_description : undefined);
     setErrors(found);
     return found.length === 0;
   };

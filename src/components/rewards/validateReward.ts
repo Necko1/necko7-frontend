@@ -2,6 +2,7 @@ import type { CreateRewardBody } from "@/types/api";
 export function rewardErrors(
   f: Partial<CreateRewardBody>,
   stage: "items" | "all",
+  existingDescription?: string,
 ) {
   const errors: string[] = [];
   const nonnegative = (n: number | null | undefined) =>
@@ -34,7 +35,8 @@ export function rewardErrors(
   if (stage === "items") return errors;
   if (!f.twitch_title?.trim() || f.twitch_title.length > 45)
     errors.push("title");
-  if ((f.twitch_description?.length || 0) > 200) errors.push("description");
+  if (f.twitch_description !== existingDescription && Array.from(f.twitch_description || "").length > 200)
+    errors.push("description");
   if (
     f.pricing_mode === "MANUAL" &&
     (!Number.isInteger(f.manual_twitch_points) ||

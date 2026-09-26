@@ -373,6 +373,7 @@ export const ru = {
       },
       templates: {
         redeemed: "Предмет добавлен в инвентарь",
+        pool_created: "Результат пула (предмет и шанс)",
         waiting_viewer: "Автопокупка выключена у зрителя",
         waiting_operator: "Автопокупка выключена у награды",
         trade_link_required: "Нужна ссылка обмена Steam",

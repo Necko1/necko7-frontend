@@ -249,9 +249,6 @@ h1, h2, h3 { text-wrap: balance; }
 .ledger-date { font-family:ui-monospace,monospace; font-size:10px; }
 .ledger-status { min-width:0; }
 .ledger-status [data-slot=badge] { background:transparent; border:0; padding:0; font-size:11px; font-weight:500; border-radius:0; display:block; width:100%; height:auto; white-space:normal; line-height:1.4; overflow-wrap:anywhere; }
-.ledger-status [data-slot=badge]::before { content:""; width:5px; height:5px; margin-right:4px; background:currentColor; border-radius:50%; }
-.ledger-status .status-manual-hold::before { border-radius:0; transform:rotate(45deg); }
-.ledger-status .status-order-created::before, .ledger-status .status-pending::before { background:transparent; border:1px solid currentColor; }
 .ledger-labels { display:grid; grid-template-columns:132px minmax(0,1fr) 110px 100px 16px; gap:16px; padding:10px 14px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); color:var(--muted-foreground); font:10px/1.4 ui-monospace,monospace; text-transform:uppercase; letter-spacing:.06em; }
 .review-desk { padding-right:30px; min-width:0; }
 .review-desk-heading { display:flex; align-items:flex-start; gap:18px; padding-bottom:22px; }

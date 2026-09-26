@@ -1,6 +1,6 @@
 import ItemArtwork from "@/components/common/SkinImage";
 import RedemptionCase from "./RedemptionCase";
-import { inventoryLabels, attemptLabels } from "@/lib/inventoryLabels";
+import { fulfillmentLabel } from "@/lib/inventoryLabels";
 import ConfirmAction from "@/components/common/ConfirmAction";
 import { EmptyState, QueryError } from "@/components/common/Page";
 import { useAppStore } from "@/store/useAppStore";
@@ -214,15 +214,10 @@ function RedemptionRow({
     redemption.status === "ManualHold";
   const lifecycle = redemption.inventory_lifecycle_status;
   const outcome = redemption.latest_attempt_outcome_kind;
-  const languageIndex = i18n.language.startsWith("ru") ? 1 : 0;
 
   const getStatusLabel = (status: RedemptionStatus) => {
-    if (lifecycle) {
-      if ((lifecycle === "RETRY_AVAILABLE" || lifecycle === "OPERATOR_REVIEW") && outcome && attemptLabels[outcome]) {
-        return attemptLabels[outcome][languageIndex];
-      }
-      if (inventoryLabels[lifecycle]) return inventoryLabels[lifecycle][languageIndex];
-    }
+    const label = fulfillmentLabel(lifecycle, outcome, i18n.language);
+    if (label) return label;
     switch (status) {
       case "PENDING":
       case "Pending":
@@ -264,10 +259,10 @@ function RedemptionRow({
 
       {open && <RedemptionCase redemption={redemption} channelId={channelId} statusLabel={getStatusLabel(redemption.status)} failure={getLocalizedFailDescription(redemption.fail_description, i18n.language) || (redemption.fail_cause ? (FAIL_CAUSE_I18N_KEYS[redemption.fail_cause] ? t(FAIL_CAUSE_I18N_KEYS[redemption.fail_cause]) : formatFailCause(redemption.fail_cause)) : "")} canAct={canAct} pending={isLoading} onAction={setAction} />}
       <ConfirmAction open={!!action} onClose={() => setAction(null)} pending={isLoading} destructive={action === "penalty"}
-        title={t(`ops.${action || "retry"}Title`)} description={t(`ops.${action || "retry"}Desc`)}
-        label={action === "retry" ? t("redemptions.retryMarketOrder") : action === "refund" ? t("redemptions.refund") : t("ops.penaltyLabel")}
+        title={action === "retry" && lifecycle ? (i18n.language.startsWith("ru") ? "Начать доставку?" : "Start delivery?") : t(`ops.${action || "retry"}Title`)} description={action === "retry" && lifecycle ? (i18n.language.startsWith("ru") ? "Будет создана попытка доставки этого предмета с его фиксированным лимитом цены. Сервер повторно проверит, что другая попытка не активна." : "This starts delivery of this item at its fixed price ceiling. The server checks again that no other attempt is active.") : t(`ops.${action || "retry"}Desc`)}
+        label={action === "retry" ? (lifecycle ? (i18n.language.startsWith("ru") ? "Начать доставку" : "Start delivery") : t("redemptions.retryMarketOrder")) : action === "refund" ? t("redemptions.refund") : t("ops.penaltyLabel")}
         context={t("ops.confirmContext", { user: redemption.user_login, points: redemption.twitch_points_cost.toLocaleString(), item: redemption.market_item_name || t("ops.unknownItem") })}
-        onConfirm={() => { if (isLoading || !canAct) return; if (action === "retry" ? !(isFailedPenalty || isManualHold) : !(isPending || isManualHold)) { setAction(null); return; } if (action === "retry") retryMutation.mutate(); if (action === "refund") refundMutation.mutate(); if (action === "penalty") penaltyMutation.mutate(); }} />
+        onConfirm={() => { if (isLoading || !canAct) return; if (action === "retry" ? !(lifecycle ? redemption.inventory_operator_can_attempt : isFailedPenalty || isManualHold) : !(isPending || isManualHold)) { setAction(null); return; } if (action === "retry") retryMutation.mutate(); if (action === "refund") refundMutation.mutate(); if (action === "penalty") penaltyMutation.mutate(); }} />
     </div>
   );
 }

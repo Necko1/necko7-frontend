@@ -22,3 +22,10 @@ export const attemptLabels: Record<string, [string, string]> = {
   seller_reverted: ["Seller reverted the accepted trade", "Продавец отменил принятый обмен"],
   terminal_unclassified: ["Trade ended; operator review needed", "Обмен завершён; требуется проверка оператора"],
 };
+
+export function fulfillmentLabel(lifecycle: string | null | undefined, outcome: string | null | undefined, language: string) {
+  const index = language.startsWith("ru") ? 1 : 0;
+  if ((lifecycle === "RETRY_AVAILABLE" || lifecycle === "OPERATOR_REVIEW") && outcome && attemptLabels[outcome])
+    return attemptLabels[outcome][index];
+  return lifecycle ? inventoryLabels[lifecycle]?.[index] : undefined;
+}

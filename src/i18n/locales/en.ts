@@ -371,6 +371,7 @@ export const en = {
       },
       templates: {
         redeemed: "Item added to inventory",
+        pool_created: "Pool result (item and chance)",
         waiting_viewer: "Viewer auto-buy disabled",
         waiting_operator: "Reward auto-buy disabled",
         trade_link_required: "Steam trade link required",

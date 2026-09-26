@@ -122,11 +122,11 @@ export default function RedemptionCase({
   const actions = [
     {
       key: "retry" as const,
-      show: ["MANUAL_HOLD", "FAILED_PENALTY"].includes(status),
-      title: c("Retry Market Order", "Повторить заказ"),
+      show: r.inventory_lifecycle_status ? r.inventory_operator_can_attempt === true : ["MANUAL_HOLD", "FAILED_PENALTY"].includes(status),
+      title: r.inventory_lifecycle_status ? c("Start delivery", "Начать доставку") : c("Retry Market Order", "Повторить заказ"),
       detail: c(
-        "Starts another buy attempt. Check that an order has not already succeeded.",
-        "Запускает попытку покупки. Сначала убедитесь, что заказ ещё не выполнен.",
+        "Request delivery for this inventory item at its fixed value. The server checks the latest attempt before creating an order.",
+        "Запросить доставку этого предмета по зафиксированной стоимости. Перед заказом сервер проверит последнюю попытку.",
       ),
     },
     {

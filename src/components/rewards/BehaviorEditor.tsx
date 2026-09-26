@@ -169,12 +169,16 @@ export default function BehaviorEditor({
                 }
               />
               <small>
-                {(form.twitch_description || "").length} / 200 ·{" "}
+                {Array.from(form.twitch_description || "").length} / 200 ·{" "}
                 {c(
                   "Ask for a Steam trade URL.",
                   "Запросите ссылку обмена Steam.",
                 )}
               </small>
+              {isEdit && Array.from(form.twitch_description || "").length > 200 && <small>{c(
+                "An unchanged saved description can be kept when editing other settings. A changed description must fit within 200 characters.",
+                "Сохранённое описание можно оставить при изменении других настроек. Новое описание должно содержать не более 200 символов.",
+              )}</small>}
             </label>
             <div className="behavior-options">
               {toggle(

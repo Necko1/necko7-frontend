@@ -339,6 +339,8 @@ export interface RedemptionResponse {
   fail_description: string | null;
   status: RedemptionStatus;
   inventory_lifecycle_status?: string | null;
+  inventory_id?: string | null;
+  inventory_operator_can_attempt?: boolean;
   latest_attempt_status?: string | null;
   latest_attempt_outcome_kind?: string | null;
   created_at: string;
@@ -652,6 +654,9 @@ export interface ViewerChannelRedemption {
   twitch_points_cost: number;
   currency: string;
   status: RedemptionStatus;
+  inventory_lifecycle_status?: string | null;
+  latest_attempt_status?: string | null;
+  latest_attempt_outcome_kind?: string | null;
   market_item_name?: string | null;
   market_paid_price?: number | null;
   fail_cause?: string | null;
@@ -686,6 +691,9 @@ export interface ViewerGlobalRedemption {
   twitch_points_cost: number;
   currency: string;
   status: RedemptionStatus;
+  inventory_lifecycle_status?: string | null;
+  latest_attempt_status?: string | null;
+  latest_attempt_outcome_kind?: string | null;
   market_item_name?: string | null;
   market_paid_price?: number | null;
   fail_cause?: string | null;
