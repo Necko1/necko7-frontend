@@ -53,6 +53,16 @@ import type {
 } from "@/types/api";
 import { config } from "@/config";
 
+export interface Cs2Status {
+  device: { id: string; app_version: string; created_at: string; last_seen_at: string | null } | null;
+}
+export interface Cs2PairingCode { code: string; expires_at: string }
+export const cs2Api = {
+  status: (channelId: string) => api.get<Cs2Status>(`/api/v1/broadcasters/${channelId}/cs2`),
+  pairing: (channelId: string) => api.post<Cs2PairingCode>(`/api/v1/broadcasters/${channelId}/cs2/pairing`),
+  unpair: (channelId: string) => api.delete(`/api/v1/broadcasters/${channelId}/cs2`),
+};
+
 // ===== Auth =====
 
 export const authApi = {

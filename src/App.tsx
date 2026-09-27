@@ -14,6 +14,7 @@ const RewardsPage = lazy(() => import("@/pages/RewardsPage"));
 const RedemptionsPage = lazy(() => import("@/pages/RedemptionsPage"));
 const ChannelsPage = lazy(() => import("@/pages/ChannelsPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const Cs2Page = lazy(() => import("@/pages/Cs2Page"));
 const ChatPage = lazy(() => import("@/pages/ChatPage"));
 const ChatMessagesPage = lazy(() => import("@/pages/ChatMessagesPage"));
 const ChatUserPage = lazy(() => import("@/pages/ChatUserPage"));
@@ -58,6 +59,7 @@ export default function App() {
               {/* App routes (handles both viewer and admin layouts) */}
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/cs2" element={<Cs2Page />} />
                 <Route path="/channels" element={<ChannelsPage />} />
                 <Route path="/rewards" element={<RewardsPage />} />
                 <Route path="/redemptions" element={<RedemptionsPage />} />

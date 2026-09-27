@@ -10,6 +10,7 @@ cat <<EOF > /usr/share/nginx/html/config.js
 window.__APP_CONFIG__ = {
   API_BASE_URL: "${API_BASE_URL}",
   BACKEND_URL: "${BACKEND_URL}",
+  CS2_DOWNLOAD_URL: "${CS2_DOWNLOAD_URL:-}",
 };
 EOF
 

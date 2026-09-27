@@ -3,6 +3,7 @@
 // 2. import.meta.env (.env file at build/dev time)
 
 interface AppConfig {
+  CS2_DOWNLOAD_URL: string;
   /** Base URL for Axios AJAX requests. Empty string "" in dev proxy mode, or backend URL in production. */
   API_BASE_URL: string;
   /** Actual backend server origin. Used for full-browser OAuth redirects. */
@@ -16,6 +17,7 @@ declare global {
 }
 
 export const config: AppConfig = {
+  CS2_DOWNLOAD_URL: window.__APP_CONFIG__?.CS2_DOWNLOAD_URL || (import.meta.env.VITE_CS2_DOWNLOAD_URL as string | undefined) || "",
   API_BASE_URL:
     window.__APP_CONFIG__?.API_BASE_URL ||
     (import.meta.env.API_BASE_URL as string | undefined) ||
