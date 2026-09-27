@@ -54,7 +54,7 @@ import type {
 import { config } from "@/config";
 
 export interface Cs2Status {
-  device: { id: string; app_version: string; created_at: string; last_seen_at: string | null } | null;
+  device: { id: string; app_version: string; created_at: string; last_seen_at: string | null; last_heartbeat_at: string | null } | null;
 }
 export interface Cs2PairingCode { code: string; expires_at: string }
 export const cs2Api = {

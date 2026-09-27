@@ -17,7 +17,7 @@ declare global {
 }
 
 export const config: AppConfig = {
-  CS2_DOWNLOAD_URL: window.__APP_CONFIG__?.CS2_DOWNLOAD_URL || (import.meta.env.VITE_CS2_DOWNLOAD_URL as string | undefined) || "",
+  CS2_DOWNLOAD_URL: window.__APP_CONFIG__?.CS2_DOWNLOAD_URL || (import.meta.env.VITE_CS2_DOWNLOAD_URL as string | undefined) || "https://github.com/Necko1/necko7-cs2i/releases/latest/download/necko7-cs2i-windows-x64-setup.exe",
   API_BASE_URL:
     window.__APP_CONFIG__?.API_BASE_URL ||
     (import.meta.env.API_BASE_URL as string | undefined) ||
