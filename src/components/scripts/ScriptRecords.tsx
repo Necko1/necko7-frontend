@@ -88,14 +88,19 @@ export default function ScriptRecords({
   data,
   command,
   busy,
+  executionSearch,
+  onExecutionSearch,
 }: {
   section: string;
   data: Overview;
   command: Command;
   busy: boolean;
+  executionSearch: string;
+  onExecutionSearch: (value: string) => void;
 }) {
   const [project, setProject] = useState("");
   const [search, setSearch] = useState("");
+  const activeSearch = section === "logs" ? executionSearch : search;
   const [status, setStatus] = useState("");
   const [source, setSource] = useState("");
   const [level, setLevel] = useState("");
@@ -134,7 +139,7 @@ export default function ScriptRecords({
         )) &&
       (pretty(row) + projectName(row))
         .toLowerCase()
-        .includes(search.toLowerCase())
+        .includes((section === "logs" ? activeSearch.trim() : activeSearch).toLowerCase())
     );
   });
   const selected =
@@ -290,8 +295,9 @@ export default function ScriptRecords({
           placeholder={
             section === "matches" ? "Search maps or matches" : "Search"
           }
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={activeSearch}
+          maxLength={section === "logs" ? 128 : undefined}
+          onChange={(e) => section === "logs" ? onExecutionSearch(e.target.value) : setSearch(e.target.value)}
           className="sm:max-w-80"
         />
         {section !== "matches" && (
@@ -615,7 +621,7 @@ export default function ScriptRecords({
       )}
       <p className="script-limit">
         {section === "logs"
-          ? "Latest 200 reports"
+          ? activeSearch ? "Latest 200 matching reports" : "Latest 200 reports"
           : section === "matches"
             ? "Current match and up to 30 ended observations"
             : section === "storage"
@@ -814,6 +820,8 @@ function MatchDetails({ row }: { row: Row }) {
   const match = object(state.match);
   const completed = rows(data.rounds);
   const current = object(data.current_round);
+  const summary = object(data.local_summary);
+  const totals = object(summary.stats);
   const roundsList = [
     ...completed,
     ...(Object.keys(current).length && current.completed !== true
@@ -849,6 +857,17 @@ function MatchDetails({ row }: { row: Row }) {
           </dd>
         </div>
       </dl>
+      {Object.keys(totals).length > 0 && (
+        <section className="script-local-totals" aria-label="Local player totals">
+          <h3>{summary.final === true ? "Final local totals" : "Last observed local totals"}</h3>
+          <dl className="script-facts">
+            {[["Kills", "kills"], ["Assists", "assists"], ["Deaths", "deaths"], ["MVPs", "mvps"], ["Score", "score"]].map(([label, key]) => (
+              <div key={key}><dt>{label}</dt><dd>{text(totals[key])}</dd></div>
+            ))}
+          </dl>
+          {summary.final !== true && <Time value={summary.observed_at} />}
+        </section>
+      )}
       <div className="script-table-wrap">
         <table className="script-table script-rounds">
           <thead>
@@ -881,6 +900,11 @@ function MatchDetails({ row }: { row: Row }) {
                 <td>{human(round.winner)}</td>
                 <td>
                   {score(round.score_before)} → {score(round.score_after)}
+                  {round.side_swap_before != null && (
+                    <div className="text-muted-foreground text-xs">
+                      Side swap: {score(object(round.side_swap_before).before)} → {score(object(round.side_swap_before).after)}
+                    </div>
+                  )}
                 </td>
                 <td>
                   {text(object(round.player).kills)} /{" "}
@@ -906,7 +930,7 @@ function RoundDetails({ row }: { row: Row }) {
       <h3>Round {typeof row.index === "number" ? row.index + 1 : "?"}</h3>
       <dl className="script-facts">
         <div>
-          <dt>Local health</dt>
+          <dt>Last observed local health</dt>
           <dd>{text(player.health)}</dd>
         </div>
         <div>

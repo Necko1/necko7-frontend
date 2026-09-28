@@ -39,14 +39,23 @@ function Scripts({ channel }: { channel: string }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const queryKey = ["scripts", channel];
+  const [executionSearch, setExecutionSearch] = useState("");
+  const [historySearch, setHistorySearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setHistorySearch(executionSearch.trim()), 200);
+    return () => clearTimeout(timer);
+  }, [executionSearch]);
   const query = useQuery({
-    queryKey,
+    queryKey: [...queryKey, section === "logs" ? historySearch : ""],
     queryFn: () =>
       api
-        .get<Overview>(`/api/v1/broadcasters/${channel}/scripts`)
+        .get<Overview>(`/api/v1/broadcasters/${channel}/scripts`, {
+          params: section === "logs" && historySearch ? { execution_search: historySearch } : undefined,
+        })
         .then((r) => r.data),
     enabled: section !== "cs2",
     refetchInterval: section === "editor" ? false : 10000,
+    placeholderData: (previous) => previous,
   });
   const [projectId, setProjectId] = useState("");
   const [dirty, setDirty] = useState(false);
@@ -226,6 +235,8 @@ function Scripts({ channel }: { channel: string }) {
               data={query.data}
               command={command}
               busy={busy}
+              executionSearch={executionSearch}
+              onExecutionSearch={setExecutionSearch}
             />
           )}
         </>

@@ -175,7 +175,7 @@ export async function scriptsApi(
       data[key as keyof typeof data] = [] as never;
   const actions: Record<string, any>[] = [];
   let createError = !!options.createError;
-  await page.route("**/api/v1/broadcasters/123/scripts", async (route) => {
+  await page.route("**/api/v1/broadcasters/123/scripts{,?*}", async (route) => {
     if (route.request().method() !== "POST")
       return route.fulfill({ json: data });
     const body = route.request().postDataJSON();

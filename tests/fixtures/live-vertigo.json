@@ -1,0 +1,3605 @@
+{
+  "provenance": "PostgreSQL replay of live-vertigo-20260928.json; visual match timestamps rebased to source observations; no production DB rows claimed.",
+  "projects": [
+    {
+      "active_revision": 1,
+      "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+      "created_at": "2026-09-28T20:53:59.388641+00:00",
+      "deleted_at": null,
+      "draft": {
+        "main.rhai": "fn on_event(ctx) { log.info(ctx.event.kind); if ctx.event.kind == \"player_kill\" { storage.set(\"kills\", storage.get(\"kills\", 0) + ctx.event.count); } }"
+      },
+      "draft_version": 2,
+      "enabled": true,
+      "id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "live_files": {
+        "main.rhai": "fn on_event(ctx) { log.info(ctx.event.kind); if ctx.event.kind == \"player_kill\" { storage.set(\"kills\", storage.get(\"kills\", 0) + ctx.event.count); } }"
+      },
+      "name": "Live evidence"
+    }
+  ],
+  "revisions": [
+    {
+      "created_at": "2026-09-28T20:53:59.404888+00:00",
+      "has_on_event": true,
+      "has_on_timer": false,
+      "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "revision": 1
+    }
+  ],
+  "jobs": [],
+  "storage": [
+    {
+      "key": "kills",
+      "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "updated_at": "2026-09-28T20:54:06.23938+00:00",
+      "value": 8
+    }
+  ],
+  "executions": [
+    {
+      "actor_type": "script",
+      "actor_user_id": null,
+      "created_at": "2026-09-28T20:54:03.00108+00:00",
+      "event": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "count": 1,
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "kind": "player_kill",
+        "match": {
+          "ct": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          },
+          "map": "de_vertigo",
+          "mode": "scrimcomp2v2",
+          "phase": "live",
+          "score": {
+            "ct": 7,
+            "t": 5
+          },
+          "series_matches_to_win": null,
+          "t": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          }
+        },
+        "player": {
+          "steam_id": "76561199207293235",
+          "team": "t"
+        },
+        "reliability": "RELIABLE",
+        "round": {
+          "completed_rounds": 12,
+          "phase": "live",
+          "winner": null
+        },
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 403,
+        "timestamp": "2026-09-28T19:57:23.201648Z",
+        "total": 8
+      },
+      "event_index": 1,
+      "finished_at": "2026-09-28T20:54:06.229374+00:00",
+      "id": "b6cdcf82-143a-46bf-b024-1629ab757d6c",
+      "job_id": null,
+      "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "report": {
+        "actions": [
+          {
+            "args": [
+              "kills",
+              0
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.get",
+            "result": 7
+          },
+          {
+            "args": [
+              "kills",
+              8
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.set",
+            "result": 8
+          }
+        ],
+        "dry_run": false,
+        "duration_ms": 8,
+        "error": null,
+        "logs": [
+          {
+            "level": "info",
+            "message": "player_kill"
+          }
+        ],
+        "meta": {
+          "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+          "execution_id": "b6cdcf82-143a-46bf-b024-1629ab757d6c",
+          "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+          "revision": 1,
+          "source": {
+            "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+            "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+            "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+            "source_seq": 403,
+            "timestamp": "2026-09-28T19:57:23.201648Z"
+          },
+          "timestamp": "2026-09-28T20:54:06.234487Z"
+        }
+      },
+      "revision": 1,
+      "sequence": 187,
+      "snapshot_id": 105,
+      "source": "cs2",
+      "source_meta": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 403,
+        "timestamp": "2026-09-28T19:57:23.201648Z"
+      },
+      "status": "success"
+    },
+    {
+      "actor_type": "script",
+      "actor_user_id": null,
+      "created_at": "2026-09-28T20:54:02.114221+00:00",
+      "event": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "count": 1,
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "kind": "player_kill",
+        "match": {
+          "ct": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          },
+          "map": "de_vertigo",
+          "mode": "scrimcomp2v2",
+          "phase": "live",
+          "score": {
+            "ct": 6,
+            "t": 4
+          },
+          "series_matches_to_win": null,
+          "t": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          }
+        },
+        "player": {
+          "steam_id": "76561199207293235",
+          "team": "t"
+        },
+        "reliability": "RELIABLE",
+        "round": {
+          "completed_rounds": 10,
+          "phase": "live",
+          "winner": null
+        },
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 321,
+        "timestamp": "2026-09-28T19:54:37.710713Z",
+        "total": 7
+      },
+      "event_index": 1,
+      "finished_at": "2026-09-28T20:54:05.85227+00:00",
+      "id": "15e0a069-6d86-4280-b06b-513c3667edb1",
+      "job_id": null,
+      "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "report": {
+        "actions": [
+          {
+            "args": [
+              "kills",
+              0
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.get",
+            "result": 6
+          },
+          {
+            "args": [
+              "kills",
+              7
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.set",
+            "result": 7
+          }
+        ],
+        "dry_run": false,
+        "duration_ms": 8,
+        "error": null,
+        "logs": [
+          {
+            "level": "info",
+            "message": "player_kill"
+          }
+        ],
+        "meta": {
+          "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+          "execution_id": "15e0a069-6d86-4280-b06b-513c3667edb1",
+          "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+          "revision": 1,
+          "source": {
+            "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+            "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+            "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+            "source_seq": 321,
+            "timestamp": "2026-09-28T19:54:37.710713Z"
+          },
+          "timestamp": "2026-09-28T20:54:05.857585300Z"
+        }
+      },
+      "revision": 1,
+      "sequence": 160,
+      "snapshot_id": 91,
+      "source": "cs2",
+      "source_meta": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 321,
+        "timestamp": "2026-09-28T19:54:37.710713Z"
+      },
+      "status": "success"
+    },
+    {
+      "actor_type": "script",
+      "actor_user_id": null,
+      "created_at": "2026-09-28T20:54:01.649649+00:00",
+      "event": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "count": 1,
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "kind": "player_kill",
+        "match": {
+          "ct": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          },
+          "map": "de_vertigo",
+          "mode": "scrimcomp2v2",
+          "phase": "live",
+          "score": {
+            "ct": 6,
+            "t": 3
+          },
+          "series_matches_to_win": null,
+          "t": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          }
+        },
+        "player": {
+          "steam_id": "76561199207293235",
+          "team": "t"
+        },
+        "reliability": "RELIABLE",
+        "round": {
+          "completed_rounds": 9,
+          "phase": "over",
+          "winner": "t"
+        },
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 275,
+        "timestamp": "2026-09-28T19:53:13.338710Z",
+        "total": 6
+      },
+      "event_index": 4,
+      "finished_at": "2026-09-28T20:54:05.656171+00:00",
+      "id": "06dfd561-89e1-4aa7-bd62-9b5112ed347a",
+      "job_id": null,
+      "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "report": {
+        "actions": [
+          {
+            "args": [
+              "kills",
+              0
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.get",
+            "result": 5
+          },
+          {
+            "args": [
+              "kills",
+              6
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.set",
+            "result": 6
+          }
+        ],
+        "dry_run": false,
+        "duration_ms": 8,
+        "error": null,
+        "logs": [
+          {
+            "level": "info",
+            "message": "player_kill"
+          }
+        ],
+        "meta": {
+          "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+          "execution_id": "06dfd561-89e1-4aa7-bd62-9b5112ed347a",
+          "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+          "revision": 1,
+          "source": {
+            "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+            "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+            "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+            "source_seq": 275,
+            "timestamp": "2026-09-28T19:53:13.338710Z"
+          },
+          "timestamp": "2026-09-28T20:54:05.661494400Z"
+        }
+      },
+      "revision": 1,
+      "sequence": 146,
+      "snapshot_id": 84,
+      "source": "cs2",
+      "source_meta": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 275,
+        "timestamp": "2026-09-28T19:53:13.338710Z"
+      },
+      "status": "success"
+    },
+    {
+      "actor_type": "script",
+      "actor_user_id": null,
+      "created_at": "2026-09-28T20:54:01.190271+00:00",
+      "event": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "count": 1,
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "kind": "player_kill",
+        "match": {
+          "ct": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          },
+          "map": "de_vertigo",
+          "mode": "scrimcomp2v2",
+          "phase": "intermission",
+          "score": {
+            "ct": 2,
+            "t": 6
+          },
+          "series_matches_to_win": null,
+          "t": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          }
+        },
+        "player": {
+          "steam_id": "76561199207293235",
+          "team": "ct"
+        },
+        "reliability": "RELIABLE",
+        "round": {
+          "completed_rounds": 8,
+          "phase": "over",
+          "winner": "ct"
+        },
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 226,
+        "timestamp": "2026-09-28T19:52:05.357225Z",
+        "total": 5
+      },
+      "event_index": 5,
+      "finished_at": "2026-09-28T20:54:05.397116+00:00",
+      "id": "019b0d49-35a9-4efe-8883-f9b1b66a8d45",
+      "job_id": null,
+      "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "report": {
+        "actions": [
+          {
+            "args": [
+              "kills",
+              0
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.get",
+            "result": 4
+          },
+          {
+            "args": [
+              "kills",
+              5
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.set",
+            "result": 5
+          }
+        ],
+        "dry_run": false,
+        "duration_ms": 8,
+        "error": null,
+        "logs": [
+          {
+            "level": "info",
+            "message": "player_kill"
+          }
+        ],
+        "meta": {
+          "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+          "execution_id": "019b0d49-35a9-4efe-8883-f9b1b66a8d45",
+          "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+          "revision": 1,
+          "source": {
+            "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+            "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+            "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+            "source_seq": 226,
+            "timestamp": "2026-09-28T19:52:05.357225Z"
+          },
+          "timestamp": "2026-09-28T20:54:05.402259800Z"
+        }
+      },
+      "revision": 1,
+      "sequence": 127,
+      "snapshot_id": 74,
+      "source": "cs2",
+      "source_meta": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 226,
+        "timestamp": "2026-09-28T19:52:05.357225Z"
+      },
+      "status": "success"
+    },
+    {
+      "actor_type": "script",
+      "actor_user_id": null,
+      "created_at": "2026-09-28T20:54:01.169783+00:00",
+      "event": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "count": 1,
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "kind": "player_kill",
+        "match": {
+          "ct": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          },
+          "map": "de_vertigo",
+          "mode": "scrimcomp2v2",
+          "phase": "live",
+          "score": {
+            "ct": 1,
+            "t": 6
+          },
+          "series_matches_to_win": null,
+          "t": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          }
+        },
+        "player": {
+          "steam_id": "76561199207293235",
+          "team": "ct"
+        },
+        "reliability": "RELIABLE",
+        "round": {
+          "completed_rounds": 7,
+          "phase": "live",
+          "winner": null
+        },
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 224,
+        "timestamp": "2026-09-28T19:52:04.865398Z",
+        "total": 4
+      },
+      "event_index": 1,
+      "finished_at": "2026-09-28T20:54:05.29787+00:00",
+      "id": "8e47f00b-d17c-4c4f-ba16-43bc3881ad02",
+      "job_id": null,
+      "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "report": {
+        "actions": [
+          {
+            "args": [
+              "kills",
+              0
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.get",
+            "result": 3
+          },
+          {
+            "args": [
+              "kills",
+              4
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.set",
+            "result": 4
+          }
+        ],
+        "dry_run": false,
+        "duration_ms": 8,
+        "error": null,
+        "logs": [
+          {
+            "level": "info",
+            "message": "player_kill"
+          }
+        ],
+        "meta": {
+          "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+          "execution_id": "8e47f00b-d17c-4c4f-ba16-43bc3881ad02",
+          "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+          "revision": 1,
+          "source": {
+            "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+            "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+            "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+            "source_seq": 224,
+            "timestamp": "2026-09-28T19:52:04.865398Z"
+          },
+          "timestamp": "2026-09-28T20:54:05.302784700Z"
+        }
+      },
+      "revision": 1,
+      "sequence": 120,
+      "snapshot_id": 73,
+      "source": "cs2",
+      "source_meta": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 224,
+        "timestamp": "2026-09-28T19:52:04.865398Z"
+      },
+      "status": "success"
+    },
+    {
+      "actor_type": "script",
+      "actor_user_id": null,
+      "created_at": "2026-09-28T20:54:00.290601+00:00",
+      "event": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "count": 1,
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "kind": "player_kill",
+        "match": {
+          "ct": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          },
+          "map": "de_vertigo",
+          "mode": "scrimcomp2v2",
+          "phase": "live",
+          "score": {
+            "ct": 1,
+            "t": 2
+          },
+          "series_matches_to_win": null,
+          "t": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          }
+        },
+        "player": {
+          "steam_id": "76561199207293235",
+          "team": "ct"
+        },
+        "reliability": "RELIABLE",
+        "round": {
+          "completed_rounds": 3,
+          "phase": "live",
+          "winner": null
+        },
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 118,
+        "timestamp": "2026-09-28T19:48:25.640168Z",
+        "total": 3
+      },
+      "event_index": 1,
+      "finished_at": "2026-09-28T20:54:04.49361+00:00",
+      "id": "6e1bf634-4f69-4d56-959e-705c5e5f70e8",
+      "job_id": null,
+      "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "report": {
+        "actions": [
+          {
+            "args": [
+              "kills",
+              0
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.get",
+            "result": 2
+          },
+          {
+            "args": [
+              "kills",
+              3
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.set",
+            "result": 3
+          }
+        ],
+        "dry_run": false,
+        "duration_ms": 8,
+        "error": null,
+        "logs": [
+          {
+            "level": "info",
+            "message": "player_kill"
+          }
+        ],
+        "meta": {
+          "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+          "execution_id": "6e1bf634-4f69-4d56-959e-705c5e5f70e8",
+          "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+          "revision": 1,
+          "source": {
+            "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+            "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+            "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+            "source_seq": 118,
+            "timestamp": "2026-09-28T19:48:25.640168Z"
+          },
+          "timestamp": "2026-09-28T20:54:04.498585800Z"
+        }
+      },
+      "revision": 1,
+      "sequence": 60,
+      "snapshot_id": 38,
+      "source": "cs2",
+      "source_meta": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 118,
+        "timestamp": "2026-09-28T19:48:25.640168Z"
+      },
+      "status": "success"
+    },
+    {
+      "actor_type": "script",
+      "actor_user_id": null,
+      "created_at": "2026-09-28T20:53:59.708748+00:00",
+      "event": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "count": 1,
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "kind": "player_kill",
+        "match": {
+          "ct": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          },
+          "map": "de_vertigo",
+          "mode": "scrimcomp2v2",
+          "phase": "live",
+          "score": {
+            "ct": 1,
+            "t": 0
+          },
+          "series_matches_to_win": null,
+          "t": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          }
+        },
+        "player": {
+          "steam_id": "76561199207293235",
+          "team": "ct"
+        },
+        "reliability": "RELIABLE",
+        "round": {
+          "completed_rounds": 1,
+          "phase": "over",
+          "winner": "ct"
+        },
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 48,
+        "timestamp": "2026-09-28T19:45:30.248834Z",
+        "total": 2
+      },
+      "event_index": 4,
+      "finished_at": "2026-09-28T20:54:04.033129+00:00",
+      "id": "61a0fcea-9624-45a6-9be1-34f77eed23bc",
+      "job_id": null,
+      "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "report": {
+        "actions": [
+          {
+            "args": [
+              "kills",
+              0
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.get",
+            "result": 1
+          },
+          {
+            "args": [
+              "kills",
+              2
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.set",
+            "result": 2
+          }
+        ],
+        "dry_run": false,
+        "duration_ms": 10,
+        "error": null,
+        "logs": [
+          {
+            "level": "info",
+            "message": "player_kill"
+          }
+        ],
+        "meta": {
+          "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+          "execution_id": "61a0fcea-9624-45a6-9be1-34f77eed23bc",
+          "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+          "revision": 1,
+          "source": {
+            "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+            "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+            "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+            "source_seq": 48,
+            "timestamp": "2026-09-28T19:45:30.248834Z"
+          },
+          "timestamp": "2026-09-28T20:54:04.038178900Z"
+        }
+      },
+      "revision": 1,
+      "sequence": 26,
+      "snapshot_id": 18,
+      "source": "cs2",
+      "source_meta": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 48,
+        "timestamp": "2026-09-28T19:45:30.248834Z"
+      },
+      "status": "success"
+    },
+    {
+      "actor_type": "script",
+      "actor_user_id": null,
+      "created_at": "2026-09-28T20:53:59.663405+00:00",
+      "event": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "count": 1,
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "kind": "player_kill",
+        "match": {
+          "ct": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          },
+          "map": "de_vertigo",
+          "mode": "scrimcomp2v2",
+          "phase": "live",
+          "score": {
+            "ct": 0,
+            "t": 0
+          },
+          "series_matches_to_win": null,
+          "t": {
+            "consecutive_losses": null,
+            "series_wins": null,
+            "timeouts_remaining": null
+          }
+        },
+        "player": {
+          "steam_id": "76561199207293235",
+          "team": "ct"
+        },
+        "reliability": "RELIABLE",
+        "round": {
+          "completed_rounds": 0,
+          "phase": "live",
+          "winner": null
+        },
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 41,
+        "timestamp": "2026-09-28T19:45:25.269434Z",
+        "total": 1
+      },
+      "event_index": 1,
+      "finished_at": "2026-09-28T20:54:03.9335+00:00",
+      "id": "ddff9fa2-38b9-468a-9f1f-8f5181d5e606",
+      "job_id": null,
+      "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+      "report": {
+        "actions": [
+          {
+            "args": [
+              "kills",
+              0
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.get",
+            "result": 0
+          },
+          {
+            "args": [
+              "kills",
+              1
+            ],
+            "dry_run": false,
+            "error": null,
+            "method": "storage.set",
+            "result": 1
+          }
+        ],
+        "dry_run": false,
+        "duration_ms": 11,
+        "error": null,
+        "logs": [
+          {
+            "level": "info",
+            "message": "player_kill"
+          }
+        ],
+        "meta": {
+          "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+          "execution_id": "ddff9fa2-38b9-468a-9f1f-8f5181d5e606",
+          "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+          "revision": 1,
+          "source": {
+            "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+            "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+            "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+            "source_seq": 41,
+            "timestamp": "2026-09-28T19:45:25.269434Z"
+          },
+          "timestamp": "2026-09-28T20:54:03.938493500Z"
+        }
+      },
+      "revision": 1,
+      "sequence": 19,
+      "snapshot_id": 16,
+      "source": "cs2",
+      "source_meta": {
+        "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+        "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9",
+        "source_seq": 41,
+        "timestamp": "2026-09-28T19:45:25.269434Z"
+      },
+      "status": "success"
+    }
+  ],
+  "matches": [
+    {
+      "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+      "completed_at": "2026-09-28T19:59:31.642036Z",
+      "created_at": "2026-09-28T19:44:52.651297Z",
+      "data": {
+        "current_round": null,
+        "end_reason": "game_over",
+        "local_summary": {
+          "evidence": {
+            "assists": {
+              "at": "2026-09-28T19:59:32.263420Z",
+              "final": true,
+              "seq": 459
+            },
+            "deaths": {
+              "at": "2026-09-28T19:59:32.263420Z",
+              "final": true,
+              "seq": 459
+            },
+            "kills": {
+              "at": "2026-09-28T19:59:32.263420Z",
+              "final": true,
+              "seq": 459
+            },
+            "mvps": {
+              "at": "2026-09-28T19:59:32.263420Z",
+              "final": true,
+              "seq": 459
+            },
+            "score": {
+              "at": "2026-09-28T19:59:32.263420Z",
+              "final": true,
+              "seq": 459
+            }
+          },
+          "final": true,
+          "observed_at": "2026-09-28T19:59:32.263420Z",
+          "seq": 459,
+          "stats": {
+            "assists": 2,
+            "deaths": 11,
+            "kills": 8,
+            "mvps": 5,
+            "score": 26
+          },
+          "steam_id": "76561199207293235"
+        },
+        "rounds": [
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 16,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 0,
+                "kills": 2,
+                "mvps": 1,
+                "score": 4
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 2,
+                "kills": 2
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:45:30.248834Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 22,
+                "timestamp": "2026-09-28T19:45:09.099063Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "kills"
+                    },
+                    {
+                      "current": 2,
+                      "delta": 2,
+                      "previous": 0,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 41,
+                "timestamp": "2026-09-28T19:45:25.269434Z"
+              },
+              {
+                "event": {
+                  "count": 1,
+                  "kind": "player_kill",
+                  "total": 1
+                },
+                "seq": 41,
+                "timestamp": "2026-09-28T19:45:25.269434Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "round_kills"
+                    },
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "round_headshot_kills"
+                    }
+                  ],
+                  "kind": "round_stats_changed"
+                },
+                "seq": 41,
+                "timestamp": "2026-09-28T19:45:25.269434Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 48,
+                "timestamp": "2026-09-28T19:45:30.248834Z"
+              },
+              {
+                "event": {
+                  "ct": {
+                    "current": 1,
+                    "delta": 1,
+                    "previous": 0
+                  },
+                  "kind": "score_changed",
+                  "t": null
+                },
+                "seq": 48,
+                "timestamp": "2026-09-28T19:45:30.248834Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 2,
+                      "delta": 1,
+                      "previous": 1,
+                      "stat": "kills"
+                    },
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "mvps"
+                    },
+                    {
+                      "current": 4,
+                      "delta": 2,
+                      "previous": 2,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 48,
+                "timestamp": "2026-09-28T19:45:30.248834Z"
+              },
+              {
+                "event": {
+                  "count": 1,
+                  "kind": "player_kill",
+                  "total": 2
+                },
+                "seq": 48,
+                "timestamp": "2026-09-28T19:45:30.248834Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 2,
+                      "delta": 1,
+                      "previous": 1,
+                      "stat": "round_kills"
+                    },
+                    {
+                      "current": 2,
+                      "delta": 1,
+                      "previous": 1,
+                      "stat": "round_headshot_kills"
+                    }
+                  ],
+                  "kind": "round_stats_changed"
+                },
+                "seq": 48,
+                "timestamp": "2026-09-28T19:45:30.248834Z"
+              }
+            ],
+            "index": 0,
+            "local_evidence": {
+              "at": "2026-09-28T19:45:37.046935Z",
+              "seq": 52,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 2,
+              "health": 16,
+              "kills": 2,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 0,
+                "kills": 2,
+                "mvps": 1,
+                "score": 4
+              },
+              "side": "ct"
+            },
+            "score_after": {
+              "ct": 1,
+              "t": 0
+            },
+            "score_before": {
+              "ct": 0,
+              "t": 0
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 0,
+                "kills": 0,
+                "mvps": 0,
+                "score": 0
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:44:52.651297Z",
+            "winner": "ct"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 1,
+                "kills": 2,
+                "mvps": 1,
+                "score": 4
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:46:10.643296Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 54,
+                "timestamp": "2026-09-28T19:45:47.330734Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 63,
+                "timestamp": "2026-09-28T19:46:08.820392Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 1
+                },
+                "seq": 63,
+                "timestamp": "2026-09-28T19:46:08.820392Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 64,
+                "timestamp": "2026-09-28T19:46:10.643296Z"
+              },
+              {
+                "event": {
+                  "ct": null,
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 1,
+                    "delta": 1,
+                    "previous": 0
+                  }
+                },
+                "seq": 64,
+                "timestamp": "2026-09-28T19:46:10.643296Z"
+              }
+            ],
+            "index": 1,
+            "local_evidence": {
+              "at": "2026-09-28T19:46:10.643296Z",
+              "seq": 64,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 0,
+              "kills": 0,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 1,
+                "kills": 2,
+                "mvps": 1,
+                "score": 4
+              },
+              "side": "ct"
+            },
+            "score_after": {
+              "ct": 1,
+              "t": 1
+            },
+            "score_before": {
+              "ct": 1,
+              "t": 0
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 0,
+                "kills": 2,
+                "mvps": 1,
+                "score": 4
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:45:37.366853Z",
+            "winner": "t"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 2,
+                "kills": 2,
+                "mvps": 1,
+                "score": 4
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:47:20.972211Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 74,
+                "timestamp": "2026-09-28T19:46:27.594312Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 85,
+                "timestamp": "2026-09-28T19:47:20.972211Z"
+              },
+              {
+                "event": {
+                  "ct": null,
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 2,
+                    "delta": 1,
+                    "previous": 1
+                  }
+                },
+                "seq": 85,
+                "timestamp": "2026-09-28T19:47:20.972211Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 2,
+                      "delta": 1,
+                      "previous": 1,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 85,
+                "timestamp": "2026-09-28T19:47:20.972211Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 2
+                },
+                "seq": 85,
+                "timestamp": "2026-09-28T19:47:20.972211Z"
+              }
+            ],
+            "index": 2,
+            "local_evidence": {
+              "at": "2026-09-28T19:47:22.548851Z",
+              "seq": 86,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 0,
+              "kills": 0,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 2,
+                "kills": 2,
+                "mvps": 1,
+                "score": 4
+              },
+              "side": "ct"
+            },
+            "score_after": {
+              "ct": 1,
+              "t": 2
+            },
+            "score_before": {
+              "ct": 1,
+              "t": 1
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 1,
+                "kills": 2,
+                "mvps": 1,
+                "score": 4
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:46:17.608330Z",
+            "winner": "t"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 3,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 1
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:49:33.957248Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 97,
+                "timestamp": "2026-09-28T19:47:37.859796Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 3,
+                      "delta": 1,
+                      "previous": 2,
+                      "stat": "kills"
+                    },
+                    {
+                      "current": 6,
+                      "delta": 2,
+                      "previous": 4,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 118,
+                "timestamp": "2026-09-28T19:48:25.640168Z"
+              },
+              {
+                "event": {
+                  "count": 1,
+                  "kind": "player_kill",
+                  "total": 3
+                },
+                "seq": 118,
+                "timestamp": "2026-09-28T19:48:25.640168Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "round_kills"
+                    }
+                  ],
+                  "kind": "round_stats_changed"
+                },
+                "seq": 118,
+                "timestamp": "2026-09-28T19:48:25.640168Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 133,
+                "timestamp": "2026-09-28T19:49:33.957248Z"
+              },
+              {
+                "event": {
+                  "ct": null,
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 3,
+                    "delta": 1,
+                    "previous": 2
+                  }
+                },
+                "seq": 133,
+                "timestamp": "2026-09-28T19:49:33.957248Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 3,
+                      "delta": 1,
+                      "previous": 2,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 133,
+                "timestamp": "2026-09-28T19:49:33.957248Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 3
+                },
+                "seq": 133,
+                "timestamp": "2026-09-28T19:49:33.957248Z"
+              }
+            ],
+            "index": 3,
+            "local_evidence": {
+              "at": "2026-09-28T19:49:33.957248Z",
+              "seq": 133,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 0,
+              "kills": 1,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 3,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "side": "ct"
+            },
+            "score_after": {
+              "ct": 1,
+              "t": 3
+            },
+            "score_before": {
+              "ct": 1,
+              "t": 2
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 2,
+                "kills": 2,
+                "mvps": 1,
+                "score": 4
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:47:27.920670Z",
+            "winner": "t"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 4,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:50:04.847183Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 145,
+                "timestamp": "2026-09-28T19:49:51.029802Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 4,
+                      "delta": 1,
+                      "previous": 3,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 150,
+                "timestamp": "2026-09-28T19:50:01.731144Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 4
+                },
+                "seq": 150,
+                "timestamp": "2026-09-28T19:50:01.731144Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 151,
+                "timestamp": "2026-09-28T19:50:04.847183Z"
+              },
+              {
+                "event": {
+                  "ct": null,
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 4,
+                    "delta": 1,
+                    "previous": 3
+                  }
+                },
+                "seq": 151,
+                "timestamp": "2026-09-28T19:50:04.847183Z"
+              }
+            ],
+            "index": 4,
+            "local_evidence": {
+              "at": "2026-09-28T19:50:01.731144Z",
+              "seq": 150,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 0,
+              "kills": 0,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 4,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "side": "ct"
+            },
+            "score_after": {
+              "ct": 1,
+              "t": 4
+            },
+            "score_before": {
+              "ct": 1,
+              "t": 3
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 3,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:49:41.011446Z",
+            "winner": "t"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 5,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:50:40.399011Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 157,
+                "timestamp": "2026-09-28T19:50:21.853159Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 179,
+                "timestamp": "2026-09-28T19:50:40.399011Z"
+              },
+              {
+                "event": {
+                  "ct": null,
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 5,
+                    "delta": 1,
+                    "previous": 4
+                  }
+                },
+                "seq": 179,
+                "timestamp": "2026-09-28T19:50:40.399011Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 5,
+                      "delta": 1,
+                      "previous": 4,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 179,
+                "timestamp": "2026-09-28T19:50:40.399011Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 5
+                },
+                "seq": 179,
+                "timestamp": "2026-09-28T19:50:40.399011Z"
+              }
+            ],
+            "index": 5,
+            "local_evidence": {
+              "at": "2026-09-28T19:50:40.399011Z",
+              "seq": 179,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 0,
+              "kills": 0,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 5,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "side": "ct"
+            },
+            "score_after": {
+              "ct": 1,
+              "t": 5
+            },
+            "score_before": {
+              "ct": 1,
+              "t": 4
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 4,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:50:11.914550Z",
+            "winner": "t"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 6,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:51:19.113608Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 183,
+                "timestamp": "2026-09-28T19:50:57.388264Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 202,
+                "timestamp": "2026-09-28T19:51:19.113608Z"
+              },
+              {
+                "event": {
+                  "ct": null,
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 6,
+                    "delta": 1,
+                    "previous": 5
+                  }
+                },
+                "seq": 202,
+                "timestamp": "2026-09-28T19:51:19.113608Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 6,
+                      "delta": 1,
+                      "previous": 5,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 202,
+                "timestamp": "2026-09-28T19:51:19.113608Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 6
+                },
+                "seq": 202,
+                "timestamp": "2026-09-28T19:51:19.113608Z"
+              }
+            ],
+            "index": 6,
+            "local_evidence": {
+              "at": "2026-09-28T19:51:19.113608Z",
+              "seq": 202,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 0,
+              "kills": 0,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 6,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "side": "ct"
+            },
+            "score_after": {
+              "ct": 1,
+              "t": 6
+            },
+            "score_before": {
+              "ct": 1,
+              "t": 5
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 5,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:50:47.458406Z",
+            "winner": "t"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 93,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 6,
+                "kills": 5,
+                "mvps": 2,
+                "score": 10
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 2,
+                "kills": 2
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:52:05.357225Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 213,
+                "timestamp": "2026-09-28T19:51:36.194440Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 4,
+                      "delta": 1,
+                      "previous": 3,
+                      "stat": "kills"
+                    },
+                    {
+                      "current": 8,
+                      "delta": 2,
+                      "previous": 6,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 224,
+                "timestamp": "2026-09-28T19:52:04.865398Z"
+              },
+              {
+                "event": {
+                  "count": 1,
+                  "kind": "player_kill",
+                  "total": 4
+                },
+                "seq": 224,
+                "timestamp": "2026-09-28T19:52:04.865398Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "round_kills"
+                    },
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "round_headshot_kills"
+                    }
+                  ],
+                  "kind": "round_stats_changed"
+                },
+                "seq": 224,
+                "timestamp": "2026-09-28T19:52:04.865398Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 226,
+                "timestamp": "2026-09-28T19:52:05.357225Z"
+              },
+              {
+                "event": {
+                  "ct": {
+                    "current": 2,
+                    "delta": 1,
+                    "previous": 1
+                  },
+                  "kind": "score_changed",
+                  "t": null
+                },
+                "seq": 226,
+                "timestamp": "2026-09-28T19:52:05.357225Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 5,
+                      "delta": 1,
+                      "previous": 4,
+                      "stat": "kills"
+                    },
+                    {
+                      "current": 2,
+                      "delta": 1,
+                      "previous": 1,
+                      "stat": "mvps"
+                    },
+                    {
+                      "current": 10,
+                      "delta": 2,
+                      "previous": 8,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 226,
+                "timestamp": "2026-09-28T19:52:05.357225Z"
+              },
+              {
+                "event": {
+                  "count": 1,
+                  "kind": "player_kill",
+                  "total": 5
+                },
+                "seq": 226,
+                "timestamp": "2026-09-28T19:52:05.357225Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 2,
+                      "delta": 1,
+                      "previous": 1,
+                      "stat": "round_kills"
+                    },
+                    {
+                      "current": 2,
+                      "delta": 1,
+                      "previous": 1,
+                      "stat": "round_headshot_kills"
+                    }
+                  ],
+                  "kind": "round_stats_changed"
+                },
+                "seq": 226,
+                "timestamp": "2026-09-28T19:52:05.357225Z"
+              }
+            ],
+            "index": 7,
+            "local_evidence": {
+              "at": "2026-09-28T19:52:13.524195Z",
+              "seq": 230,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 2,
+              "health": 93,
+              "kills": 2,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 6,
+                "kills": 5,
+                "mvps": 2,
+                "score": 10
+              },
+              "side": "ct"
+            },
+            "score_after": {
+              "ct": 2,
+              "t": 6
+            },
+            "score_before": {
+              "ct": 1,
+              "t": 6
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 6,
+                "kills": 3,
+                "mvps": 1,
+                "score": 6
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "ct",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:51:26.258481Z",
+            "winner": "ct"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 14,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 6,
+                "kills": 6,
+                "mvps": 3,
+                "score": 15
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 1,
+                "kills": 1
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:53:13.338710Z",
+            "events": [
+              {
+                "event": {
+                  "ct": {
+                    "current": 6,
+                    "delta": 4,
+                    "previous": 2
+                  },
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 2,
+                    "delta": -4,
+                    "previous": 6
+                  }
+                },
+                "seq": 231,
+                "timestamp": "2026-09-28T19:52:13.884601Z"
+              },
+              {
+                "event": {
+                  "change": {
+                    "current": "t",
+                    "previous": "ct"
+                  },
+                  "kind": "team_changed"
+                },
+                "seq": 231,
+                "timestamp": "2026-09-28T19:52:13.884601Z"
+              },
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 235,
+                "timestamp": "2026-09-28T19:52:30.317637Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 12,
+                      "delta": 2,
+                      "previous": 10,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 271,
+                "timestamp": "2026-09-28T19:53:11.221445Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 275,
+                "timestamp": "2026-09-28T19:53:13.338710Z"
+              },
+              {
+                "event": {
+                  "ct": null,
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 3,
+                    "delta": 1,
+                    "previous": 2
+                  }
+                },
+                "seq": 275,
+                "timestamp": "2026-09-28T19:53:13.338710Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 6,
+                      "delta": 1,
+                      "previous": 5,
+                      "stat": "kills"
+                    },
+                    {
+                      "current": 3,
+                      "delta": 1,
+                      "previous": 2,
+                      "stat": "mvps"
+                    },
+                    {
+                      "current": 15,
+                      "delta": 3,
+                      "previous": 12,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 275,
+                "timestamp": "2026-09-28T19:53:13.338710Z"
+              },
+              {
+                "event": {
+                  "count": 1,
+                  "kind": "player_kill",
+                  "total": 6
+                },
+                "seq": 275,
+                "timestamp": "2026-09-28T19:53:13.338710Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "round_kills"
+                    },
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "round_headshot_kills"
+                    }
+                  ],
+                  "kind": "round_stats_changed"
+                },
+                "seq": 275,
+                "timestamp": "2026-09-28T19:53:13.338710Z"
+              }
+            ],
+            "index": 8,
+            "local_evidence": {
+              "at": "2026-09-28T19:53:15.597642Z",
+              "seq": 279,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 1,
+              "health": 14,
+              "kills": 1,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 6,
+                "kills": 6,
+                "mvps": 3,
+                "score": 15
+              },
+              "side": "t"
+            },
+            "score_after": {
+              "ct": 6,
+              "t": 3
+            },
+            "score_before": {
+              "ct": 6,
+              "t": 2
+            },
+            "side_swap_before": {
+              "after": {
+                "ct": 6,
+                "t": 2
+              },
+              "before": {
+                "ct": 2,
+                "t": 6
+              },
+              "seq": 231
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 6,
+                "kills": 5,
+                "mvps": 2,
+                "score": 10
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:52:13.884601Z",
+            "winner": "t"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 6,
+                "kills": 6,
+                "mvps": 3,
+                "score": 16
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:53:54.305006Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 286,
+                "timestamp": "2026-09-28T19:53:30.424343Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 299,
+                "timestamp": "2026-09-28T19:53:54.305006Z"
+              },
+              {
+                "event": {
+                  "ct": null,
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 4,
+                    "delta": 1,
+                    "previous": 3
+                  }
+                },
+                "seq": 299,
+                "timestamp": "2026-09-28T19:53:54.305006Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "assists"
+                    },
+                    {
+                      "current": 16,
+                      "delta": 1,
+                      "previous": 15,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 299,
+                "timestamp": "2026-09-28T19:53:54.305006Z"
+              }
+            ],
+            "index": 9,
+            "local_evidence": {
+              "at": "2026-09-28T19:54:00.034385Z",
+              "seq": 302,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 100,
+              "kills": 0,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 6,
+                "kills": 6,
+                "mvps": 3,
+                "score": 16
+              },
+              "side": "t"
+            },
+            "score_after": {
+              "ct": 6,
+              "t": 4
+            },
+            "score_before": {
+              "ct": 6,
+              "t": 3
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 0,
+                "deaths": 6,
+                "kills": 6,
+                "mvps": 3,
+                "score": 15
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:53:20.468860Z",
+            "winner": "t"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 7,
+                "kills": 7,
+                "mvps": 4,
+                "score": 23
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 1,
+                "kills": 1
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:55:16.723703Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 308,
+                "timestamp": "2026-09-28T19:54:11.278590Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 18,
+                      "delta": 2,
+                      "previous": 16,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 319,
+                "timestamp": "2026-09-28T19:54:35.643217Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 7,
+                      "delta": 1,
+                      "previous": 6,
+                      "stat": "kills"
+                    },
+                    {
+                      "current": 21,
+                      "delta": 3,
+                      "previous": 18,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 321,
+                "timestamp": "2026-09-28T19:54:37.710713Z"
+              },
+              {
+                "event": {
+                  "count": 1,
+                  "kind": "player_kill",
+                  "total": 7
+                },
+                "seq": 321,
+                "timestamp": "2026-09-28T19:54:37.710713Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "round_kills"
+                    },
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "round_headshot_kills"
+                    }
+                  ],
+                  "kind": "round_stats_changed"
+                },
+                "seq": 321,
+                "timestamp": "2026-09-28T19:54:37.710713Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 333,
+                "timestamp": "2026-09-28T19:55:16.723703Z"
+              },
+              {
+                "event": {
+                  "ct": null,
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 5,
+                    "delta": 1,
+                    "previous": 4
+                  }
+                },
+                "seq": 333,
+                "timestamp": "2026-09-28T19:55:16.723703Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 4,
+                      "delta": 1,
+                      "previous": 3,
+                      "stat": "mvps"
+                    },
+                    {
+                      "current": 23,
+                      "delta": 2,
+                      "previous": 21,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 333,
+                "timestamp": "2026-09-28T19:55:16.723703Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 7,
+                      "delta": 1,
+                      "previous": 6,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 334,
+                "timestamp": "2026-09-28T19:55:17.087036Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 7
+                },
+                "seq": 334,
+                "timestamp": "2026-09-28T19:55:17.087036Z"
+              }
+            ],
+            "index": 10,
+            "local_evidence": {
+              "at": "2026-09-28T19:55:17.087036Z",
+              "seq": 334,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 1,
+              "health": 0,
+              "kills": 1,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 7,
+                "kills": 7,
+                "mvps": 4,
+                "score": 23
+              },
+              "side": "t"
+            },
+            "score_after": {
+              "ct": 6,
+              "t": 5
+            },
+            "score_before": {
+              "ct": 6,
+              "t": 4
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 6,
+                "kills": 6,
+                "mvps": 3,
+                "score": 16
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:54:01.344226Z",
+            "winner": "t"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 8,
+                "kills": 7,
+                "mvps": 4,
+                "score": 23
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:56:48.730850Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 348,
+                "timestamp": "2026-09-28T19:55:33.789429Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 8,
+                      "delta": 1,
+                      "previous": 7,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 356,
+                "timestamp": "2026-09-28T19:55:49.924429Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 8
+                },
+                "seq": 356,
+                "timestamp": "2026-09-28T19:55:49.924429Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 385,
+                "timestamp": "2026-09-28T19:56:48.730850Z"
+              },
+              {
+                "event": {
+                  "ct": {
+                    "current": 7,
+                    "delta": 1,
+                    "previous": 6
+                  },
+                  "kind": "score_changed",
+                  "t": null
+                },
+                "seq": 385,
+                "timestamp": "2026-09-28T19:56:48.730850Z"
+              }
+            ],
+            "index": 11,
+            "local_evidence": {
+              "at": "2026-09-28T19:55:52.524258Z",
+              "seq": 358,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 0,
+              "kills": 0,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 8,
+                "kills": 7,
+                "mvps": 4,
+                "score": 23
+              },
+              "side": "t"
+            },
+            "score_after": {
+              "ct": 7,
+              "t": 5
+            },
+            "score_before": {
+              "ct": 6,
+              "t": 5
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 7,
+                "kills": 7,
+                "mvps": 4,
+                "score": 23
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:55:23.761468Z",
+            "winner": "ct"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 9,
+                "kills": 8,
+                "mvps": 4,
+                "score": 25
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 1
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:57:45.739487Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 395,
+                "timestamp": "2026-09-28T19:57:05.710389Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 8,
+                      "delta": 1,
+                      "previous": 7,
+                      "stat": "kills"
+                    },
+                    {
+                      "current": 25,
+                      "delta": 2,
+                      "previous": 23,
+                      "stat": "score"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 403,
+                "timestamp": "2026-09-28T19:57:23.201648Z"
+              },
+              {
+                "event": {
+                  "count": 1,
+                  "kind": "player_kill",
+                  "total": 8
+                },
+                "seq": 403,
+                "timestamp": "2026-09-28T19:57:23.201648Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 1,
+                      "delta": 1,
+                      "previous": 0,
+                      "stat": "round_kills"
+                    }
+                  ],
+                  "kind": "round_stats_changed"
+                },
+                "seq": 403,
+                "timestamp": "2026-09-28T19:57:23.201648Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 9,
+                      "delta": 1,
+                      "previous": 8,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 410,
+                "timestamp": "2026-09-28T19:57:26.766944Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 9
+                },
+                "seq": 410,
+                "timestamp": "2026-09-28T19:57:26.766944Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 417,
+                "timestamp": "2026-09-28T19:57:45.739487Z"
+              },
+              {
+                "event": {
+                  "ct": null,
+                  "kind": "score_changed",
+                  "t": {
+                    "current": 6,
+                    "delta": 1,
+                    "previous": 5
+                  }
+                },
+                "seq": 417,
+                "timestamp": "2026-09-28T19:57:45.739487Z"
+              }
+            ],
+            "index": 12,
+            "local_evidence": {
+              "at": "2026-09-28T19:57:26.766944Z",
+              "seq": 410,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 0,
+              "kills": 1,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 9,
+                "kills": 8,
+                "mvps": 4,
+                "score": 25
+              },
+              "side": "t"
+            },
+            "score_after": {
+              "ct": 7,
+              "t": 6
+            },
+            "score_before": {
+              "ct": 7,
+              "t": 5
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 1,
+                "deaths": 8,
+                "kills": 7,
+                "mvps": 4,
+                "score": 23
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:56:55.775800Z",
+            "winner": "t"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 2,
+                "deaths": 10,
+                "kills": 8,
+                "mvps": 5,
+                "score": 26
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:58:39.558211Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 428,
+                "timestamp": "2026-09-28T19:58:02.773794Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 435,
+                "timestamp": "2026-09-28T19:58:39.558211Z"
+              },
+              {
+                "event": {
+                  "ct": {
+                    "current": 8,
+                    "delta": 1,
+                    "previous": 7
+                  },
+                  "kind": "score_changed",
+                  "t": null
+                },
+                "seq": 435,
+                "timestamp": "2026-09-28T19:58:39.558211Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 10,
+                      "delta": 1,
+                      "previous": 9,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 435,
+                "timestamp": "2026-09-28T19:58:39.558211Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 10
+                },
+                "seq": 435,
+                "timestamp": "2026-09-28T19:58:39.558211Z"
+              }
+            ],
+            "index": 13,
+            "local_evidence": {
+              "at": "2026-09-28T19:58:39.558211Z",
+              "seq": 435,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 0,
+              "kills": 0,
+              "match_stats": {
+                "assists": 2,
+                "deaths": 10,
+                "kills": 8,
+                "mvps": 5,
+                "score": 26
+              },
+              "side": "t"
+            },
+            "score_after": {
+              "ct": 8,
+              "t": 6
+            },
+            "score_before": {
+              "ct": 7,
+              "t": 6
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 2,
+                "deaths": 9,
+                "kills": 8,
+                "mvps": 5,
+                "score": 26
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:57:52.831230Z",
+            "winner": "ct"
+          },
+          {
+            "completed": true,
+            "end": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 0,
+              "helmet": null,
+              "match_stats": {
+                "assists": 2,
+                "deaths": 11,
+                "kills": 8,
+                "mvps": 5,
+                "score": 26
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "ended_at": "2026-09-28T19:59:31.642036Z",
+            "events": [
+              {
+                "event": {
+                  "kind": "round_started"
+                },
+                "seq": 441,
+                "timestamp": "2026-09-28T19:58:56.530342Z"
+              },
+              {
+                "event": {
+                  "kind": "round_ended"
+                },
+                "seq": 458,
+                "timestamp": "2026-09-28T19:59:31.642036Z"
+              },
+              {
+                "event": {
+                  "ct": {
+                    "current": 9,
+                    "delta": 1,
+                    "previous": 8
+                  },
+                  "kind": "score_changed",
+                  "t": null
+                },
+                "seq": 458,
+                "timestamp": "2026-09-28T19:59:31.642036Z"
+              },
+              {
+                "event": {
+                  "changes": [
+                    {
+                      "current": 11,
+                      "delta": 1,
+                      "previous": 10,
+                      "stat": "deaths"
+                    }
+                  ],
+                  "kind": "match_stats_changed"
+                },
+                "seq": 458,
+                "timestamp": "2026-09-28T19:59:31.642036Z"
+              },
+              {
+                "event": {
+                  "kind": "player_died",
+                  "total": 11
+                },
+                "seq": 458,
+                "timestamp": "2026-09-28T19:59:31.642036Z"
+              }
+            ],
+            "index": 14,
+            "local_evidence": {
+              "at": "2026-09-28T19:59:31.642036Z",
+              "seq": 458,
+              "steam_id": "76561199207293235"
+            },
+            "player": {
+              "headshot_kills": 0,
+              "health": 0,
+              "kills": 0,
+              "match_stats": {
+                "assists": 2,
+                "deaths": 11,
+                "kills": 8,
+                "mvps": 5,
+                "score": 26
+              },
+              "side": "t"
+            },
+            "score_after": {
+              "ct": 9,
+              "t": 6
+            },
+            "score_before": {
+              "ct": 8,
+              "t": 6
+            },
+            "start": {
+              "armor": null,
+              "burning": null,
+              "defuse_kit": null,
+              "equipment_value": null,
+              "flash": null,
+              "health": 100,
+              "helmet": null,
+              "match_stats": {
+                "assists": 2,
+                "deaths": 10,
+                "kills": 8,
+                "mvps": 5,
+                "score": 26
+              },
+              "money": null,
+              "round_stats": {
+                "headshot_kills": 0,
+                "kills": 0
+              },
+              "smoke": null,
+              "steam_id": "76561199207293235",
+              "team": "t",
+              "weapons": null
+            },
+            "started_at": "2026-09-28T19:58:46.547742Z",
+            "winner": "ct"
+          }
+        ],
+        "state": {
+          "game": {
+            "app_id": 730,
+            "build": 14185,
+            "local_steam_id": "76561199207293235",
+            "name": null,
+            "observed_at": 1790625565
+          },
+          "match": {
+            "ct": {
+              "consecutive_losses": null,
+              "series_wins": null,
+              "timeouts_remaining": null
+            },
+            "map": "de_vertigo",
+            "mode": "scrimcomp2v2",
+            "phase": "game_over",
+            "score": {
+              "ct": 9,
+              "t": 6
+            },
+            "series_matches_to_win": null,
+            "t": {
+              "consecutive_losses": null,
+              "series_wins": null,
+              "timeouts_remaining": null
+            }
+          },
+          "player": {
+            "armor": null,
+            "burning": null,
+            "defuse_kit": null,
+            "equipment_value": null,
+            "flash": null,
+            "health": 0,
+            "helmet": null,
+            "match_stats": {
+              "assists": 2,
+              "deaths": 11,
+              "kills": 8,
+              "mvps": 5,
+              "score": 26
+            },
+            "money": null,
+            "round_stats": {
+              "headshot_kills": 0,
+              "kills": 0
+            },
+            "smoke": null,
+            "steam_id": "76561199207293235",
+            "team": "t",
+            "weapons": null
+          },
+          "round": {
+            "completed_rounds": 15,
+            "phase": "freeze_time",
+            "winner": "ct"
+          },
+          "view": {
+            "activity": "menu",
+            "clan": null,
+            "display_name": null,
+            "identity": "local",
+            "observer_slot": null,
+            "steam_id": "76561199207293235"
+          }
+        },
+        "updated_at": "2026-09-28T19:59:32.263420Z"
+      },
+      "device_id": "9f1c1aae-6e46-408d-8db6-3aa2697e7d54",
+      "id": "94ec6616-622c-422d-b20f-55b4fb5ed460",
+      "map": "de_vertigo",
+      "session_id": "7abb4ce0-0e18-4fc8-a27e-f89ad54958f9"
+    }
+  ],
+  "snapshots": [],
+  "operational_logs": [
+    {
+      "broadcaster_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+      "category": "SYSTEM",
+      "created_at": "2026-09-28T20:54:06.889842+00:00",
+      "details": {
+        "actor_type": "script",
+        "execution_id": "a668155d-b82c-4848-b0c5-8a0f18bf5d0a",
+        "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+        "revision": 1
+      },
+      "event_type": "script.execution_interrupted",
+      "id": 6,
+      "level": "WARN",
+      "message": "Script execution interrupted; possible side effects were not replayed",
+      "solution_hint": null
+    },
+    {
+      "broadcaster_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+      "category": "SYSTEM",
+      "created_at": "2026-09-28T20:54:06.889842+00:00",
+      "details": {
+        "actor_type": "script",
+        "error": "Runtime error: expected QA failure (line 1, position 20)",
+        "script": {
+          "channel_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+          "execution_id": "3aa858c7-7bb8-45b4-94bc-8dd4a80c0c9f",
+          "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+          "revision": 2
+        }
+      },
+      "event_type": "script.execution_failed",
+      "id": 5,
+      "level": "WARN",
+      "message": "Script execution failed",
+      "solution_hint": null
+    },
+    {
+      "broadcaster_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+      "category": "SYSTEM",
+      "created_at": "2026-09-28T20:54:06.889842+00:00",
+      "details": {
+        "actor_type": "user",
+        "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+        "project_name": "Live evidence",
+        "revision": 2,
+        "user_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "user_login": "owner"
+      },
+      "event_type": "script.project_published",
+      "id": 4,
+      "level": "INFO",
+      "message": "@owner published script project \"Live evidence\" (revision 2)",
+      "solution_hint": null
+    },
+    {
+      "broadcaster_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+      "category": "SYSTEM",
+      "created_at": "2026-09-28T20:53:59.88582+00:00",
+      "details": {
+        "actor_type": "user",
+        "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+        "project_name": "Live evidence",
+        "user_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "user_login": "owner"
+      },
+      "event_type": "script.project_enabled",
+      "id": 3,
+      "level": "INFO",
+      "message": "@owner enabled script project \"Live evidence\"",
+      "solution_hint": null
+    },
+    {
+      "broadcaster_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+      "category": "SYSTEM",
+      "created_at": "2026-09-28T20:53:59.88582+00:00",
+      "details": {
+        "actor_type": "user",
+        "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+        "project_name": "Live evidence",
+        "revision": 1,
+        "user_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "user_login": "owner"
+      },
+      "event_type": "script.project_published",
+      "id": 2,
+      "level": "INFO",
+      "message": "@owner published script project \"Live evidence\" (revision 1)",
+      "solution_hint": null
+    },
+    {
+      "broadcaster_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+      "category": "SYSTEM",
+      "created_at": "2026-09-28T20:53:59.88582+00:00",
+      "details": {
+        "actor_type": "user",
+        "project_id": "b746d6e0-a4e7-47fc-bc26-266564da0523",
+        "project_name": "Live evidence",
+        "user_id": "live-vertigo-e716b170-cc40-4db1-b4ec-304ee0a6518e",
+        "user_login": "owner"
+      },
+      "event_type": "script.project_created",
+      "id": 1,
+      "level": "INFO",
+      "message": "@owner created script project \"Live evidence\"",
+      "solution_hint": null
+    }
+  ]
+}
