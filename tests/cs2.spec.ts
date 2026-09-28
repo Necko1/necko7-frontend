@@ -18,6 +18,7 @@ test("pairing renews, detects desktop, and revokes without unnecessary codes", a
   expect(codes).toBe(2);
   await expect(page.getByText("CS2 data: Receiving CS2 data")).toBeVisible();
   await page.getByRole("button", { name: "Unpair desktop" }).click();
+  await page.getByRole("dialog", { name: "Unpair desktop?" }).getByRole("button", { name: "Unpair desktop" }).click();
   await expect(page.getByRole("link", { name: "Open CS2 Integration", exact: true })).toBeVisible();
   expect(codes).toBe(3);
 });

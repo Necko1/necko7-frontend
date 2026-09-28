@@ -4,7 +4,7 @@ import { QueryError } from "@/components/common/Page";
 import PanelGuide from "@/components/layout/PanelGuide";
 import { toast } from "sonner";
 import { useState, useEffect, Suspense } from "react";
-import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -160,7 +160,7 @@ export default function AppLayout() {
     ] },
     { label: t("ops.configuration"), items: [
       { label: t("nav.rewards"), to: "/rewards", icon: <IconGift /> },
-      ...(role === "OWNER" ? [{ label: "Scripts", to: "/scripts/editor", icon: <IconGrid /> }] : []),
+      ...(role === "OWNER" ? [{ label: "Scripts", to: "/scripts/editor", icon: <IconGrid />, isActive: (pathname: string) => pathname === "/scripts" || pathname.startsWith("/scripts/") }] : []),
       { label: t("ops.settings"), to: `/broadcasters/${selected!.channel_id}/settings`, icon: <IconSettings /> },
     ] },
     { label: t("ops.community"), items: [
@@ -180,7 +180,7 @@ export default function AppLayout() {
     <nav aria-label={t("ops.workspace")} className="min-h-0 flex-1 overflow-y-auto px-3 space-y-6 pb-5">{groups.map((group, groupIndex) => <div key={group.label}><p className="nav-group-label px-3 mb-2"><span>0{groupIndex + 1}</span>{group.label}</p><div className="space-y-1">{group.items.map(item => {
       const active = item.isActive ? item.isActive(location.pathname) : item.end ? location.pathname === item.to : location.pathname === item.to || location.pathname.startsWith(item.to + "/");
       const id = item.to.includes("MANUAL_HOLD") ? "holds" : item.to.includes("settings") ? "settings" : item.to.slice(1);
-      return <NavLink key={item.to} to={item.to} end={item.end} aria-current={active ? "page" : false} data-tour={!mobile ? id : undefined} className="workspace-link" onClick={() => setMobileOpen(false)}>{item.icon}<span className="flex-1">{item.label}</span>{id === "holds" && holds && holds.total > 0 && <span className="rounded bg-amber-400/15 text-amber-300 px-1.5 text-xs tabular-nums">{holds.total}</span>}</NavLink>;
+      return <Link key={item.to} to={item.to} aria-current={active ? "page" : false} data-tour={!mobile ? id : undefined} className="workspace-link" onClick={() => setMobileOpen(false)}>{item.icon}<span className="flex-1">{item.label}</span>{id === "holds" && holds && holds.total > 0 && <span className="rounded bg-amber-400/15 text-amber-300 px-1.5 text-xs tabular-nums">{holds.total}</span>}</Link>;
     })}</div></div>)}</nav>
     <div className="border-t border-border p-3 space-y-2">{operator && meData && selected && <PanelGuide userId={meData.twitch_id} channelId={selected.channel_id} role={role!} mobile={mobile} onStart={() => setMobileOpen(false)} />}
     <LanguageSwitcher />

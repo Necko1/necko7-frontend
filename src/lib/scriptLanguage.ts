@@ -1,5 +1,9 @@
 import type { Monaco } from "@monaco-editor/react";
 import * as monaco from "monaco-editor/editor/editor.api";
+// The slim local API bundle does not register these editor contributions.
+import "monaco-editor/editor/contrib/suggest/browser/suggestController.js";
+import "monaco-editor/editor/contrib/hover/browser/hoverContribution.js";
+import "monaco-editor/editor/contrib/find/browser/findController.js";
 import EditorWorker from "monaco-editor/editor/editor.worker?worker";
 import { loader } from "@monaco-editor/react";
 
