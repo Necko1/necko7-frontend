@@ -214,7 +214,7 @@ export async function correctionApi(
           solution_hint:
             i > 3 ? "Check the recorded market outcome before retrying." : null,
           details: {
-            redemption_id: redemptions[0].twitch_redemption_id,
+            redemption_id: redemptions[0].fulfillment_id,
             old_status: "PENDING",
             new_status: i < 3 ? "ORDER_CREATED" : "MANUAL_HOLD",
             attempt: i + 1,

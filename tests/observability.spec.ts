@@ -14,7 +14,7 @@ for (const width of [1440, 390]) {
       { ...redemptions[2], status: "COMPLETED", inventory_lifecycle_status: "DELIVERED", latest_attempt_status: "DELIVERED", latest_attempt_outcome_kind: null },
     ];
     await page.route("**/api/v1/broadcasters/123/redemptions?**", route => route.fulfill({ json: { items: rows, total: rows.length, offset: 0, limit: 25 } }));
-    const redemptionId = rows[2].twitch_redemption_id;
+    const redemptionId = rows[2].fulfillment_id;
     await page.route(`**/api/v1/broadcasters/123/redemptions/${redemptionId}/audit`, route => route.fulfill({ json: [
       { id: 1, event_key: "redeemed", redemption_id: redemptionId, inventory_id: null, attempt_custom_id: null, event_type: "reward_redeemed", actor_kind: "viewer", actor_user_id: "913", created_at: "2026-09-25T10:00:00Z" },
       { id: 2, event_key: "created", redemption_id: redemptionId, inventory_id: "inventory-1", attempt_custom_id: null, event_type: "inventory_created", actor_kind: "system", actor_user_id: null, created_at: "2026-09-25T10:00:01Z" },

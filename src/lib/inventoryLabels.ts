@@ -1,4 +1,5 @@
 export const inventoryLabels: Record<string, [string, string]> = {
+  DISCARDED: ["Discarded", "Discarded"],
   WAITING_VIEWER: ["Ready for your action", "Ожидает вашего решения"],
   WAITING_OPERATOR: ["Operator review", "Проверка оператором"],
   TRADE_LINK_REQUIRED: ["Trade link required", "Нужна ссылка обмена"],

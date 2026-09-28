@@ -882,6 +882,7 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
     show_description: true,
     show_market_price: true,
     show_price_deviation: true,
+    show_invisible_rewards: false,
     show_paused_rewards: true,
     show_pause_reason: true,
     show_cooldown_and_limits: true,
@@ -901,6 +902,7 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
         show_description: settings.public_rewards_config.show_description ?? true,
         show_market_price: settings.public_rewards_config.show_market_price ?? true,
         show_price_deviation: settings.public_rewards_config.show_price_deviation ?? true,
+        show_invisible_rewards: settings.public_rewards_config.show_invisible_rewards ?? false,
         show_paused_rewards: settings.public_rewards_config.show_paused_rewards ?? true,
         show_pause_reason: settings.public_rewards_config.show_pause_reason ?? true,
         show_cooldown_and_limits: settings.public_rewards_config.show_cooldown_and_limits ?? true,
@@ -1072,6 +1074,7 @@ function PublicCatalogTab({ channelId, channelLogin }: { channelId: string; chan
             checked={config.show_paused_rewards ?? true}
             onChange={(v) => setFlag("show_paused_rewards", v)}
           />
+          <ToggleField id="show_invisible_rewards" label="Include rewards hidden on Twitch" description="Controls this storefront only; Twitch visibility stays separate." checked={config.show_invisible_rewards ?? false} onChange={v => setFlag("show_invisible_rewards", v)} />
           <Separator />
           <ToggleField
             id="show_pause_reason"

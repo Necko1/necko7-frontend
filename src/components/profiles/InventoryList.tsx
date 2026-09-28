@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { api } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -20,7 +21,7 @@ export default function InventoryList({ channelId, userId, operator = false }: {
   const [offset, setOffset] = useState(0);
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
-  const [action, setAction] = useState<{ item: InventoryItem; kind: "attempt" | "refund"; useSavedLink?: boolean } | null>(null);
+  const [action, setAction] = useState<{ item: InventoryItem; kind: "attempt" | "refund" | "discard"; useSavedLink?: boolean } | null>(null);
   const params = { limit, offset, status: status || undefined, search: search.trim() || undefined };
   const viewerSettings = useQuery({ queryKey: ["viewer-settings"], queryFn: () => usersApi.getSettings().then(r => r.data), enabled: !operator });
   const query = useQuery({
@@ -32,7 +33,8 @@ export default function InventoryList({ channelId, userId, operator = false }: {
     enabled: !operator || (!!channelId && !!userId),
   });
   const mutation = useMutation({
-    mutationFn: async ({ item, kind, useSavedLink }: { item: InventoryItem; kind: "attempt" | "refund"; useSavedLink?: boolean }) => {
+    mutationFn: async ({ item, kind, useSavedLink }: { item: InventoryItem; kind: "attempt" | "refund" | "discard"; useSavedLink?: boolean }) => {
+      if (kind === "discard") return api.post(`/api/v1/me/inventory/${item.id}/discard`, {confirmation:"DISCARD"});
       if (operator && channelId && userId) {
         return kind === "attempt" ? viewerApi.operatorAttempt(channelId, userId, item.id, useSavedLink) : viewerApi.operatorRefund(channelId, userId, item.id);
       }
@@ -66,7 +68,7 @@ export default function InventoryList({ channelId, userId, operator = false }: {
     if (item.latest_attempt_status === "BUYER_FAILED" && !operator && !item.buyer_retry_allowed) return false;
     return ["WAITING_VIEWER", "WAITING_OPERATOR", "TRADE_LINK_REQUIRED", "RETRY_AVAILABLE", "INSUFFICIENT_FUNDS"].includes(item.lifecycle_status);
   };
-  const canRefund = (item: InventoryItem) => item.redemption_status === "PENDING" && (operator || !item.has_buyer_revert) && ["WAITING_VIEWER", "WAITING_OPERATOR", "TRADE_LINK_REQUIRED", "RETRY_AVAILABLE", "INSUFFICIENT_FUNDS", "OPERATOR_REVIEW"].includes(item.lifecycle_status) && item.fulfillment_mode !== "LEGACY_REVIEW";
+  const canRefund = (item: InventoryItem) => item.origin !== "SCRIPT" && item.redemption_status === "PENDING" && (operator || !item.has_buyer_revert) && ["WAITING_VIEWER", "WAITING_OPERATOR", "TRADE_LINK_REQUIRED", "RETRY_AVAILABLE", "INSUFFICIENT_FUNDS", "OPERATOR_REVIEW"].includes(item.lifecycle_status) && item.fulfillment_mode !== "LEGACY_REVIEW";
   return <section aria-label={c("Inventory items", "Предметы инвентаря")} className="space-y-4">
     {filters}
     {!query.data.length && offset === 0 ? <EmptyState title={c("No matching inventory items", "Подходящих предметов нет")} description={c("Items appear here when a reward resolves a concrete skin.", "Предмет появится здесь после выбора конкретного скина для награды.")} /> : <ul className="inventory-grid">{query.data.map(item => <li key={item.id} className="inventory-item">
@@ -74,6 +76,8 @@ export default function InventoryList({ channelId, userId, operator = false }: {
       <div className="min-w-0 space-y-2">
         <p className="eyebrow">{c(...(labels[item.lifecycle_status] || [item.lifecycle_status, item.lifecycle_status]))}</p>
         <h3>{item.item_name}</h3>
+        {item.origin === "SCRIPT" && <p className="text-xs text-muted-foreground">Script reward · No Twitch points spent</p>}
+        {item.origin === "SCRIPT" && !operator && item.lifecycle_status !== "DISCARDED" && <Button size="sm" variant="outline" disabled={!["WAITING_VIEWER","WAITING_OPERATOR","TRADE_LINK_REQUIRED","RETRY_AVAILABLE","INSUFFICIENT_FUNDS"].includes(item.lifecycle_status)} title="Discard is unavailable while an order or trade is unresolved" onClick={() => setAction({item,kind:"discard"})}>Discard</Button>}
         <p className="text-xs text-muted-foreground">{item.reward_title} · <Link to={`/c/${item.channel_login}/profile`}>{item.channel_login}</Link></p>
         <div className="inventory-facts"><span>{formatMinorCurrency(item.fixed_price, item.currency)} <small>{item.fulfillment_mode === "LEGACY_REVIEW" ? c("historical recorded value", "историческая запись стоимости") : c("fixed value", "зафиксированная стоимость")}</small></span><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString()}</time></div>
         {item.latest_attempt_outcome_kind && attemptLabels[item.latest_attempt_outcome_kind] && <p className="text-xs text-muted-foreground">{c(...attemptLabels[item.latest_attempt_outcome_kind])}</p>}
@@ -90,6 +94,6 @@ export default function InventoryList({ channelId, userId, operator = false }: {
       </div>
     </li>)}</ul>}
     {!!query.data.length && <div className="flex items-center gap-4"><Button variant="outline" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))}>{c("Previous", "Назад")}</Button><span className="text-xs text-muted-foreground">{c("Page", "Страница")} {Math.floor(offset / limit) + 1}</span><Button variant="outline" disabled={query.data.length < limit} onClick={() => setOffset(offset + limit)}>{c("Next", "Далее")}</Button></div>}
-    <ConfirmAction open={!!action} onClose={() => setAction(null)} onConfirm={() => { if (action && !mutation.isPending) mutation.mutate(action); }} pending={mutation.isPending} destructive={action?.kind === "refund"} title={action?.kind === "refund" ? c("Return Channel Points?", "Вернуть баллы канала?") : c("Start a Market order?", "Создать заказ на маркете?")} description={action?.kind === "refund" ? c("Fulfillment will close only after the server verifies that no order or trade can still deliver this item.", "Выдача завершится только после проверки, что заказ или обмен больше не может доставить предмет.") : c("A new order is created only when the previous attempt is confirmed safe to retry.", "Новый заказ создаётся только после подтверждения безопасности повторной попытки.")} label={action?.kind === "refund" ? c("Return points", "Вернуть баллы") : c("Start order", "Создать заказ")} context={action?.item.item_name} />
+    <ConfirmAction open={!!action} onClose={() => setAction(null)} onConfirm={() => { if (action && !mutation.isPending) mutation.mutate(action); }} pending={mutation.isPending} destructive={action?.kind === "refund"} title={action?.kind === "discard" ? "Discard this item?" : action?.kind === "refund" ? c("Return Channel Points?", "Вернуть баллы канала?") : c("Start a Market order?", "Создать заказ на маркете?")} description={action?.kind === "discard" ? "No Twitch points exist to refund. This permanently closes fulfillment and keeps its audit history." : action?.kind === "refund" ? c("Fulfillment will close only after the server verifies that no order or trade can still deliver this item.", "Выдача завершится только после проверки, что заказ или обмен больше не может доставить предмет.") : c("A new order is created only when the previous attempt is confirmed safe to retry.", "Новый заказ создаётся только после подтверждения безопасности повторной попытки.")} label={action?.kind === "discard" ? "Discard" : action?.kind === "refund" ? c("Return points", "Вернуть баллы") : c("Start order", "Создать заказ")} context={action?.item.item_name} />
   </section>;
 }

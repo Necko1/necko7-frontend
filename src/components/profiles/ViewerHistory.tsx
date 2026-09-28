@@ -137,7 +137,7 @@ export default function ViewerHistory({ channelId }: { channelId?: string }) {
             const lifecycleLabel = fulfillmentLabel(r.inventory_lifecycle_status, r.latest_attempt_outcome_kind, i18n.language);
             return (
               <details
-                key={r.twitch_redemption_id}
+                key={r.fulfillment_id}
                 className="viewer-history-row"
               >
                 <summary>
@@ -232,7 +232,7 @@ export default function ViewerHistory({ channelId }: { channelId?: string }) {
                           )}
                         </dt>
                         <dd className="font-mono text-xs">
-                          {r.twitch_redemption_id}
+                          {r.fulfillment_id}
                         </dd>
                       </div>
                     </dl>

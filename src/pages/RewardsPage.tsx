@@ -2205,6 +2205,11 @@ function RewardEditDialog({
           </DialogHeader>
 
           {/* Action bar */}
+          <div className="flex flex-wrap items-center gap-3 py-2">
+            <label className="text-sm">Script alias <input aria-label="Script alias" className="ml-2 rounded border border-border bg-background px-2 py-1" key={reward.script_alias} defaultValue={reward.script_alias ?? ""} placeholder="random_skin" maxLength={64} onBlur={e => { if(e.target.value !== (reward.script_alias ?? "")) updateMutation.mutate({script_alias:e.target.value}); }} /></label>
+            <Button size="sm" variant="outline" disabled={updateMutation.isPending} onClick={() => updateMutation.mutate({is_visible:reward.is_visible === false})}>{reward.is_visible === false ? "Show on Twitch" : "Hide on Twitch"}</Button>
+            <span className="text-xs text-muted-foreground">Visibility does not pause fulfillment or price updates.</span>
+          </div>
           <div
             className={cn(
               "flex flex-wrap items-center gap-2 mt-2",

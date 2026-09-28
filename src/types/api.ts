@@ -41,6 +41,7 @@ export type CategorizedChatMessages = Record<string, Record<string, string>>;
 export type CategorizedPlaceholders = Record<string, Record<string, string[]>>;
 
 export interface PublicRewardsConfig {
+  show_invisible_rewards?: boolean;
   enabled?: boolean;
   show_chat_requirements?: boolean;
   show_cooldown_and_limits?: boolean;
@@ -189,6 +190,8 @@ export interface RewardPurchaseLimitsConfig {
 }
 
 export interface RewardResponse {
+  is_visible?: boolean;
+  script_alias?: string | null;
   id: string;
   twitch_id: string;
   is_paused: boolean;
@@ -262,6 +265,8 @@ export interface CreateRewardBody {
 }
 
 export interface UpdateRewardBody {
+  is_visible?: boolean;
+  script_alias?: string;
   reward_type?: RewardType | null;
   pricing_mode?: PricingMode | null;
   price_strategy?: PriceStrategy | null;
@@ -325,7 +330,7 @@ export type RedemptionStatus =
   | "FailedPenalty";
 
 export interface RedemptionResponse {
-  twitch_redemption_id: string;
+  fulfillment_id: string;
   twitch_reward_id: string;
   user_id: string;
   user_login: string;
@@ -648,7 +653,7 @@ export interface ViewerChannelProfileResponse {
 }
 
 export interface ViewerChannelRedemption {
-  twitch_redemption_id: string;
+  fulfillment_id: string;
   twitch_reward_id: string;
   reward_title: string;
   twitch_points_cost: number;
@@ -683,7 +688,7 @@ export interface ViewerGlobalProfileResponse {
 }
 
 export interface ViewerGlobalRedemption {
-  twitch_redemption_id: string;
+  fulfillment_id: string;
   twitch_reward_id: string;
   channel_id: string;
   channel_login: string;
@@ -715,6 +720,8 @@ export interface FulfillmentAuditEvent {
 }
 
 export interface InventoryItem {
+  origin?: "TWITCH" | "SCRIPT";
+  twitch_redemption_id?: string | null;
   id: string;
   redemption_id: string;
   viewer_id: string;

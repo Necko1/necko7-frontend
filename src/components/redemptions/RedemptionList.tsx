@@ -119,14 +119,14 @@ function RedemptionRow({
 }) {
   const { t, i18n } = useTranslation();
   const [params] = useSearchParams();
-  const [open, setOpen] = useState(() => params.get("redemption") === redemption.twitch_redemption_id);
+  const [open, setOpen] = useState(() => params.get("redemption") === redemption.fulfillment_id);
   const [action, setAction] = useState<"retry" | "refund" | "penalty" | null>(null);
   const role = useAppStore(state => state.broadcasters.find(b => b.channel_id === channelId)?.role.toUpperCase());
   const canAct = role === "OWNER" || role === "EDITOR";
   const qc = useQueryClient();
 
   const retryMutation = useMutation({
-    mutationFn: () => redemptionsApi.retry(channelId, redemption.twitch_redemption_id),
+    mutationFn: () => redemptionsApi.retry(channelId, redemption.fulfillment_id),
     onSuccess: (res) => {
       setAction(null);
       const updated = res.data;
@@ -135,7 +135,7 @@ function RedemptionRow({
         return {
           ...oldData,
           items: oldData.items.map((item: RedemptionResponse) =>
-            item.twitch_redemption_id === updated.twitch_redemption_id
+            item.fulfillment_id === updated.fulfillment_id
               ? { ...item, ...updated }
               : item
           ),
@@ -159,7 +159,7 @@ function RedemptionRow({
     },
   });
   const refundMutation = useMutation({
-    mutationFn: () => redemptionsApi.refund(channelId, redemption.twitch_redemption_id),
+    mutationFn: () => redemptionsApi.refund(channelId, redemption.fulfillment_id),
     onSuccess: () => {
       setAction(null);
       qc.invalidateQueries({ queryKey: ["redemptions", channelId] });
@@ -180,7 +180,7 @@ function RedemptionRow({
     },
   });
   const penaltyMutation = useMutation({
-    mutationFn: () => redemptionsApi.penalty(channelId, redemption.twitch_redemption_id),
+    mutationFn: () => redemptionsApi.penalty(channelId, redemption.fulfillment_id),
     onSuccess: () => {
       setAction(null);
       qc.invalidateQueries({ queryKey: ["redemptions", channelId] });
@@ -249,7 +249,7 @@ function RedemptionRow({
 
   return (
     <div className="ledger-row">
-      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={`detail-${redemption.twitch_redemption_id}`} className="ledger-summary">
+      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={`detail-${redemption.fulfillment_id}`} className="ledger-summary">
         <span className="ledger-status"><Badge className={cn("text-xs rounded px-2 py-1 font-medium", statusClass)}>{getStatusLabel(redemption.status)}</Badge></span>
         <span className="ledger-person min-w-0"><span className="ledger-art"><ItemArtwork key={redemption.market_item_name} marketItemName={redemption.market_item_name}/></span><span className="block text-sm font-semibold truncate">{redemption.market_item_name || t("ops.unknownItem")}</span><span className="mt-1 block text-xs text-muted-foreground truncate">@{redemption.user_login}{redemption.retry_count > 0 && ` · ${redemption.retry_count} ${t("redemptions.retriesMany")}`}</span>{isManualHold && redemption.fail_cause && <span className="mt-1 block text-xs text-amber-300 truncate">{FAIL_CAUSE_I18N_KEYS[redemption.fail_cause] ? t(FAIL_CAUSE_I18N_KEYS[redemption.fail_cause]) : formatFailCause(redemption.fail_cause)}</span>}</span>
         <span className="ledger-date text-xs text-muted-foreground">{format(new Date(redemption.created_at), "dd MMM HH:mm")}</span>
@@ -326,7 +326,7 @@ function RedemptionListContent({
       <div className="ledger">
       {data.items.map((r) => (
         <RedemptionRow
-          key={r.twitch_redemption_id}
+          key={r.fulfillment_id}
           redemption={r}
           channelId={channelId}
           compact={compact}

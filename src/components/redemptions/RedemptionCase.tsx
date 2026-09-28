@@ -31,16 +31,16 @@ export default function RedemptionCase({
   const [limit, setLimit] = useState(20);
   const status = r.status.replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
   const logs = useQuery({
-    queryKey: ["case-events", channelId, r.twitch_redemption_id, limit],
+    queryKey: ["case-events", channelId, r.fulfillment_id, limit],
     queryFn: () =>
       logsApi
-        .list(channelId, { redemption_id: r.twitch_redemption_id, limit })
+        .list(channelId, { redemption_id: r.fulfillment_id, limit })
         .then((res) => res.data),
     refetchInterval: 15_000,
   });
   const audit = useQuery({
-    queryKey: ["fulfillment-audit", channelId, r.twitch_redemption_id],
-    queryFn: () => redemptionsApi.audit(channelId, r.twitch_redemption_id).then(res => res.data),
+    queryKey: ["fulfillment-audit", channelId, r.fulfillment_id],
+    queryFn: () => redemptionsApi.audit(channelId, r.fulfillment_id).then(res => res.data),
     refetchInterval: 15_000,
   });
   const rewards = useQuery({
@@ -52,7 +52,7 @@ export default function RedemptionCase({
     (item) => item.twitch_id === r.twitch_reward_id,
   );
   const events = [...(logs.data?.items || [])]
-    .filter((event) => event.details?.redemption_id === r.twitch_redemption_id)
+    .filter((event) => event.details?.redemption_id === r.fulfillment_id)
     .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id);
   const auditTitles: Record<string, string> = {
     reward_redeemed: c("Viewer redeemed the reward", "Зритель активировал награду"),
@@ -151,7 +151,7 @@ export default function RedemptionCase({
   return (
     <section
       className="redemption-case"
-      id={`detail-${r.twitch_redemption_id}`}
+      id={`detail-${r.fulfillment_id}`}
       aria-label={c("Transaction case", "Дело по активации")}
     >
       <div className="case-heading">
@@ -170,7 +170,7 @@ export default function RedemptionCase({
       {canAct && actions.length > 0 && (
         <a
           className="text-xs text-primary inline-block mt-3"
-          href={`#resolve-${r.twitch_redemption_id}`}
+          href={`#resolve-${r.fulfillment_id}`}
         >
           {c("Review available actions", "Перейти к доступным действиям")} ↓
         </a>
@@ -264,7 +264,7 @@ export default function RedemptionCase({
             <dl className="preview-facts font-mono text-xs">
               <div>
                 <dt>Redemption</dt>
-                <dd>{r.twitch_redemption_id}</dd>
+                <dd>{r.fulfillment_id}</dd>
               </div>
               <div>
                 <dt>Reward</dt>
@@ -351,7 +351,7 @@ export default function RedemptionCase({
       {canAct && actions.length > 0 && (
         <section
           className="case-resolution"
-          id={`resolve-${r.twitch_redemption_id}`}
+          id={`resolve-${r.fulfillment_id}`}
         >
           <h4 className="section-title">
             {c("Resolve this case", "Решить ситуацию")}

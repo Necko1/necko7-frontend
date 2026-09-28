@@ -183,3 +183,17 @@ for (const width of [1440, 390]) test(`durable Market transaction states at ${wi
   await expect(page.getByText('"amount":1.25')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
 });
+
+
+test("script inventory discards only after confirmation and blocks unresolved trades", async ({page}) => {
+  const mutations=await mockApi(page);
+  await page.route("**/api/v1/me/inventory**", route=>route.request().method()==="GET"?route.fulfill({json:[{...item("WAITING_OPERATOR",0),origin:"SCRIPT",fulfillment_mode:"OPERATOR",latest_attempt_status:null,attempt_count:0},{...item("TRADE_WAITING",1),origin:"SCRIPT",latest_attempt_status:"TRADE_WAITING"}]}):route.fallback());
+  await page.goto("/inventory");
+  await expect(page.getByRole("button",{name:"Return Channel Points"})).toHaveCount(0);
+  await expect(page.locator(".inventory-item").nth(1).getByRole("button",{name:"Discard",exact:true})).toBeDisabled();
+  await page.locator(".inventory-item").first().getByRole("button",{name:"Discard",exact:true}).click();
+  await expect(page.getByText("No Twitch points exist to refund.",{exact:false})).toBeVisible();
+  expect(mutations).toHaveLength(0);
+  await page.getByRole("dialog").getByRole("button",{name:"Discard",exact:true}).click();
+  await expect.poll(()=>mutations.some(m=>m.path.endsWith("/discard") && (m.body as {confirmation:string}).confirmation==="DISCARD")).toBe(true);
+});

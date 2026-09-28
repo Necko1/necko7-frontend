@@ -45,9 +45,9 @@ for (const width of [1440, 390]) {
       { ...redemptions[2], status: "PENDING", inventory_id: "item-review", inventory_lifecycle_status: "OPERATOR_REVIEW", inventory_operator_can_attempt: false },
     ];
     await page.route("**/api/v1/broadcasters/123/redemptions?**", route => route.fulfill({ json: { items: rows, total: 3, limit: 25, offset: 0 } }));
-    await page.route(`**/api/v1/broadcasters/123/redemptions/${rows[0].twitch_redemption_id}/audit`, route => route.fulfill({ json: [
-      { id: 1, event_key: "redeemed", redemption_id: rows[0].twitch_redemption_id, event_type: "reward_redeemed", actor_kind: "viewer", actor_user_id: "900", created_at: rows[0].created_at },
-      { id: 2, event_key: "inventory", redemption_id: rows[0].twitch_redemption_id, event_type: "inventory_created", actor_kind: "system", created_at: rows[0].created_at },
+    await page.route(`**/api/v1/broadcasters/123/redemptions/${rows[0].fulfillment_id}/audit`, route => route.fulfill({ json: [
+      { id: 1, event_key: "redeemed", redemption_id: rows[0].fulfillment_id, event_type: "reward_redeemed", actor_kind: "viewer", actor_user_id: "900", created_at: rows[0].created_at },
+      { id: 2, event_key: "inventory", redemption_id: rows[0].fulfillment_id, event_type: "inventory_created", actor_kind: "system", created_at: rows[0].created_at },
     ] }));
     await page.goto("/redemptions");
     await page.locator(".ledger-summary").nth(0).click();
@@ -57,7 +57,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole("dialog")).toContainText("fixed price ceiling");
     await page.getByRole("dialog").getByRole("button", { name: "Start delivery", exact: true }).click();
     await expect.poll(() => mutations.length).toBe(1);
-    expect(mutations[0].path).toBe(`/api/v1/broadcasters/123/redemptions/${rows[0].twitch_redemption_id}/retry`);
+    expect(mutations[0].path).toBe(`/api/v1/broadcasters/123/redemptions/${rows[0].fulfillment_id}/retry`);
     await page.locator(".ledger-summary").nth(0).click();
     for (const index of [1, 2]) {
       await page.locator(".ledger-summary").nth(index).click();
