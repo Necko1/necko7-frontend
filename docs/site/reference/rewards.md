@@ -139,7 +139,7 @@ Create a real SCRIPT fulfillment.
 
 **Returns:** `TriggerResult`.
 
-**Behavior and effects:** No Twitch points or fake redemption. Bypasses Twitch-specific cooldown and per-stream/per-user-stream caps, NOT necko7 bot/reward operational state, chat requirements, purchase limits, inventory admission, buyer/trade-link or market constraints. ok means admission/known current state, never a guarantee of completed Steam delivery. Never automatically announces failures in chat.
+**Behavior and effects:** No Twitch points or fake redemption. Bypasses Twitch-specific cooldown and per-stream/per-user-stream caps, NOT necko7 bot/reward operational state, chat requirements, purchase limits, inventory admission, buyer/trade-link or market constraints. ok means admission/known current state, never a guarantee of completed Steam delivery. Selection, inventory admission, waiting-mode and successful order announcements stay silent; use chat.send for the giveaway announcement. Pre-inventory validation/admission failures stay silent. Once an inventory item exists, normal fulfillment notices cover missing trade links, purchase errors/uncertain outcomes, trade offers with acceptance link/deadline, acceptance and delivery failures, including background tracking and manual attempts. Standard SCRIPT notices do not claim Twitch points/refunds; channel-authored delivery templates are honored.
 
 **Errors:** Host/domain failures become #{ok: false, code: string}; pre-host Rhai type/serialization/call-budget errors still throw. Optional result fields are not guaranteed: test membership before reading. See [trigger results](../errors#trigger-results).
 

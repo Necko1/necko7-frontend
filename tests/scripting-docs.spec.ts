@@ -4,6 +4,30 @@ import eventCatalog from "../docs/events.json" with { type: "json" };
 const root = process.env.DOCS_TEST_URL || "http://127.0.0.1:4174/docs/scripting/";
 const capture = (page: Page, name: string) => page.screenshot({ path: `../.qa/productization/docs-${name}.png`, animations: "disabled" });
 
+test("script reward announcements and actionable delivery notices have distinct documented ownership", async ({ page }) => {
+  await page.goto(`${root}reference/rewards#trigger`);
+  await expect(page.getByRole("switch")).toHaveAttribute("aria-checked", /true|false/);
+  await expect(page.locator("#trigger")).toBeInViewport();
+  await expect(page.locator("main")).toContainText("successful order announcements stay silent");
+  await expect(page.locator("main")).toContainText("trade offers with acceptance link/deadline");
+  await expect(page.locator("main")).toContainText("Pre-inventory validation/admission failures stay silent");
+  await page.goto(`${root}errors#delivery-notifications`);
+  await expect(page.locator("#delivery-notifications")).toBeInViewport();
+  await expect(page.locator("main")).toContainText("background tracking after the script finishes");
+  await expect(page.locator("main")).toContainText("Saving the link does not itself place an order");
+  await expect(page.locator("main")).toContainText("OPERATOR mode still requires the channel operator");
+  await expect(page.locator("main")).toContainText("Channel-authored delivery templates remain honored");
+  await page.screenshot({ path: "../.qa/script-delivery/docs-notifications.png", animations: "disabled" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${root}errors#delivery-notifications`);
+  await expect(page.locator("#delivery-notifications")).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator("#delivery-notifications").evaluate(element => {
+    window.scrollBy(0, element.getBoundingClientRect().top - 96);
+  });
+  await page.screenshot({ path: "../.qa/script-delivery/docs-notifications-narrow.png", animations: "disabled" });
+});
+
 test("message filtering guide, complete API and keyword recipe explain the same semantics", async ({ page }) => {
   await page.goto(`${root}message-filtering`);
   await expect(page.locator("main h1")).toContainText("Filter chatters by message content");

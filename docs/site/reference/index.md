@@ -1,6 +1,6 @@
 # API reference
 
-Rhai 1.26.1, necko7 scripting contract 0.10.4. All 53 host/type/helper signatures are listed here. Unknown JSON values become Rhai `()`, not zero.
+Rhai 1.26.1, necko7 scripting contract 0.10.5. All 53 host/type/helper signatures are listed here. Unknown JSON values become Rhai `()`, not zero.
 
 | Namespace / type | Reference |
 | --- | --- |

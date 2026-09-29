@@ -51,7 +51,7 @@ Unknown domain error strings can be forwarded from fulfillment; code is not a cl
 | retry_after | Optional seconds hint (60 for trigger-rate rejection) |
 | planned / validation | Dry-run plan and explanation when supplied |
 
-Check optional field membership before reading. The result never posts to chat automatically. A later delivery/reconciliation update also does not manufacture a script chat announcement.
+Check optional field membership before reading. Reward announcements belong to your script, but the shared fulfillment system still sends actionable delivery notices. See [delivery notifications](#delivery-notifications).
 
 | Common code | Interpretation / response |
 | --- | --- |
@@ -74,5 +74,20 @@ The earlier brief README described the project limit as attempts/minute; the act
 SCRIPT origin has no Twitch redemption ID and spends zero Twitch points. It bypasses Twitch cooldown/per-stream/per-user-stream limits, not necko7 operational checks, chat requirements, explicit purchase_limits, atomic admission, item selection, ownership, buyer/trade link and market restrictions.
 
 An admitted item can wait for viewer/operator action. Viewer Discard in safe waiting/retry states records a terminal DISCARDED history with actor/time, never a points refund; unresolved order/trade blocks discard. Operator refund/penalty operations reject SCRIPT items. Existing inventory reconciliation handles ambiguous external purchases.
+
+## Delivery notifications
+
+`rewards.trigger` does not automatically announce the selected prize, inventory admission, waiting mode or successful Market order. Use `chat.send` for your giveaway announcement. Validation/admission failures before inventory creation (unknown alias/user, paused/inactive reward, activity requirements or purchase limits) stay silent; inspect the structured result and log the problem.
+
+Once the item exists in inventory, normal fulfillment notifications are enabled for:
+
+- A missing/invalid Steam trade link and other buyer/Market purchase errors.
+- An uncertain purchase outcome requiring reconciliation. An order may already exist; do not retrigger blindly.
+- A ready Steam trade offer, including the acceptance link and deadline.
+- Trade acceptance (not yet a guarantee of final delivery), delivery failures and buyer/seller reversals.
+
+These notices also work during authorized manual purchases and background tracking after the script finishes. Existing durable per-attempt notification deduplication remains in effect. Standard SCRIPT messages do not mention pending points or refunds because no Twitch points were spent. Channel-authored delivery templates remain honored; keep them applicable to both Twitch and SCRIPT items.
+
+If no trade link was saved when auto-buy ran, the item stays in inventory with `TRADE_LINK_REQUIRED`; no Market order is made. The viewer can save the link and start delivery of **that same item** for AUTO/VIEWER modes. Saving the link does not itself place an order. If reward auto-buy is disabled, OPERATOR mode still requires the channel operator to start purchase. Do not call `rewards.trigger` again to resume an existing item.
 
 Use [safe hidden trigger](./cookbook/trigger-safely) or [the complete delayed giveaway](./cookbook/ace-secret-case). Do not solve delivery errors by spamming chat or automatic retrigger loops.
