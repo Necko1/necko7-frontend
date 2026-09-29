@@ -1,0 +1,38 @@
+name: Verify frontend image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clean-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build from a clean install
+        run: docker build --no-cache --tag necko7-frontend:ci .
+      - name: Check static dashboard and documentation routes
+        run: |
+          docker run --detach --name frontend-ci --publish 127.0.0.1:18080:80 necko7-frontend:ci
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:18080/health
+          curl --fail http://127.0.0.1:18080/docs/scripting/ --output /tmp/docs-home.html
+          grep -q 'necko7 scripting' /tmp/docs-home.html
+          curl --fail http://127.0.0.1:18080/docs/scripting/reference/rewards --output /tmp/docs-reference.html
+          grep -q 'rewards.trigger' /tmp/docs-reference.html
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18080/docs/scripting/not-a-page)
+          test "$status" = 404
+      - name: Container logs
+        if: failure()
+        run: docker logs frontend-ci || true
+      - name: Cleanup
+        if: always()
+        run: docker rm --force frontend-ci || true

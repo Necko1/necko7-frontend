@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-const root = "http://127.0.0.1:4174/docs/scripting/";
+const root = process.env.DOCS_TEST_URL || "http://127.0.0.1:4174/docs/scripting/";
 const capture = (page: Page, name: string) => page.screenshot({ path: `../.qa/productization/docs-${name}.png`, animations: "disabled" });
 
 test("documentation navigation, reference and long result shapes", async ({ page }) => {

@@ -2,6 +2,8 @@
 
 Public static VitePress site: `docs/site`. Framework configuration/theme: `docs/.vitepress`. Production frontend build includes static output in `dist/docs/scripting`; the existing Docker static copy includes it. No publishing/deployment is performed by these commands.
 
+The production Docker builder uses Node 22 / npm 10. Regenerate lockfiles with that npm major, for example `npx --yes npm@10.9.9 install --package-lock-only --ignore-scripts`. npm 11 can omit nested optional React 18 peers used by VitePress's DocSearch package while the dashboard remains on React 19. A successful build against existing node_modules is not a clean-install check. Before publishing, run `docker build --no-cache -t necko7-frontend:qa .`; the Verify frontend image workflow performs this build and checks documentation routes on pushes/PRs without publishing an image. Do not bypass npm ci with legacy-peer-deps or replace it with npm install in production.
+
 ```sh
 npm ci
 npm run api:sync
