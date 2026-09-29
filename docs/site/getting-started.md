@@ -22,6 +22,8 @@ fn on_event(ctx) {
 
 Only a one-argument `on_event(ctx)` or `on_timer(ctx)` in the entry script is detected as a handler. Define a main handler that calls imported module functions; a handler hidden inside a module does not subscribe the main project.
 
+Find all supported event kinds, exact payload fields and runnable handlers in [CS2 events and payloads](./reference/events). For example, [player_kill](./reference/events#player_kill) explains why `count` is kills added between updates while `total` is your player's kill total for the current match, not this round or lifetime.
+
 ## Test before real effects
 
 Expand **Test draft**, choose CS2 event or Timer, and load a recorded event or supply normalized JSON. For the code above:

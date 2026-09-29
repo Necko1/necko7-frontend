@@ -18,6 +18,7 @@ Build channel automations from observed CS2 events, chat activity, rewards and d
 - [API reference](./reference/): every host function, builder, argument, return shape and constraint.
 - [Rhai language](./language): the embedded version and official syntax resources.
 - [Context and data shapes](./reference/data): event versus timer context, optional fields and unknown values.
+- [CS2 events and payloads](./reference/events): every event, when it fires, exact fields, complete JSON and Rhai handlers.
 - [Cookbook](./cookbook/): ten complete tested projects, including a multi-file example.
 - [Access and pairing](./access): Owner and Editor responsibilities.
 

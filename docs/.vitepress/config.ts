@@ -23,7 +23,7 @@ export default defineConfig({
         { text: 'Projects, tests and timers', link: '/workflows' }, { text: 'Multi-file projects', link: '/multi-file' }, { text: 'Match observations', link: '/matches' }, { text: 'Failures and results', link: '/errors' }, { text: 'Sandbox and limits', link: '/limits' },
       ] },
       { text: 'API reference', collapsed: false, items: [
-        { text: 'All APIs', link: '/reference/' }, { text: 'Context and data shapes', link: '/reference/data' }, { text: 'Semantic events', link: '/reference/events' },
+        { text: 'All APIs', link: '/reference/' }, { text: 'Context and data shapes', link: '/reference/data' }, { text: 'CS2 events and payloads', link: '/reference/events' },
         ...[...new Set(api.functions.map(f => f.namespace))].map(n => ({ text: n, link: '/reference/' + n.replaceAll('.', '-') })),
       ] },
       { text: 'Cookbook', items: [{ text: 'All recipes', link: '/cookbook/' }, { text: 'Ace to secret case', link: '/cookbook/ace-secret-case' }] },

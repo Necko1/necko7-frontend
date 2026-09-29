@@ -28,6 +28,9 @@ jobs:
           grep -q 'necko7 scripting' /tmp/docs-home.html
           curl --fail http://127.0.0.1:18080/docs/scripting/reference/rewards --output /tmp/docs-reference.html
           grep -q 'rewards.trigger' /tmp/docs-reference.html
+          curl --fail http://127.0.0.1:18080/docs/scripting/reference/events --output /tmp/docs-events.html
+          grep -q 'id="player_kill"' /tmp/docs-events.html
+          grep -q 'Full event payload for ammo_changed' /tmp/docs-events.html
           status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18080/docs/scripting/not-a-page)
           test "$status" = 404
       - name: Container logs

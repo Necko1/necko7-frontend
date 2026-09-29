@@ -122,26 +122,26 @@ An event context contains `event`, `state`, `previous`, `current_match`, `source
 | `flash` | Observed exposure or (). |
 | `smoke` | Observed exposure or (). |
 | `burning` | Observed exposure or (). |
-| `match_stats` | Cumulative MatchStats (not round assists). |
-| `round_stats` | RoundStats {kills, headshot_kills}. |
+| `match_stats` | CS2-reported totals for this player in the current match, across all rounds so far; not this round or lifetime. |
+| `round_stats` | Your player's kills/headshot_kills in this one real round, not totals for the match. |
 | `weapons` | Observed array&lt;Weapon&gt; or (); absence does not prove a dropped item. |
 
 ## match_stats
 
 | Property | Meaning |
 | --- | --- |
-| `kills` | Cumulative known local kills or (). |
-| `assists` | Cumulative known local assists or (). |
-| `deaths` | Cumulative known local deaths or (). |
-| `mvps` | Cumulative known local MVP count or (). |
-| `score` | Cumulative known local score or (). |
+| `kills` | Your player's known kill total for the current CS2 match (all rounds so far), or (). Not kills this round or over your lifetime. |
+| `assists` | Your player's known assist total for the current CS2 match (all rounds so far), or (). Not per-round assists. |
+| `deaths` | Your player's known death total for the current CS2 match (all rounds so far), or (). Not deaths this round or over your lifetime. |
+| `mvps` | Your player's known MVP total for the current CS2 match (all rounds so far), or (). No exact award timing is implied. |
+| `score` | Your player's known scoreboard points for the current CS2 match (all rounds so far), or (). Not CT/T team score. |
 
 ## round_stats
 
 | Property | Meaning |
 | --- | --- |
-| `kills` | Known local kills in this real round or (). |
-| `headshot_kills` | Known local headshot kills in this real round or (). |
+| `kills` | Your player's known kills in this one real round, or (). Not the match total. Known zero is 0, unknown is (). |
+| `headshot_kills` | Your player's known headshot kills in this one real round, or (). A subset of round kills, not a separate additional kill total. |
 
 ## weapon
 
@@ -192,7 +192,7 @@ An event context contains `event`, `state`, `previous`, `current_match`, `source
 | `updated_at` | Latest observation UTC string. |
 | `partial` | true if evidence gaps/incomplete replacement found; absent until necessary, test membership. |
 | `end_reason` | game_over or observation_reset when ended; may be absent. |
-| `local_summary` | LocalSummary or (); cumulative stats with per-field authoritative provenance. May be absent before evidence. |
+| `local_summary` | LocalSummary or (); your player's totals for the current CS2 match (all rounds so far), with per-field authoritative provenance. May be absent before evidence. |
 
 ## r
 
@@ -215,20 +215,20 @@ An event context contains `event`, `state`, `previous`, `current_match`, `source
 
 | Property | Meaning |
 | --- | --- |
-| `kills` | Known local round kills or (); zero is known zero. |
-| `headshot_kills` | Known local round headshot kills or (). |
+| `kills` | Your player's known kills in this one recorded round, or (); zero is known zero. Not the match total. |
+| `headshot_kills` | Your player's known headshot kills in this one recorded round, or (); a subset of kills in that round. |
 | `side` | Retained ct/t local side or (). |
 | `health` | Last observed local health, not guaranteed round-end health. |
-| `match_stats` | Last-authoritative cumulative counters or (); not per-round assists. |
+| `match_stats` | Last-authoritative totals for your player in the current CS2 match (all rounds so far), or (); not per-round assists. |
 
 ## local_summary
 
 | Property | Meaning |
 | --- | --- |
 | `steam_id` | Verified local Steam ID. |
-| `stats` | Retained known cumulative MatchStats. |
+| `stats` | Retained known totals for your player in this CS2 match (all rounds so far), not this round, since connection or lifetime. |
 | `evidence` | Map per stat -&gt; {seq, at, final}. |
-| `observed_at` | Latest local authoritative cumulative observation time. |
+| `observed_at` | Latest authoritative observation time of your player's counters for this CS2 match. |
 | `seq` | Its source sequence. |
 | `final` | true only when all retained known fields observed at game over. Otherwise last observed. |
 

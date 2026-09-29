@@ -14,11 +14,13 @@ The recorder retains previously observed authoritative local round values throug
 
 Scores are `#{ct, t}`. CT/T labels change at halftime: `2:6 -> 6:2` can be the same points relabelled, not points awarded. `side_swap_before` records that evidence separately. Compare each round's local side and winner, not a permanent CT roster. Counters advance on completion. Game over can arrive with `freeze_time` and still complete the final real round exactly once; it must not create a new fake round.
 
-Round fields include index, observed start/end timestamps, completion, score_before/score_after, winner, start/end local snapshots and retained local player kills/headshot_kills/side/health/cumulative match_stats. Last observed health is not guaranteed end-of-round health. See [full shapes](./reference/data#r).
+Round fields include index, observed start/end timestamps, completion, score_before/score_after, winner, start/end local snapshots and retained local player kills/headshot_kills/side/health/match_stats. The round's kills and headshot_kills cover **that one round**; its match_stats cover **your player's current match, across all rounds so far**, as last observed during that round. Headshot kills are a subset of round kills, not extra kills to add. Last observed health is not guaranteed end-of-round health. See [full shapes](./reference/data#r).
 
-## Cumulative totals
+## Totals for this match {#cumulative-totals}
 
-`local_summary.stats` contains last-authoritative kills, assists, deaths, mvps and score when observed. `evidence` carries sequence, time and finality **per field**. `final=true` only when every retained known field was observed at game over. Otherwise the UI labels **Last observed**, not Final. A field never observed stays unknown/missing; no teammate fallback. Provider identity changes clear old local-summary evidence.
+`local_summary.stats` contains your player's last-authoritative kills, assists, deaths, mvps and scoreboard points **for the current CS2 match**, when observed. These are CS2's totals across all rounds so far, not this round, this stream, lifetime or counts starting when necko7 connected. For example, if you connect with 5 kills already on the scoreboard, a later verified increase to 7 is `player_kill.count = 2`, `player_kill.total = 7`, not a new total of 2. Your scoreboard points are separate from the CT:T team score.
+
+`evidence` carries sequence, time and finality **per field**. `final=true` only when every retained known field was observed at game over. Otherwise the UI labels **Last observed**, not Final. A field never observed stays unknown/missing; no teammate fallback. Provider identity changes clear old local-summary evidence.
 
 ## Completeness and missing data
 
