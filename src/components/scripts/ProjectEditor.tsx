@@ -788,6 +788,7 @@ export default function ProjectEditor({
               fontSize: 13,
               tabSize: 4,
               automaticLayout: true,
+              fixedOverflowWidgets: true,
               scrollBeyondLastLine: false,
               wordWrap: "on",
               padding: { top: 12 },

@@ -21,7 +21,9 @@ fn on_event(ctx) {
 
 fn on_timer(ctx) {
     if ctx.timer.key != "ace_giveaway" { return; }
-    let filter = UserFilter::create().min_messages(3).min_characters(15)
+    let filter = UserFilter::create()
+        .activity(ActivityFilter::create().min_messages(3).min_characters(15)
+            .during(Duration::from_mins(5)))
         .reward_redemptions(RewardFilter::create().reward("entry_reward")
             .statuses(["COMPLETED"]).min_count(1).during(Duration::from_days(7)));
     let viewers = chat.recent_chatters(Duration::from_mins(5), filter);

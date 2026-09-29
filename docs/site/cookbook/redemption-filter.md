@@ -10,7 +10,7 @@ fn on_event(ctx) {
     if ctx.event.kind != "match_started" { return; }
     let reward_filter = RewardFilter::create().reward("entry_reward")
         .statuses(["COMPLETED"]).min_count(2).during(Duration::from_days(7));
-    let filter = UserFilter::create().min_messages(1).reward_redemptions(reward_filter);
+    let filter = UserFilter::create().reward_redemptions(reward_filter);
     let viewers = chat.recent_chatters(Duration::from_mins(5), filter);
     log.info(`Eligible returning viewers: ${viewers.len}`);
 }

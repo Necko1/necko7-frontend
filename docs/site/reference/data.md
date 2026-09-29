@@ -253,10 +253,10 @@ An event context contains `event`, `state`, `previous`, `current_match`, `source
 | --- | --- |
 | `id` | Twitch user ID string. |
 | `login` | Observed login; can be absent in user_stats without chat. |
-| `messages` | Known observed message count. |
-| `characters` | Sum of recorded char_count. |
-| `first_activity` | Earliest activity in requested window or (). |
-| `last_activity` | Latest activity in window or (). |
+| `messages` | All recorded messages in recent_chatters' candidate window (or user_stats' requested window), NOT the nested filter windows or only matching text. |
+| `characters` | Sum of stored Unicode character counts in the candidate/requested window, NOT nested eligibility history. |
+| `first_activity` | Earliest recorded activity in the candidate/requested window or (). |
+| `last_activity` | Latest recorded activity in the candidate/requested window or (). |
 | `redemptions` | user_stats only: {total, completed, script}. |
 
 ## reward

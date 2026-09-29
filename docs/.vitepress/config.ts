@@ -20,7 +20,7 @@ export default defineConfig({
         { text: 'Overview', link: '/' }, { text: 'Getting started', link: '/getting-started' }, { text: 'Rhai language', link: '/language' }, { text: 'Access and pairing', link: '/access' },
       ] },
       { text: 'Working with scripts', items: [
-        { text: 'Projects, tests and timers', link: '/workflows' }, { text: 'Multi-file projects', link: '/multi-file' }, { text: 'Match observations', link: '/matches' }, { text: 'Failures and results', link: '/errors' }, { text: 'Sandbox and limits', link: '/limits' },
+        { text: 'Projects, tests and timers', link: '/workflows' }, { text: 'Multi-file projects', link: '/multi-file' }, { text: 'User filtering and windows', link: '/user-filtering' }, { text: 'Message filtering', link: '/message-filtering' }, { text: 'Match observations', link: '/matches' }, { text: 'Failures and results', link: '/errors' }, { text: 'Sandbox and limits', link: '/limits' },
       ] },
       { text: 'API reference', collapsed: false, items: [
         { text: 'All APIs', link: '/reference/' }, { text: 'Context and data shapes', link: '/reference/data' }, { text: 'CS2 events and payloads', link: '/reference/events' },

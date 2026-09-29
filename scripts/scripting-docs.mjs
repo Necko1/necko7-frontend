@@ -58,7 +58,7 @@ ${f.parameters.length ? '| Parameter | Type | Meaning |\n| --- | --- | --- |\n' 
 
 **Dry run:** ${f.dry_run}
 
-**Budget:** ${namespace === 'random' || namespace === 'ctx.current_match' || ['Duration','UserFilter','RewardFilter'].includes(namespace) ? 'Local engine operation, no host-call admission. Engine limits still apply.' : '100 host calls total; ' + (f.name === 'trigger' || ['send','reply'].includes(f.name) ? '3 calls of this operation per execution.' : ['set_visible','set_paused','enable_for'].includes(f.name) ? '10 calls of this operation per execution.' : '50 calls of this operation per execution.') + (f.name === 'trigger' ? ' Also at most 10 admitted fulfillment rows per project in the preceding minute; the check is not a blanket Twitch rate limit.' : '')}
+**Budget:** ${namespace === 'random' || namespace === 'ctx.current_match' || ['Duration','UserFilter','ActivityFilter','MessageFilter','RewardFilter'].includes(namespace) ? 'Local engine operation, no host-call admission. Engine limits still apply.' : '100 host calls total; ' + (f.name === 'trigger' || ['send','reply'].includes(f.name) ? '3 calls of this operation per execution.' : ['set_visible','set_paused','enable_for'].includes(f.name) ? '10 calls of this operation per execution.' : '50 calls of this operation per execution.') + (f.name === 'trigger' ? ' Also at most 10 admitted fulfillment rows per project in the preceding minute; the check is not a blanket Twitch rate limit.' : '')}
 
 \`\`\`rhai
 ${f.example}

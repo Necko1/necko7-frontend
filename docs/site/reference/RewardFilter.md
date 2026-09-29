@@ -13,7 +13,7 @@ No parameters.
 
 **Returns:** `RewardFilter`.
 
-**Behavior and effects:** Default min_count is zero, alias/window unset, statuses empty; empty statuses means all statuses. A reward predicate only filters eligibility when min_count > 0.
+**Behavior and effects:** Default min_count is zero, alias/window unset, statuses empty; empty statuses means all statuses. A reward predicate only filters eligibility when min_count > 0. Its .during(...) window is independent of recent_chatters' candidate window. Omit .during(...) to inspect all retained channel history up to query time, not lifetime data that was never recorded. It never inherits the candidate window. Repeating .during(...) replaces the window.
 
 **Errors:** No host call; pure value.
 
@@ -43,9 +43,9 @@ Return an updated reward filter.
 
 **Returns:** `RewardFilter`.
 
-**Behavior and effects:** Builder returns a new value; counts and windows validated when queried. This queries channel fulfillment/redemption history, including SCRIPT origin. No delivery guarantee follows from a count.
+**Behavior and effects:** Returns an updated builder; chain or assign it. Queries only this channel's recorded fulfillment/redemption history, including SCRIPT origin. Zero min_count disables the predicate; empty statuses means all statuses. Its .during(...) window is independent of recent_chatters' candidate window. Omit .during(...) to inspect all retained channel history up to query time, not lifetime data that was never recorded. It never inherits the candidate window. Repeating .during(...) replaces the window. No delivery guarantee follows from a count.
 
-**Errors:** statuses throws on non-string array items; invalid_reward_filter for negative counts or window < 60 at query.
+**Errors:** Non-string statuses throw a Rhai type error. Negative min_count or an explicit window outside 60..31,536,000 seconds throws invalid_reward_filter at attachment/query.
 
 **Dry run:** Identical.
 
@@ -73,9 +73,9 @@ Return an updated reward filter.
 
 **Returns:** `RewardFilter`.
 
-**Behavior and effects:** Builder returns a new value; counts and windows validated when queried. This queries channel fulfillment/redemption history, including SCRIPT origin. No delivery guarantee follows from a count.
+**Behavior and effects:** Returns an updated builder; chain or assign it. Queries only this channel's recorded fulfillment/redemption history, including SCRIPT origin. Zero min_count disables the predicate; empty statuses means all statuses. Its .during(...) window is independent of recent_chatters' candidate window. Omit .during(...) to inspect all retained channel history up to query time, not lifetime data that was never recorded. It never inherits the candidate window. Repeating .during(...) replaces the window. No delivery guarantee follows from a count.
 
-**Errors:** statuses throws on non-string array items; invalid_reward_filter for negative counts or window < 60 at query.
+**Errors:** Non-string statuses throw a Rhai type error. Negative min_count or an explicit window outside 60..31,536,000 seconds throws invalid_reward_filter at attachment/query.
 
 **Dry run:** Identical.
 
@@ -103,9 +103,9 @@ Return an updated reward filter.
 
 **Returns:** `RewardFilter`.
 
-**Behavior and effects:** Builder returns a new value; counts and windows validated when queried. This queries channel fulfillment/redemption history, including SCRIPT origin. No delivery guarantee follows from a count.
+**Behavior and effects:** Returns an updated builder; chain or assign it. Queries only this channel's recorded fulfillment/redemption history, including SCRIPT origin. Zero min_count disables the predicate; empty statuses means all statuses. Its .during(...) window is independent of recent_chatters' candidate window. Omit .during(...) to inspect all retained channel history up to query time, not lifetime data that was never recorded. It never inherits the candidate window. Repeating .during(...) replaces the window. No delivery guarantee follows from a count.
 
-**Errors:** statuses throws on non-string array items; invalid_reward_filter for negative counts or window < 60 at query.
+**Errors:** Non-string statuses throw a Rhai type error. Negative min_count or an explicit window outside 60..31,536,000 seconds throws invalid_reward_filter at attachment/query.
 
 **Dry run:** Identical.
 
@@ -133,9 +133,9 @@ Return an updated reward filter.
 
 **Returns:** `RewardFilter`.
 
-**Behavior and effects:** Builder returns a new value; counts and windows validated when queried. This queries channel fulfillment/redemption history, including SCRIPT origin. No delivery guarantee follows from a count.
+**Behavior and effects:** Returns an updated builder; chain or assign it. Queries only this channel's recorded fulfillment/redemption history, including SCRIPT origin. Zero min_count disables the predicate; empty statuses means all statuses. Its .during(...) window is independent of recent_chatters' candidate window. Omit .during(...) to inspect all retained channel history up to query time, not lifetime data that was never recorded. It never inherits the candidate window. Repeating .during(...) replaces the window. No delivery guarantee follows from a count.
 
-**Errors:** statuses throws on non-string array items; invalid_reward_filter for negative counts or window < 60 at query.
+**Errors:** Non-string statuses throw a Rhai type error. Negative min_count or an explicit window outside 60..31,536,000 seconds throws invalid_reward_filter at attachment/query.
 
 **Dry run:** Identical.
 

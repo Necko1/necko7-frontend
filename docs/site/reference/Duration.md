@@ -15,7 +15,7 @@ Create an explicit duration.
 
 **Returns:** `Duration`.
 
-**Behavior and effects:** Result must be 1..31,536,000 seconds. Fractional input, zero, negative and excessive values fail. Chat/reward-filter windows must be at least 60 seconds; scheduler supports 1 second.
+**Behavior and effects:** Result must be 1..31,536,000 seconds. Fractional input, zero, negative and excessive values fail. Candidate chat/user_stats and explicit RewardFilter windows must be at least 60 seconds. ActivityFilter/MessageFilter windows and scheduler support 1 second. Omitting a nested filter's during inspects all retained channel history.
 
 **Errors:** Throws: Duration must be positive and at most one year.
 
@@ -45,7 +45,7 @@ Create an explicit duration.
 
 **Returns:** `Duration`.
 
-**Behavior and effects:** Result must be 1..31,536,000 seconds. Fractional input, zero, negative and excessive values fail. Chat/reward-filter windows must be at least 60 seconds; scheduler supports 1 second.
+**Behavior and effects:** Result must be 1..31,536,000 seconds. Fractional input, zero, negative and excessive values fail. Candidate chat/user_stats and explicit RewardFilter windows must be at least 60 seconds. ActivityFilter/MessageFilter windows and scheduler support 1 second. Omitting a nested filter's during inspects all retained channel history.
 
 **Errors:** Throws: Duration must be positive and at most one year.
 
@@ -75,7 +75,7 @@ Create an explicit duration.
 
 **Returns:** `Duration`.
 
-**Behavior and effects:** Result must be 1..31,536,000 seconds. Fractional input, zero, negative and excessive values fail. Chat/reward-filter windows must be at least 60 seconds; scheduler supports 1 second.
+**Behavior and effects:** Result must be 1..31,536,000 seconds. Fractional input, zero, negative and excessive values fail. Candidate chat/user_stats and explicit RewardFilter windows must be at least 60 seconds. ActivityFilter/MessageFilter windows and scheduler support 1 second. Omitting a nested filter's during inspects all retained channel history.
 
 **Errors:** Throws: Duration must be positive and at most one year.
 
@@ -105,7 +105,7 @@ Create an explicit duration.
 
 **Returns:** `Duration`.
 
-**Behavior and effects:** Result must be 1..31,536,000 seconds. Fractional input, zero, negative and excessive values fail. Chat/reward-filter windows must be at least 60 seconds; scheduler supports 1 second.
+**Behavior and effects:** Result must be 1..31,536,000 seconds. Fractional input, zero, negative and excessive values fail. Candidate chat/user_stats and explicit RewardFilter windows must be at least 60 seconds. ActivityFilter/MessageFilter windows and scheduler support 1 second. Omitting a nested filter's during inspects all retained channel history.
 
 **Errors:** Throws: Duration must be positive and at most one year.
 
@@ -135,7 +135,7 @@ Create an explicit duration.
 
 **Returns:** `Duration`.
 
-**Behavior and effects:** Result must be 1..31,536,000 seconds. Fractional input, zero, negative and excessive values fail. Chat/reward-filter windows must be at least 60 seconds; scheduler supports 1 second.
+**Behavior and effects:** Result must be 1..31,536,000 seconds. Fractional input, zero, negative and excessive values fail. Candidate chat/user_stats and explicit RewardFilter windows must be at least 60 seconds. ActivityFilter/MessageFilter windows and scheduler support 1 second. Omitting a nested filter's during inspects all retained channel history.
 
 **Errors:** Throws: Duration must be positive and at most one year.
 

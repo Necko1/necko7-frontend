@@ -19,7 +19,8 @@ Build channel automations from observed CS2 events, chat activity, rewards and d
 - [Rhai language](./language): the embedded version and official syntax resources.
 - [Context and data shapes](./reference/data): event versus timer context, optional fields and unknown values.
 - [CS2 events and payloads](./reference/events): every event, when it fires, exact fields, complete JSON and Rhai handlers.
-- [Cookbook](./cookbook/): ten complete tested projects, including a multi-file example.
+- [User filtering and windows](./user-filtering): candidate selection versus independent activity, message-content and reward history.
+- [Cookbook](./cookbook/): complete tested projects, including multi-file and independent-window examples.
 - [Access and pairing](./access): Owner and Editor responsibilities.
 
 ## A few important boundaries

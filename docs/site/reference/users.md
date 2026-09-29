@@ -7,28 +7,28 @@
 users.recent_chatters(window: Duration, filter: UserFilter) -> array<User>
 ```
 
-Query eligible recent channel chatters.
+Select recent candidate chatters, then apply independent history filters.
 
 | Parameter | Type | Meaning |
 | --- | --- | --- |
-| `window` | `Duration` | 60..31,536,000 seconds, evaluated relative to query time. |
-| `filter` | `UserFilter` | Create with UserFilter::create(); chain criteria. |
+| `window` | `Duration` | 60..31,536,000 seconds. Select candidate users who authored recorded messages in this channel during this window, relative to query time. |
+| `filter` | `UserFilter` | UserFilter criteria are ANDed after candidate selection; each nested filter has its own optional window. |
 
 **Returns:** `array<User>`.
 
-**Behavior and effects:** At most 1,000 users, newest last_activity first, then ID. Activity must fall inside the chat window. Reward criteria are ANDed with message/character thresholds. Subscription/follower/role data is not available.
+**Behavior and effects:** chat.recent_chatters and users.recent_chatters are aliases. The window selects candidates only: users with recorded channel messages between query time minus window and query time. ActivityFilter, MessageFilter and RewardFilter each use their own .during(...) window; without it they inspect all retained channel history, never implicitly the candidate window. All attached criteria are ANDed. Legacy UserFilter.min_messages/min_characters alone keep their released candidate-window semantics. Returned messages, characters, first_activity and last_activity always describe ALL messages in the candidate window, not the nested filters' windows or only text matches. One database query; at most 1,000 eligible users, newest last_activity first then ID; limit applies AFTER filtering. No qualifying candidates returns []. Future records, other channels and username/display-name text are excluded. No follower/subscriber/role filtering. See [user filtering](../user-filtering).
 
-**Errors:** Throws a Rhai runtime error on invalid arguments, host failures or exhausted budgets; see [errors](../errors). No automatic retry. invalid_chat_window, invalid_reward_filter.
+**Errors:** Throws a Rhai runtime error on invalid arguments, host failures or exhausted budgets; see [errors](../errors). No automatic retry. invalid_chat_window, invalid_reward_filter, invalid_activity_filter, invalid_message_filter.
 
 **Dry run:** Reads current channel/project data even in dry run.
 
 **Budget:** 100 host calls total; 50 calls of this operation per execution.
 
 ```rhai
-users.recent_chatters(Duration::from_mins(5), UserFilter::create().min_messages(2));
+users.recent_chatters(Duration::from_mins(5), UserFilter::create().activity(ActivityFilter::create().min_messages(2).during(Duration::from_mins(30))));
 ```
 
-Related APIs: [users.user_stats](./users#user_stats).
+Related APIs: [UserFilter.activity](./UserFilter#activity), [UserFilter.messages](./UserFilter#messages), [UserFilter.reward_redemptions](./UserFilter#reward_redemptions).
 
 See [data shapes](./data), [limits](../limits), [dry run](../workflows#dry-run) and [cookbook](../cookbook/).
 

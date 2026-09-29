@@ -36,8 +36,11 @@ Local Duration/filter construction, random.pick and last_rounds do not use the h
 | Live jobs/project | 256, including scheduled/blocked/queued |
 | Pending event queue/project | 1,000; overflow diagnostic and truncation |
 | Duration | 1..31,536,000 seconds; positive integer constructors only |
-| Chat / redemption-filter window | 60..31,536,000 seconds |
+| Candidate chat / user_stats window | 60..31,536,000 seconds |
+| ActivityFilter / MessageFilter explicit window | 1..31,536,000 seconds; omitted means all retained channel history |
+| RewardFilter explicit window | 60..31,536,000 seconds; omitted means all retained channel history |
 | Returned chat users | At most 1,000 |
+| MessageFilter clauses / pattern | 1..16 clauses when attached; 1..256 Unicode scalar values per literal pattern; no NUL or regex |
 | last_rounds argument | 0..256 |
 | Match records | One active/channel, up to 30 completed matches |
 | Round storage | Up to 256 completed observed rounds, 512 timeline events/round |

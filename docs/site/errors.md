@@ -22,6 +22,8 @@ try {
 | scheduler_project_limit / missing_on_timer | Live job quota exceeded / pinned revision has no timer handler |
 | invalid_chat_window | Window outside 60..31,536,000 seconds or negative chat minimum |
 | invalid_reward_filter | Invalid redemption window or negative minimum count |
+| invalid_activity_filter | Negative message/character threshold or explicit ActivityFilter window outside 1..31,536,000 seconds |
+| invalid_message_filter | Empty attached MessageFilter, more than 16 clauses, a pattern empty/containing NUL/over 256 Unicode scalar values, or explicit window outside 1..31,536,000 seconds |
 | invalid_message | Empty message or more than 500 Unicode characters |
 | log_message_limit | More than 2,048 UTF-8 bytes |
 | reward_not_found / twitch_unavailable | Unknown channel alias / reward mutation could not complete through Twitch |
