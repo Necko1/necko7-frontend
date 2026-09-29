@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,12 +20,12 @@ import { scriptingDocsUrl } from "@/lib/scriptingDocs";
 import "@/components/scripts/scripts.css";
 
 const tabs = [
-  ["cs2", "CS2 Integration"],
-  ["editor", "Editor"],
-  ["storage", "Local Storage"],
-  ["matches", "Matches"],
-  ["scheduler", "Scheduler"],
-  ["logs", "Logs"],
+  ["cs2", "scripts.cs2"],
+  ["editor", "scripts.editor"],
+  ["storage", "scripts.storage"],
+  ["matches", "scripts.matches"],
+  ["scheduler", "scripts.scheduler"],
+  ["logs", "scripts.logs"],
 ];
 export default function ScriptsPage() {
   const { selectedBroadcasterId, broadcasters } = useAppStore();
@@ -36,6 +37,7 @@ export default function ScriptsPage() {
   return <Scripts key={channel.channel_id} channel={channel.channel_id} />;
 }
 function Scripts({ channel }: { channel: string }) {
+  const { t } = useTranslation();
   const { section = "editor" } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -69,7 +71,7 @@ function Scripts({ channel }: { channel: string }) {
     query.data?.projects[0];
   const command: Command = async (body) => {
     if (pending.current)
-      throw new Error("Wait for the current action to finish.");
+      throw new Error(t("scripts.waitAction"));
     pending.current = true;
     setBusy(true);
     try {
@@ -107,9 +109,9 @@ function Scripts({ channel }: { channel: string }) {
         event.preventDefault();
         event.stopPropagation();
         showDialog({
-          title: "Leave with unsaved changes?",
-          description: "Your latest edits have not been saved to the draft.",
-          submit: "Discard and leave",
+          title: t("scripts.leaveTitle"),
+          description: t("scripts.leaveDescription"),
+          submit: t("scripts.leave"),
           destructive: true,
           onSubmit: () => {
             setDirty(false);
@@ -122,7 +124,7 @@ function Scripts({ channel }: { channel: string }) {
     };
     document.addEventListener("click", listener, true);
     return () => document.removeEventListener("click", listener, true);
-  }, [dirty, showDialog, navigate]);
+  }, [dirty, showDialog, navigate, t]);
   if (!tabs.some(([key]) => key === section))
     return <Navigate to="/scripts/editor" replace />;
   function chooseProject(id: string) {
@@ -132,9 +134,9 @@ function Scripts({ channel }: { channel: string }) {
     };
     if (dirty)
       modal.show({
-        title: "Switch project?",
-        description: "Unsaved edits in this project will be discarded.",
-        submit: "Discard and switch",
+        title: t("scripts.switchTitle"),
+        description: t("scripts.switchDescription"),
+        submit: t("scripts.switch"),
         destructive: true,
         onSubmit: change,
       });
@@ -143,25 +145,25 @@ function Scripts({ channel }: { channel: string }) {
   return (
     <div className="page-shell scripts-page">
       <header>
-        <h1>Scripts</h1>
-        <a href={scriptingDocsUrl()} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">Scripting documentation ↗</a>
+        <h1>{t("scripts.title")}</h1>
+        <a href={scriptingDocsUrl()} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">{t("scripts.docs")}</a>
       </header>
-      <nav aria-label="Scripts" className="scripts-nav">
+      <nav aria-label={t("scripts.title")} className="scripts-nav">
         {tabs.map(([key, label]) => (
           <NavLink key={key} to={`/scripts/${key}`}>
-            {label}
+            {t(label)}
           </NavLink>
         ))}
       </nav>
       {section === "cs2" && <Cs2Page />}
       {section !== "cs2" && query.isLoading && (
-        <p role="status">Loading scripts...</p>
+        <p role="status">{t("scripts.loading")}</p>
       )}
       {section !== "cs2" && query.isError && (
         <div role="alert" className="flex flex-wrap gap-3 items-center">
-          Unable to load scripts.
+          {t("scripts.loadFailed")}
           <Button variant="outline" onClick={() => void query.refetch()}>
-            Retry
+            {t("scripts.retry")}
           </Button>
         </div>
       )}
@@ -170,7 +172,7 @@ function Scripts({ channel }: { channel: string }) {
           <div hidden={section !== "editor"} className="script-editor-section">
             <div className="script-project-bar">
               <Choice
-                label="Project"
+                label={t("scripts.project")}
                 value={selected?.id ?? ""}
                 options={query.data.projects.map((p) => ({
                   value: p.id,
@@ -184,15 +186,15 @@ function Scripts({ channel }: { channel: string }) {
                 disabled={busy || dirty}
                 title={
                   dirty
-                    ? "Save your current edits before creating a project"
+                    ? t("scripts.saveBeforeCreate")
                     : undefined
                 }
                 onClick={() =>
                   modal.show({
-                    title: "Create project",
+                    title: t("scripts.createProject"),
                     description:
-                      "A project contains automation scripts, its own storage and scheduled jobs. New projects start disabled.",
-                    submit: "Create project",
+                      t("scripts.createProjectDescription"),
+                    submit: t("scripts.createProject"),
                     fields: [projectNameField()],
                     onSubmit: async (values) => {
                       const result = await command({
@@ -201,12 +203,12 @@ function Scripts({ channel }: { channel: string }) {
                       });
                       setDirty(false);
                       setProjectId(String(result.id));
-                      toast.success("Project created");
+                      toast.success(t("scripts.projectCreated"));
                     },
                   })
                 }
               >
-                Create project
+                {t("scripts.createProject")}
               </Button>
             </div>
             {selected ? (
@@ -225,8 +227,8 @@ function Scripts({ channel }: { channel: string }) {
               />
             ) : (
               <div className="script-empty">
-                <h2>No projects yet</h2>
-                <p>Create a project to start writing automation.</p>
+                <h2>{t("scripts.noProjects")}</h2>
+                <p>{t("scripts.noProjectsDescription")}</p>
               </div>
             )}
           </div>

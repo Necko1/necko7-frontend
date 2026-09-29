@@ -86,7 +86,7 @@ Once the item exists in inventory, normal fulfillment notifications are enabled 
 - A ready Steam trade offer, including the acceptance link and deadline.
 - Trade acceptance (not yet a guarantee of final delivery), delivery failures and buyer/seller reversals.
 
-These notices also work during authorized manual purchases and background tracking after the script finishes. Existing durable per-attempt notification deduplication remains in effect. Standard SCRIPT messages do not mention pending points or refunds because no Twitch points were spent. Channel-authored delivery templates remain honored; keep them applicable to both Twitch and SCRIPT items.
+These notices also work during authorized manual purchases and background tracking after the script finishes. Existing durable per-attempt notification deduplication remains in effect. All origins use the same channel-configured delivery templates and shared neutral defaults, without SCRIPT-specific text substitution; Twitch points/refund notices retain separate Twitch-only keys. Channel-authored delivery templates are honored.
 
 If no trade link was saved when auto-buy ran, the item stays in inventory with `TRADE_LINK_REQUIRED`; no Market order is made. The viewer can save the link and start delivery of **that same item** for AUTO/VIEWER modes. Saving the link does not itself place an order. If reward auto-buy is disabled, OPERATOR mode still requires the channel operator to start purchase. Do not call `rewards.trigger` again to resume an existing item.
 

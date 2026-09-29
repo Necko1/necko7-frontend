@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Editor, { type Monaco } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
@@ -65,6 +66,7 @@ import { toast } from "sonner";
 import { scriptingDocsUrl } from "@/lib/scriptingDocs";
 
 function TreeNode({ node, style, dragHandle }: NodeRendererProps<FileNode>) {
+  const { t } = useTranslation();
   return (
     <div
       style={style}
@@ -91,7 +93,7 @@ function TreeNode({ node, style, dragHandle }: NodeRendererProps<FileNode>) {
         <input
           autoFocus
           defaultValue={node.data.name}
-          aria-label="Rename file or folder"
+          aria-label={t("scripts.renamePath")}
           onFocus={(e) => e.target.select()}
           onBlur={() => node.reset()}
           onKeyDown={(e) => {
@@ -103,7 +105,7 @@ function TreeNode({ node, style, dragHandle }: NodeRendererProps<FileNode>) {
         <span>{node.data.name}</span>
       )}
       {node.data.dirty && (
-        <span className="script-dirty-dot" aria-label="Unsaved changes" />
+        <span className="script-dirty-dot" aria-label={t("scripts.unsaved")} />
       )}
     </div>
   );
@@ -133,6 +135,7 @@ export default function ProjectEditor({
   busy: boolean;
   active: boolean;
 }) {
+  const { t, i18n } = useTranslation();
   const [files, setFiles] = useState(project.draft);
   const [saved, setSaved] = useState(project.draft);
   const [version, setVersion] = useState(project.draft_version);
@@ -217,7 +220,7 @@ export default function ProjectEditor({
       });
       setSaved(snapshot);
       setVersion(Number(response.version));
-      toast.success("Draft saved");
+      toast.success(t("scripts.draftSaved"));
     } catch (error) {
       setResult({ error: errorText(error) });
     } finally {
@@ -259,7 +262,7 @@ export default function ProjectEditor({
     setOpen((t) => t.map(transform));
     setFile(transform(file));
     setSelectedPath(transform(selectedPath));
-    toast.success("Path updated. Check affected imports before publishing.");
+    toast.success(t("scripts.pathUpdated"));
   }
   function newFile(folder: boolean, parentOverride?: string) {
     const node = treeRef.current?.get(selectedPath);
@@ -269,19 +272,19 @@ export default function ProjectEditor({
         ? selectedPath.slice(0, selectedPath.lastIndexOf("/"))
         : "");
     modal.show({
-      title: folder ? "Create folder" : "Create file",
+      title: folder ? t("scripts.createFolder") : t("scripts.createFile"),
       description: folder
-        ? "Add a folder to this project's draft."
-        : "Add a Rhai source file to this project's draft.",
-      submit: folder ? "Create folder" : "Create file",
+        ? t("scripts.createFolderDescription")
+        : t("scripts.createFileDescription"),
+      submit: folder ? t("scripts.createFolder") : t("scripts.createFile"),
       fields: [
         {
           name: "path",
-          label: folder ? "Folder path" : "File path",
+          label: folder ? t("scripts.folderPath") : t("scripts.filePath"),
           value: parent ? parent + "/" : "",
           validate: (value) =>
             !validPath(folder ? value + "/_folder.rhai" : value)
-              ? "Enter a relative path; source files must end in .rhai."
+              ? t("scripts.invalidPath")
               : undefined,
         },
       ],
@@ -295,9 +298,9 @@ export default function ProjectEditor({
           ) ||
           (!folder && path.endsWith("/_folder.rhai"))
         )
-          throw new Error("That path is reserved or already exists.");
+          throw new Error(t("scripts.reservedPath"));
         if (Object.keys(next).length >= 64)
-          throw new Error("A project can contain at most 64 source files.");
+          throw new Error(t("scripts.sourceLimit"));
         next[path] = folder ? "// Folder module\n" : "";
         setFiles(next);
         filesRef.current = next;
@@ -309,9 +312,9 @@ export default function ProjectEditor({
   function removePath(path = selectedPath) {
     if (path === "main.rhai") return;
     modal.show({
-      title: "Delete file or folder?",
-      description: `Remove ${path} from the draft? This takes effect when you save and publish.`,
-      submit: "Delete",
+      title: t("scripts.deletePathTitle"),
+      description: t("scripts.deletePathDescription", { path }),
+      submit: t("scripts.delete"),
       destructive: true,
       onSubmit: () => {
         const next = Object.fromEntries(
@@ -329,10 +332,10 @@ export default function ProjectEditor({
   }
   function editPath(path: string, rename = false) {
     modal.show({
-      title: rename ? "Rename file or folder" : "Move file or folder",
-      description: "Imports must be updated separately. Validate before publishing.",
-      submit: rename ? "Rename" : "Move",
-      fields: [{ name: "path", label: rename ? "Name" : "Destination path", value: rename ? path.split("/").at(-1) : path }],
+      title: rename ? t("scripts.renamePath") : t("scripts.movePath"),
+      description: t("scripts.importsDescription"),
+      submit: rename ? t("scripts.rename") : t("scripts.move"),
+      fields: [{ name: "path", label: rename ? t("scripts.name") : t("scripts.destinationPath"), value: rename ? path.split("/").at(-1) : path }],
       onSubmit: values => applyMove([{ from: path, to: rename && path.includes("/") ? path.slice(0, path.lastIndexOf("/") + 1) + values.path : values.path }]),
     });
   }
@@ -340,7 +343,7 @@ export default function ProjectEditor({
     try {
       const response = await command({ project_id: project.id, ...body });
       if (body.action === "validate") setResult(response);
-      else toast.success("Project updated");
+      else toast.success(t("scripts.projectUpdated"));
       return response;
     } catch (error) {
       setResult({ error: errorText(error) });
@@ -405,7 +408,7 @@ export default function ProjectEditor({
     .flatMap((s) =>
       rows(s.events).map((event, index) => ({
         value: `${s.id}:${index}`,
-        label: `${human(object(event.event).kind ?? event.kind)} / ${new Date(String(s.created_at)).toLocaleString()}`,
+        label: `${human(object(event.event).kind ?? event.kind)} / ${new Date(String(s.created_at)).toLocaleString(i18n.language)}`,
       })),
     )
     .filter((o) => o.label.toLowerCase().includes(eventSearch.toLowerCase()));
@@ -428,17 +431,17 @@ export default function ProjectEditor({
             <StatusBadge value={project.enabled ? "enabled" : "disabled"} />
             <span>
               {project.active_revision
-                ? `Live version ${project.active_revision}`
-                : "Never published"}
+                ? t("scripts.liveVersion", { version: project.active_revision })
+                : t("scripts.neverPublished")}
             </span>
             <span>
               {dirty
-                ? "Unsaved edits"
+                ? t("scripts.unsavedEdits")
                 : project.active_revision && !project.live_files
-                  ? "Live comparison unavailable"
+                  ? t("scripts.comparisonUnavailable")
                   : unpublished
-                    ? "Unpublished draft"
-                    : "Draft matches live"}
+                    ? t("scripts.unpublishedDraft")
+                    : t("scripts.matchesLive")}
             </span>
           </div>
         </div>
@@ -448,58 +451,58 @@ export default function ProjectEditor({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Project actions"
-                title="Project actions"
+                aria-label={t("scripts.projectActions")}
+                title={t("scripts.projectActions")}
               />
             }
           >
             <HugeiconsIcon icon={MoreHorizontalIcon} size={19} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem render={<a href={scriptingDocsUrl("reference/")} target="_blank" rel="noopener noreferrer" />}>API reference</DropdownMenuItem>
-            <DropdownMenuItem render={<a href="https://rhai.rs/book/" target="_blank" rel="noopener noreferrer" />}>Rhai language guide</DropdownMenuItem>
+            <DropdownMenuItem render={<a href={scriptingDocsUrl("reference/")} target="_blank" rel="noopener noreferrer" />}>{t("scripts.apiReference")}</DropdownMenuItem>
+            <DropdownMenuItem render={<a href="https://rhai.rs/book/" target="_blank" rel="noopener noreferrer" />}>{t("scripts.rhaiGuide")}</DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>
                 modal.show({
-                  title: "Rename project",
+                  title: t("scripts.renameProject"),
                   description:
-                    "Update the name used in project lists and logs.",
-                  submit: "Rename",
+                    t("scripts.renameProjectDescription"),
+                  submit: t("scripts.rename"),
                   fields: [projectNameField(project.name)],
                   onSubmit: (values) =>
                     action({ action: "rename", name: values.name.trim() }),
                 })
               }
             >
-              Rename project
+              {t("scripts.renameProject")}
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={busy}
               onClick={() =>
                 modal.show({
                   title: project.enabled
-                    ? "Disable project?"
-                    : "Enable project?",
+                    ? t("scripts.disableTitle")
+                    : t("scripts.enableTitle"),
                   description: project.enabled
-                    ? "New events stop running. Due jobs become blocked and will need a manual run."
-                    : "New events will use the live version. Overdue blocked jobs will not run automatically.",
+                    ? t("scripts.disableDescription")
+                    : t("scripts.enableDescription"),
                   submit: project.enabled
-                    ? "Disable project"
-                    : "Enable project",
+                    ? t("scripts.disable")
+                    : t("scripts.enable"),
                   onSubmit: () =>
                     action({ action: "enable", enabled: !project.enabled }),
                 })
               }
             >
-              {project.enabled ? "Disable project" : "Enable project"}
+              {project.enabled ? t("scripts.disable") : t("scripts.enable")}
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
               onClick={() =>
                 modal.show({
-                  title: "Delete project?",
-                  description: `Delete ${project.name} and cancel its pending jobs. History remains available.`,
-                  submit: "Delete project",
+                  title: t("scripts.deleteProjectTitle"),
+                  description: t("scripts.deleteProjectDescription", { name: project.name }),
+                  submit: t("scripts.deleteProject"),
                   destructive: true,
                   fields: [confirmationField("DELETE")],
                   onSubmit: () =>
@@ -507,7 +510,7 @@ export default function ProjectEditor({
                 })
               }
             >
-              Delete project
+              {t("scripts.deleteProject")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -517,38 +520,38 @@ export default function ProjectEditor({
           variant="outline"
           disabled={busy || !dirty}
           onClick={() => void save()}
-          title="Save changes to the draft"
+          title={t("scripts.saveDraftTitle")}
         >
           <HugeiconsIcon icon={FloppyDiskIcon} size={16} />
-          Save draft
+          {t("scripts.saveDraft")}
         </Button>
         <Button
           variant="outline"
           disabled={busy || dirty}
           onClick={() => void action({ action: "validate" }).catch(() => {})}
-          title="Check the saved draft for errors"
+          title={t("scripts.validateTitle")}
         >
           <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
-          Validate
+          {t("scripts.validate")}
         </Button>
         <Button
           disabled={busy || dirty}
           onClick={() =>
             modal.show({
-              title: "Publish draft?",
+              title: t("scripts.publishTitle"),
               description: project.enabled
-                ? "The saved draft becomes live for new events. Existing timers keep their pinned version."
-                : "The saved draft becomes the live version. This project stays disabled until you enable it.",
-              submit: "Publish",
+                ? t("scripts.publishEnabledDescription")
+                : t("scripts.publishDisabledDescription"),
+              submit: t("scripts.publish"),
               onSubmit: async () => {
                 await action({ action: "publish", version });
-                toast.success("New live version published");
+                toast.success(t("scripts.published"));
               },
             })
           }
         >
           <HugeiconsIcon icon={Upload01Icon} size={16} />
-          Publish
+          {t("scripts.publish")}
         </Button>
         <Button
           variant="ghost"
@@ -560,25 +563,25 @@ export default function ProjectEditor({
           }}
         >
           <HugeiconsIcon icon={Clock01Icon} size={16} />
-          Version history
+          {t("scripts.history")}
         </Button>
         <span className="script-save-state">
           {dirty
-            ? "Save before validating, publishing or testing."
+            ? t("scripts.saveBeforeTest")
             : project.enabled
-              ? "New events run the live version."
-              : "Automation is disabled."}
+              ? t("scripts.eventsUseLive")
+              : t("scripts.automationDisabled")}
         </span>
       </div>
       <div className="script-workbench">
         <aside>
           <div className="script-file-tools">
-            <span>Files</span>
+            <span>{t("scripts.files")}</span>
             <Button
               variant="ghost"
               size="icon-sm"
-              title="Create file"
-              aria-label="Create file"
+              title={t("scripts.createFile")}
+              aria-label={t("scripts.createFile")}
               onClick={() => newFile(false)}
             >
               <HugeiconsIcon icon={FileAddIcon} size={16} />
@@ -586,8 +589,8 @@ export default function ProjectEditor({
             <Button
               variant="ghost"
               size="icon-sm"
-              title="Create folder"
-              aria-label="Create folder"
+              title={t("scripts.createFolder")}
+              aria-label={t("scripts.createFolder")}
               onClick={() => newFile(true)}
             >
               <HugeiconsIcon icon={FolderAddIcon} size={16} />
@@ -598,8 +601,8 @@ export default function ProjectEditor({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    title="File actions"
-                    aria-label="File actions"
+                    title={t("scripts.fileActions")}
+                    aria-label={t("scripts.fileActions")}
                   />
                 }
               >
@@ -611,20 +614,20 @@ export default function ProjectEditor({
                   onClick={() => treeRef.current?.get(selectedPath)?.edit()}
                 >
                   <HugeiconsIcon icon={Edit02Icon} size={15} />
-                  Rename
+                  {t("scripts.rename")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={selectedPath === "main.rhai"}
                   onClick={() =>
                     modal.show({
-                      title: "Move file or folder",
+                      title: t("scripts.movePath"),
                       description:
-                        "Choose a new relative path. Imports must be updated separately.",
-                      submit: "Move",
+                        t("scripts.moveDescription"),
+                      submit: t("scripts.move"),
                       fields: [
                         {
                           name: "path",
-                          label: "Destination path",
+                          label: t("scripts.destinationPath"),
                           value: selectedPath,
                         },
                       ],
@@ -633,7 +636,7 @@ export default function ProjectEditor({
                     })
                   }
                 >
-                  Move to...
+                  {t("scripts.moveTo")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={selectedPath === "main.rhai"}
@@ -641,13 +644,13 @@ export default function ProjectEditor({
                   onClick={() => removePath()}
                 >
                   <HugeiconsIcon icon={Delete02Icon} size={15} />
-                  Delete
+                  {t("scripts.delete")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
           <ContextMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
-          <ContextMenu.Trigger className="script-tree" tabIndex={0} aria-label="File tree context menu"
+          <ContextMenu.Trigger className="script-tree" tabIndex={0} aria-label={t("scripts.treeMenu")}
             onContextMenu={event => {
               const path = (event.target as Element).closest<HTMLElement>("[data-path]")?.dataset.path ?? null;
               setContextPath(path);
@@ -690,7 +693,7 @@ export default function ProjectEditor({
                     },
                   ]);
                 } catch (error) {
-                  toast.error(String(error));
+                  toast.error(errorText(error));
                 }
               }}
               onMove={({ dragIds, parentId }) => {
@@ -704,26 +707,26 @@ export default function ProjectEditor({
                     })),
                   );
                 } catch (error) {
-                  toast.error(String(error));
+                  toast.error(errorText(error));
                 }
               }}
-              aria-label="Project files"
+              aria-label={t("scripts.projectFiles")}
             >
               {TreeNode}
             </Tree>
           </ContextMenu.Trigger>
           <ContextMenu.Portal>
             <ContextMenu.Positioner sideOffset={4} collisionPadding={8} className="z-50">
-              <ContextMenu.Popup className="script-context-menu" aria-label="File tree actions">
-                {contextPath && files[contextPath] !== undefined && <ContextMenu.Item disabled={busy} onClick={() => select(contextPath)}>Open</ContextMenu.Item>}
+              <ContextMenu.Popup className="script-context-menu" aria-label={t("scripts.treeActions")}>
+                {contextPath && files[contextPath] !== undefined && <ContextMenu.Item disabled={busy} onClick={() => select(contextPath)}>{t("scripts.open")}</ContextMenu.Item>}
                 {(!contextPath || files[contextPath] === undefined) && <>
-                  <ContextMenu.Item disabled={busy} onClick={() => newFile(false, contextPath ?? "")}><HugeiconsIcon icon={FileAddIcon} size={15} />New file</ContextMenu.Item>
-                  <ContextMenu.Item disabled={busy} onClick={() => newFile(true, contextPath ?? "")}><HugeiconsIcon icon={FolderAddIcon} size={15} />New folder</ContextMenu.Item>
+                  <ContextMenu.Item disabled={busy} onClick={() => newFile(false, contextPath ?? "")}><HugeiconsIcon icon={FileAddIcon} size={15} />{t("scripts.newFile")}</ContextMenu.Item>
+                  <ContextMenu.Item disabled={busy} onClick={() => newFile(true, contextPath ?? "")}><HugeiconsIcon icon={FolderAddIcon} size={15} />{t("scripts.newFolder")}</ContextMenu.Item>
                 </>}
                 {contextPath && <>
-                  <ContextMenu.Item disabled={busy || contextPath === "main.rhai"} onClick={() => editPath(contextPath, true)}><HugeiconsIcon icon={Edit02Icon} size={15} />Rename</ContextMenu.Item>
-                  <ContextMenu.Item disabled={busy || contextPath === "main.rhai"} onClick={() => editPath(contextPath)}>Move to...</ContextMenu.Item>
-                  <ContextMenu.Item disabled={busy || contextPath === "main.rhai"} data-destructive onClick={() => removePath(contextPath)}><HugeiconsIcon icon={Delete02Icon} size={15} />Delete</ContextMenu.Item>
+                  <ContextMenu.Item disabled={busy || contextPath === "main.rhai"} onClick={() => editPath(contextPath, true)}><HugeiconsIcon icon={Edit02Icon} size={15} />{t("scripts.rename")}</ContextMenu.Item>
+                  <ContextMenu.Item disabled={busy || contextPath === "main.rhai"} onClick={() => editPath(contextPath)}>{t("scripts.moveTo")}</ContextMenu.Item>
+                  <ContextMenu.Item disabled={busy || contextPath === "main.rhai"} data-destructive onClick={() => removePath(contextPath)}><HugeiconsIcon icon={Delete02Icon} size={15} />{t("scripts.delete")}</ContextMenu.Item>
                 </>}
               </ContextMenu.Popup>
             </ContextMenu.Positioner>
@@ -750,8 +753,8 @@ export default function ProjectEditor({
                   </button>
                   {p !== "main.rhai" && (
                     <button
-                      aria-label={`Close ${p}`}
-                      title="Close file"
+                      aria-label={t("scripts.closePath", { path: p })}
+                      title={t("scripts.closeFile")}
                       onClick={() => {
                         setOpen((t) => t.filter((v) => v !== p));
                         if (file === p) setFile("main.rhai");
@@ -764,6 +767,7 @@ export default function ProjectEditor({
               ))}
           </div>
           <Editor
+            loading={t("scripts.loadingEditor")}
             key={file}
             keepCurrentModel
             height="440px"
@@ -784,6 +788,7 @@ export default function ProjectEditor({
               setFiles(next);
             }}
             options={{
+              ariaLabel: t("scripts.codeEditor"),
               minimap: { enabled: false },
               fontSize: 13,
               tabSize: 4,
@@ -801,7 +806,7 @@ export default function ProjectEditor({
         </div>
       </div>
       {result !== null && (
-        <section aria-label="Diagnostics" className="script-diagnostics">
+        <section aria-label={t("scripts.diagnostics")} className="script-diagnostics">
           <ExecutionReport value={result} onDiagnostic={diagnostic} />
         </section>
       )}
@@ -815,8 +820,8 @@ export default function ProjectEditor({
             icon={testOpen ? ArrowDown01Icon : ArrowRight01Icon}
             size={16}
           />
-          <strong>Test draft</strong>
-          <span>No real side effects</span>
+          <strong>{t("scripts.testDraft")}</strong>
+          <span>{t("scripts.noSideEffects")}</span>
         </button>
         {testOpen && (
           <div className="script-test-body">
@@ -834,24 +839,24 @@ export default function ProjectEditor({
                 }}
               >
                 <TabsList>
-                  <TabsTrigger value="on_event">CS2 event</TabsTrigger>
-                  <TabsTrigger value="on_timer">Timer</TabsTrigger>
+                  <TabsTrigger value="on_event">{t("scripts.cs2Event")}</TabsTrigger>
+                  <TabsTrigger value="on_timer">{t("scripts.timer")}</TabsTrigger>
                 </TabsList>
               </Tabs>
               {entry === "on_event" && (
                 <>
                   <Input
-                    aria-label="Search recorded events"
-                    placeholder="Find a recorded event"
+                    aria-label={t("scripts.searchEvents")}
+                    placeholder={t("scripts.findEvent")}
                     value={eventSearch}
                     onChange={(e) => setEventSearch(e.target.value)}
                     className="max-w-64"
                   />
                   <Choice
-                    label="Recorded event"
+                    label={t("scripts.recordedEvent")}
                     value={recorded}
                     options={[
-                      { value: "", label: "Manual test context" },
+                      { value: "", label: t("scripts.manualContext") },
                       ...eventOptions,
                     ]}
                     disabled={busy}
@@ -873,7 +878,7 @@ export default function ProjectEditor({
               )}
             </div>
             <div className="script-context-summary">
-              <span>Context</span>
+              <span>{t("scripts.context")}</span>
               <strong>
                 {parsed
                   ? human(
@@ -882,7 +887,7 @@ export default function ProjectEditor({
                         : (object(parsed.event).kind ??
                             object(parsed.timer).key),
                     )
-                  : "Invalid JSON"}
+                  : t("scripts.invalidJson")}
               </strong>
               {object(parsed?.state).match != null && (
                 <span>
@@ -891,9 +896,9 @@ export default function ProjectEditor({
               )}
             </div>
             <details className="script-raw">
-              <summary>Edit normalized context (JSON)</summary>
+              <summary>{t("scripts.editContext")}</summary>
               <Textarea
-                aria-label="Test context"
+                aria-label={t("scripts.testContext")}
                 rows={7}
                 className="font-mono mt-3"
                 value={context}
@@ -917,7 +922,7 @@ export default function ProjectEditor({
               }
             >
               <HugeiconsIcon icon={PlayIcon} size={16} />
-              Run dry test
+              {t("scripts.runTest")}
             </Button>
             {testResult !== null && (
               <ExecutionReport
@@ -933,14 +938,13 @@ export default function ProjectEditor({
       <Dialog open={history} onOpenChange={setHistory}>
         <DialogContent className="sm:max-w-3xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Version history</DialogTitle>
+            <DialogTitle>{t("scripts.history")}</DialogTitle>
             <DialogDescription>
-              Published versions are immutable. Activating an earlier version
-              leaves your draft and existing timers unchanged.
+              {t("scripts.historyDescription")}
             </DialogDescription>
           </DialogHeader>
           {!revisions.length ? (
-            <Empty title="No published versions" />
+            <Empty title={t("scripts.noVersions")} />
           ) : (
             <div className="script-history">
               <div>
@@ -952,8 +956,8 @@ export default function ProjectEditor({
                     onClick={() => void inspectRevision(Number(r.revision))}
                   >
                     <strong>
-                      Version {String(r.revision)}
-                      {project.active_revision === r.revision ? " / Live" : ""}
+                      {t("scripts.version")} {String(r.revision)}
+                      {project.active_revision === r.revision ? t("scripts.liveSuffix") : ""}
                     </strong>
                     <Time value={r.created_at} />
                   </button>
@@ -962,23 +966,23 @@ export default function ProjectEditor({
               <div>
                 {historyRevision === null ? (
                   <p className="text-muted-foreground">
-                    Select a version to inspect its code.
+                    {t("scripts.selectVersion")}
                   </p>
                 ) : (
                   <>
-                    <h3>Version {historyRevision}</h3>
+                    <h3>{t("scripts.version")}{" "}{historyRevision}</h3>
                     {historyError && (
                       <p role="alert" className="text-destructive">
                         {historyError}
                       </p>
                     )}
                     {!historyFiles && !historyError && (
-                      <p role="status">Loading published code...</p>
+                      <p role="status">{t("scripts.loadingCode")}</p>
                     )}
                     {historyFiles && (
                       <>
                         <Choice
-                          label="Published file"
+                          label={t("scripts.publishedFile")}
                           value={historyFile}
                           options={Object.keys(historyFiles)
                             .filter((p) => !isFolderMarker(p, historyFiles[p]))
@@ -999,21 +1003,21 @@ export default function ProjectEditor({
                       variant="outline"
                       onClick={() =>
                         modal.show({
-                          title: `Activate version ${historyRevision}?`,
+                          title: t("scripts.activateTitle", { version: historyRevision }),
                           description:
-                            "New events will use this version. Your draft stays unchanged; scheduled jobs keep their pinned version.",
-                          submit: "Activate version",
+                            t("scripts.activateDescription"),
+                          submit: t("scripts.activate"),
                           onSubmit: async () => {
                             await action({
                               action: "rollback",
                               revision: historyRevision,
                             });
-                            toast.success("Live version changed");
+                            toast.success(t("scripts.liveChanged"));
                           },
                         })
                       }
                     >
-                      Activate version {historyRevision}
+                      {t("scripts.activate")} {historyRevision}
                     </Button>
                   </>
                 )}

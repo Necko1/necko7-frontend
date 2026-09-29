@@ -1,3 +1,5 @@
+import i18n from "@/i18n";
+const t = i18n.t.bind(i18n);
 export type FileNode = {
   id: string;
   name: string;
@@ -50,7 +52,7 @@ export function movePaths(
     moves.some((m) => m.from === "main.rhai" || m.to.startsWith(m.from + "/"))
   )
     throw new Error(
-      "The entry file must stay at the root, and folders cannot move inside themselves.",
+      t("scripts.invalidMove"),
     );
   const next: Record<string, string> = {};
   for (const [path, content] of Object.entries(files)) {
@@ -60,12 +62,12 @@ export function movePaths(
     const renamed = move ? move.to + path.slice(move.from.length) : path;
     if (!validPath(renamed) || next[renamed] !== undefined)
       throw new Error(
-        "Use a unique relative path with letters, numbers, underscores or dashes.",
+        t("scripts.uniquePath"),
       );
     next[renamed] = content;
   }
   const paths = Object.keys(next);
   if (paths.some((p) => paths.some((other) => other.startsWith(p + "/"))))
-    throw new Error("A file and folder cannot share the same path.");
+    throw new Error(t("scripts.fileFolderCollision"));
   return next;
 }

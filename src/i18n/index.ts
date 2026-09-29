@@ -1,4 +1,5 @@
 import { operationsEn, operationsRu } from "./operations";
+import { scriptsEn, scriptsRu } from "./scripts";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { ru } from "./locales/ru";
@@ -10,8 +11,8 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      ru: { translation: { ...ru, ops: operationsRu } },
-      en: { translation: { ...en, ops: operationsEn } },
+      ru: { translation: { ...ru, ops: operationsRu, scripts: scriptsRu } },
+      en: { translation: { ...en, ops: operationsEn, scripts: scriptsEn } },
     },
     lng: savedLang,
     fallbackLng: "en",
@@ -21,7 +22,7 @@ i18n
   });
 
 i18n.on("languageChanged", (lng) => {
-  document.documentElement.lang = lng;
+  if (typeof document !== "undefined") document.documentElement.lang = lng;
   if (typeof window !== "undefined") {
     localStorage.setItem("necko_lang", lng);
   }
@@ -36,4 +37,4 @@ export const changeAppLanguage = (lang: "ru" | "en") => {
 
 export default i18n;
 
-document.documentElement.lang = i18n.language;
+if (typeof document !== "undefined") document.documentElement.lang = i18n.language;

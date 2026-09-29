@@ -1,3 +1,4 @@
+import "./monacoLocale";
 import type { Monaco } from "@monaco-editor/react";
 import apiReference from "../../docs/api.json";
 import { scriptingDocsUrl } from "./scriptingDocs";

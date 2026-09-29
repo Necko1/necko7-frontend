@@ -1,5 +1,7 @@
+import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 import { formatDistanceToNow } from "date-fns";
+import { enUS, ru } from "date-fns/locale";
 import {
   Select,
   SelectContent,
@@ -11,16 +13,18 @@ import { Badge } from "@/components/ui/badge";
 import { human, pretty } from "./data";
 
 export function Time({ value }: { value: unknown }) {
+  const { t, i18n } = useTranslation();
   const date = new Date(String(value));
   return Number.isNaN(date.getTime()) ? (
-    <span>Unknown time</span>
+    <span>{t("scripts.unknownTime")}</span>
   ) : (
-    <time dateTime={date.toISOString()} title={date.toLocaleString()}>
-      {formatDistanceToNow(date, { addSuffix: true })}
+    <time dateTime={date.toISOString()} title={date.toLocaleString(i18n.language)}>
+      {formatDistanceToNow(date, { addSuffix: true, locale: i18n.language.startsWith("ru") ? ru : enUS })}
     </time>
   );
 }
 export function StatusBadge({ value }: { value: unknown }) {
+  useTranslation();
   return (
     <Badge
       className="rounded-sm"
@@ -85,6 +89,7 @@ export function Filters({
   options: string[];
   onChange: (v: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div role="group" aria-label={label} className="script-filter">
       <span>{label}</span>
@@ -95,7 +100,7 @@ export function Filters({
           key={v}
           onClick={() => onChange(v)}
         >
-          {v ? human(v) : "All"}
+          {v ? human(v) : t("scripts.all")}
         </button>
       ))}
     </div>
@@ -103,14 +108,15 @@ export function Filters({
 }
 export function Raw({
   value,
-  label = "Raw data",
+  label,
 }: {
   value: unknown;
   label?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <details className="script-raw">
-      <summary>{label}</summary>
+      <summary>{label ?? t("scripts.rawData")}</summary>
       <pre>{pretty(value)}</pre>
     </details>
   );

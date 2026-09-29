@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
@@ -6,6 +7,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { Button } from "@/components/ui/button";
 import { isAxiosError } from "axios";
 import { formatDistanceToNow } from "date-fns";
+import { enUS, ru } from "date-fns/locale";
 import { config } from "@/config";
 import { useScriptDialog } from "@/components/scripts/useScriptDialog";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -25,11 +27,12 @@ export default function Cs2Page() {
 }
 
 function Cs2Integration({ channelId, owner }: { channelId: string; owner: boolean }) {
+  const { t, i18n } = useTranslation();
   const modal = useScriptDialog();
   const qc = useQueryClient();
   const [now, setNow] = useState(() => Date.now());
   const [openFeedback, setOpenFeedback] = useState(false);
-  const [checkFeedback, setCheckFeedback] = useState("");
+  const [checkFeedback, setCheckFeedback] = useState<"connected" | "waitingDesktop" | null>(null);
   const statusKey = ["cs2", channelId];
   const codeKey = ["cs2-code", channelId];
   const status = useQuery({
@@ -119,17 +122,17 @@ function Cs2Integration({ channelId, owner }: { channelId: string; owner: boolea
     : undefined;
   const errorText =
     responseStatus === 429
-      ? "CS2 pairing is being refreshed. Wait ten seconds and retry."
+      ? t("scripts.pairingRefreshing")
       : responseStatus === 401
-        ? "Your session expired. Sign in again to manage CS2 Integration."
+        ? t("scripts.sessionExpired")
         : responseStatus === 403
-          ? "Only the channel owner can manage CS2 Integration."
-          : "Unable to update CS2 Integration. Check your connection and retry.";
+          ? t("scripts.ownerOnly")
+          : t("scripts.cs2UpdateFailed");
   const error = status.isError || (!device && pairing.isError) || unpairError;
   async function retry() {
     setUnpairError(false);
     const current = await status.refetch({ cancelRefetch: false });
-    if (current.isSuccess) setCheckFeedback(current.data.device ? "Desktop connected." : "No desktop connected yet. Open the app or enter the code manually.");
+    if (current.isSuccess) setCheckFeedback(current.data.device ? "connected" : "waitingDesktop");
     if (
       owner && current.isSuccess &&
       !current.data.device &&
@@ -143,12 +146,12 @@ function Cs2Integration({ channelId, owner }: { channelId: string; owner: boolea
   return (
     <div className="space-y-6">
       <section className="border-y border-border py-6 space-y-5">
-        {status.isLoading && <p role="status">Loading integration…</p>}
+        {status.isLoading && <p role="status">{t("scripts.loadingIntegration")}</p>}
         {error && (
           <div role="alert" className="space-y-3">
             <p>
               {unpairError
-                ? "Unable to unpair the CS2 desktop. Check your connection and retry."
+                ? t("scripts.unpairFailed")
                 : errorText}
             </p>
             <Button
@@ -156,7 +159,7 @@ function Cs2Integration({ channelId, owner }: { channelId: string; owner: boolea
               disabled={status.isFetching || pairing.isFetching}
               onClick={() => void retry()}
             >
-              Retry
+              {t("scripts.retry")}
             </Button>
           </div>
         )}
@@ -164,35 +167,36 @@ function Cs2Integration({ channelId, owner }: { channelId: string; owner: boolea
           <>
             <div className="grid gap-5 md:grid-cols-[minmax(160px,1fr)_minmax(240px,2fr)]">
               <div>
-                <h2 className="text-xl font-semibold">Paired</h2>
+                <h2 className="text-xl font-semibold">{t("scripts.paired")}</h2>
                 <p className="text-sm text-muted-foreground mt-2">
-                  CS2 desktop companion
+                  {t("scripts.companion")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Version {device.app_version}
+                  {t("scripts.version")} {device.app_version}
                 </p>
               </div>
               <div className="space-y-3">
                 <p className="text-sm">
-                  Desktop:{" "}
+                  {t("scripts.desktopLabel")}{" "}
                   {device.last_heartbeat_at
                     ? now - Date.parse(device.last_heartbeat_at) < 120_000
-                      ? "Online"
-                      : "Offline (heartbeat overdue)"
-                    : "Status not yet checked"}
+                      ? t("scripts.desktopOnline")
+                      : t("scripts.offline")
+                    : t("scripts.unchecked")}
                 </p>
                 <p className="text-sm">
-                  CS2 data:{" "}
+                  {t("scripts.cs2Data")}{" "}
                   {device.last_seen_at &&
                   now - Date.parse(device.last_seen_at) < 60_000
-                    ? "Receiving CS2 data"
-                    : "Waiting for CS2"}
+                    ? t("scripts.receivingCs2")
+                    : t("scripts.waitingCs2")}
                 </p>
                 {device.last_seen_at && (
                   <p className="text-sm text-muted-foreground">
-                    Last received{" "}
+                    {t("scripts.lastReceived")}{" "}
                     {formatDistanceToNow(new Date(device.last_seen_at), {
                       addSuffix: true,
+                      locale: i18n.language.startsWith("ru") ? ru : enUS,
                     })}
                   </p>
                 )}
@@ -203,40 +207,40 @@ function Cs2Integration({ channelId, owner }: { channelId: string; owner: boolea
               disabled={unpair.isPending}
               onClick={() =>
                 modal.show({
-                  title: "Unpair desktop?",
+                  title: t("scripts.unpairTitle"),
                   description:
-                    "This device will stop forwarding CS2 events for your channel. You can pair it again with a new code.",
-                  submit: "Unpair desktop",
+                    t("scripts.unpairDescription"),
+                  submit: t("scripts.unpair"),
                   destructive: true,
                   onSubmit: () => unpair.mutateAsync(),
                 })
               }
             >
-              {unpair.isPending ? "Unpairing…" : "Unpair desktop"}
-            </Button> : <p className="text-sm text-muted-foreground">Desktop pairing is managed by the channel owner.</p>}
+              {unpair.isPending ? t("scripts.unpairing") : t("scripts.unpair")}
+            </Button> : <p className="text-sm text-muted-foreground">{t("scripts.ownerManagesPairing")}</p>}
           </>
         ) : (
           status.data && (
             <>
               <div className="space-y-2">
-                <h2 className="text-lg font-semibold">Connect your CS2 desktop</h2>
-                <p className="text-sm text-muted-foreground">{owner ? "Open the companion to connect this channel. Keep CS2 running for game updates." : "Desktop pairing is managed by the channel owner."}</p>
+                <h2 className="text-lg font-semibold">{t("scripts.connectDesktop")}</h2>
+                <p className="text-sm text-muted-foreground">{owner ? t("scripts.connectDesktopDescription") : t("scripts.ownerManagesPairing")}</p>
               </div>
               {owner && <div className="cs2-pairing-flow">
               {remaining > 0 && code ? (
                 <>
                   <div className="cs2-pairing-code">
                   <div>
-                  <h3 className="text-xs text-muted-foreground mb-2">Pairing code</h3>
+                  <h3 className="text-xs text-muted-foreground mb-2">{t("scripts.pairingCode")}</h3>
                   <p
                     className="font-mono text-3xl"
-                    aria-label="Pairing code"
+                    aria-label={t("scripts.pairingCode")}
                   >
                     {code.code}
                   </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Expires in{" "}
+                    {t("scripts.expiresIn")}{" "}
                     {Math.floor(remaining / 60)
                       .toString()
                       .padStart(2, "0")}
@@ -250,22 +254,22 @@ function Cs2Integration({ channelId, owner }: { channelId: string; owner: boolea
                     onClick={() => setOpenFeedback(true)}
                   >
                     <HugeiconsIcon icon={Link01Icon} size={16} />
-                    Open CS2 Integration
+                    {t("scripts.openCs2")}
                   </a>
-                  <Button variant="outline" disabled={status.isFetching} onClick={() => void retry()}><HugeiconsIcon icon={RefreshIcon} size={16} />Check connection</Button>
+                  <Button variant="outline" disabled={status.isFetching} onClick={() => void retry()}><HugeiconsIcon icon={RefreshIcon} size={16} />{t("scripts.checkConnection")}</Button>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    You can also enter this code in the desktop app.
+                    {t("scripts.manualPairing")}
                   </p>
-                  {openFeedback && <p role="status" className="text-sm text-muted-foreground">Your browser may ask to open necko7 CS2. If nothing opens, install the app below, then enter this code. This page updates when pairing completes.</p>}
-                  {checkFeedback && <p role="status" className="text-sm">{checkFeedback}</p>}
+                  {openFeedback && <p role="status" className="text-sm text-muted-foreground">{t("scripts.openFeedback")}</p>}
+                  {checkFeedback && <p role="status" className="text-sm">{t(`scripts.${checkFeedback}`)}</p>}
                 </>
               ) : (
                 !pairing.isError && (
                   <p role="status">
                     {code
-                      ? "Pairing code expired. Refreshing…"
-                      : "Creating pairing code…"}
+                      ? t("scripts.codeExpired")
+                      : t("scripts.creatingCode")}
                   </p>
                 )
               )}
@@ -275,13 +279,13 @@ function Cs2Integration({ channelId, owner }: { channelId: string; owner: boolea
         )}
         {!device && (
           <div className="cs2-install-flow">
-          <div><h3 className="text-sm font-medium">Need the companion?</h3><p className="text-sm text-muted-foreground mt-1">Install necko7 CS2 for Windows, then return here to connect.</p></div>
+          <div><h3 className="text-sm font-medium">{t("scripts.needCompanion")}</h3><p className="text-sm text-muted-foreground mt-1">{t("scripts.installDescription")}</p></div>
           <a
             className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-foreground"
             href={download}
           >
             <HugeiconsIcon icon={Download01Icon} size={16} />
-            Download desktop app
+            {t("scripts.downloadDesktop")}
           </a>
           </div>
         )}

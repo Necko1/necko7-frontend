@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ export type DialogRequest = {
   onSubmit: (values: Record<string, string>) => Promise<unknown> | void;
 };
 export function useScriptDialog() {
+  const { t } = useTranslation();
   const [request, setRequest] = useState<DialogRequest | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
@@ -132,14 +134,14 @@ export function useScriptDialog() {
               disabled={pending}
               onClick={() => setRequest(null)}
             >
-              Cancel
+              {t("scripts.cancel")}
             </Button>
             <Button
               type="submit"
               variant={request?.destructive ? "destructive" : "default"}
               disabled={pending}
             >
-              {pending ? "Working..." : request?.submit}
+              {pending ? t("scripts.working") : request?.submit}
             </Button>
           </DialogFooter>
         </form>

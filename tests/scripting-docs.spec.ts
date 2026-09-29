@@ -16,7 +16,9 @@ test("script reward announcements and actionable delivery notices have distinct 
   await expect(page.locator("main")).toContainText("background tracking after the script finishes");
   await expect(page.locator("main")).toContainText("Saving the link does not itself place an order");
   await expect(page.locator("main")).toContainText("OPERATOR mode still requires the channel operator");
-  await expect(page.locator("main")).toContainText("Channel-authored delivery templates remain honored");
+  await expect(page.locator("main")).toContainText("All origins use the same channel-configured delivery templates and shared neutral defaults");
+  await expect(page.locator("main")).toContainText("without SCRIPT-specific text substitution");
+  await expect(page.locator("main")).toContainText("Channel-authored delivery templates are honored");
   await page.screenshot({ path: "../.qa/script-delivery/docs-notifications.png", animations: "disabled" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${root}errors#delivery-notifications`);
