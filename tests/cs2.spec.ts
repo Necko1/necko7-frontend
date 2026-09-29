@@ -22,7 +22,7 @@ test("pairing renews, detects desktop, and revokes without unnecessary codes", a
   await expect(page.getByRole("link", { name: "Open CS2 Integration", exact: true })).toBeVisible();
   expect(codes).toBe(3);
 });
-for (const role of ["EDITOR", "VIEWER"]) test(`${role} cannot manage CS2`, async ({ page }) => {
+for (const role of ["VIEWER"]) test(`${role} cannot manage CS2`, async ({ page }) => {
   await mockApi(page, { role });
   let calls = 0;
   await page.route("**/api/v1/broadcasters/123/cs2**", route => { calls++; return route.fulfill({ status: 403, json: {} }); });
@@ -60,7 +60,7 @@ test("focus and Retry reuse a valid code without destructive rotation", async ({
     window.dispatchEvent(new Event("focus"));
   });
   await expect.poll(() => checks).toBeGreaterThan(before);
-  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await page.getByRole("button", { name: "Check connection", exact: true }).click();
   await expect(page.getByText("4EME-GX7G", { exact: true })).toBeVisible();
   expect(codes).toBe(1);
   await expect(page.getByText("Changes were not saved. Please try again.")).toHaveCount(0);

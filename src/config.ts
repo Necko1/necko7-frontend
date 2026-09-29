@@ -3,6 +3,7 @@
 // 2. import.meta.env (.env file at build/dev time)
 
 interface AppConfig {
+  SCRIPTING_DOCS_URL: string;
   CS2_DOWNLOAD_URL: string;
   /** Base URL for Axios AJAX requests. Empty string "" in dev proxy mode, or backend URL in production. */
   API_BASE_URL: string;
@@ -17,6 +18,7 @@ declare global {
 }
 
 export const config: AppConfig = {
+  SCRIPTING_DOCS_URL: window.__APP_CONFIG__?.SCRIPTING_DOCS_URL || import.meta.env.VITE_SCRIPTING_DOCS_URL || "",
   CS2_DOWNLOAD_URL: window.__APP_CONFIG__?.CS2_DOWNLOAD_URL || (import.meta.env.VITE_CS2_DOWNLOAD_URL as string | undefined) || "https://github.com/Necko1/necko7-cs2i/releases/latest/download/necko7-cs2i-windows-x64-setup.exe",
   API_BASE_URL:
     window.__APP_CONFIG__?.API_BASE_URL ||

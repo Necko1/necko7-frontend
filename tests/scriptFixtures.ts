@@ -166,9 +166,9 @@ export function scriptData() {
 }
 export async function scriptsApi(
   page: Page,
-  options: { empty?: boolean; createError?: boolean } = {},
+  options: { empty?: boolean; createError?: boolean; role?: string } = {},
 ) {
-  await mockApi(page);
+  await mockApi(page, { role: options.role });
   const data = scriptData();
   if (options.empty)
     for (const key of Object.keys(data))

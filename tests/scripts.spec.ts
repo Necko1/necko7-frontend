@@ -341,8 +341,8 @@ test("empty projects remain sensible", async ({ page }) => {
     page.getByRole("heading", { name: "No projects yet" }),
   ).toBeVisible();
 });
-test("scripts are restricted to channel owners", async ({ page }) => {
-  await mockApi(page, { role: "EDITOR" });
+test("scripts exclude non-operator channel viewers", async ({ page }) => {
+  await mockApi(page, { role: "VIEWER" });
   await page.goto("/scripts/editor");
   await expect(page).toHaveURL(/\/channels$/);
 });

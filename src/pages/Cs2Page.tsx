@@ -8,23 +8,28 @@ import { isAxiosError } from "axios";
 import { formatDistanceToNow } from "date-fns";
 import { config } from "@/config";
 import { useScriptDialog } from "@/components/scripts/useScriptDialog";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Download01Icon, Link01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
+import "@/components/scripts/scripts.css";
 
 export default function Cs2Page() {
   const { selectedBroadcasterId, broadcasters } = useAppStore();
   const channel = broadcasters.find(
     (b) => b.channel_id === selectedBroadcasterId,
   );
-  if (channel?.role.toUpperCase() !== "OWNER")
+  if (!channel || !["OWNER", "EDITOR"].includes(channel.role.toUpperCase()))
     return <Navigate to="/channels" replace />;
   return (
-    <Cs2Integration key={channel.channel_id} channelId={channel.channel_id} />
+    <Cs2Integration key={`${channel.channel_id}-${channel.role}`} channelId={channel.channel_id} owner={channel.role.toUpperCase() === "OWNER"} />
   );
 }
 
-function Cs2Integration({ channelId }: { channelId: string }) {
+function Cs2Integration({ channelId, owner }: { channelId: string; owner: boolean }) {
   const modal = useScriptDialog();
   const qc = useQueryClient();
   const [now, setNow] = useState(() => Date.now());
+  const [openFeedback, setOpenFeedback] = useState(false);
+  const [checkFeedback, setCheckFeedback] = useState("");
   const statusKey = ["cs2", channelId];
   const codeKey = ["cs2-code", channelId];
   const status = useQuery({
@@ -35,7 +40,7 @@ function Cs2Integration({ channelId }: { channelId: string }) {
   });
   const pairing = useQuery({
     queryKey: codeKey,
-    enabled: status.isSuccess && !status.data.device,
+    enabled: owner && status.isSuccess && !status.data.device,
     staleTime: Infinity,
     gcTime: 10 * 60_000,
     refetchOnWindowFocus: false,
@@ -86,7 +91,7 @@ function Cs2Integration({ channelId }: { channelId: string }) {
   } = pairing;
   useEffect(() => {
     if (
-      status.isSuccess &&
+      owner && status.isSuccess &&
       !status.data.device &&
       remaining === 0 &&
       !codeFetching &&
@@ -100,6 +105,7 @@ function Cs2Integration({ channelId }: { channelId: string }) {
     codeFetching,
     codeFailed,
     refetchCode,
+    owner,
   ]);
   const device = status.data?.device;
   const deviceId = device?.id;
@@ -123,8 +129,9 @@ function Cs2Integration({ channelId }: { channelId: string }) {
   async function retry() {
     setUnpairError(false);
     const current = await status.refetch({ cancelRefetch: false });
+    if (current.isSuccess) setCheckFeedback(current.data.device ? "Desktop connected." : "No desktop connected yet. Open the app or enter the code manually.");
     if (
-      current.isSuccess &&
+      owner && current.isSuccess &&
       !current.data.device &&
       (!code || Date.parse(code.expires_at) <= Date.now() || pairing.isError)
     )
@@ -191,7 +198,7 @@ function Cs2Integration({ channelId }: { channelId: string }) {
                 )}
               </div>
             </div>
-            <Button
+            {owner ? <Button
               variant="outline"
               disabled={unpair.isPending}
               onClick={() =>
@@ -206,20 +213,28 @@ function Cs2Integration({ channelId }: { channelId: string }) {
               }
             >
               {unpair.isPending ? "Unpairing…" : "Unpair desktop"}
-            </Button>
+            </Button> : <p className="text-sm text-muted-foreground">Desktop pairing is managed by the channel owner.</p>}
           </>
         ) : (
           status.data && (
             <>
-              <h2 className="text-lg font-semibold">Pairing code</h2>
+              <div className="space-y-2">
+                <h2 className="text-lg font-semibold">Connect your CS2 desktop</h2>
+                <p className="text-sm text-muted-foreground">{owner ? "Open the companion to connect this channel. Keep CS2 running for game updates." : "Desktop pairing is managed by the channel owner."}</p>
+              </div>
+              {owner && <div className="cs2-pairing-flow">
               {remaining > 0 && code ? (
                 <>
+                  <div className="cs2-pairing-code">
+                  <div>
+                  <h3 className="text-xs text-muted-foreground mb-2">Pairing code</h3>
                   <p
-                    className="border-l-2 border-primary px-5 py-3 font-mono text-3xl w-fit"
+                    className="font-mono text-3xl"
                     aria-label="Pairing code"
                   >
                     {code.code}
                   </p>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Expires in{" "}
                     {Math.floor(remaining / 60)
@@ -227,15 +242,23 @@ function Cs2Integration({ channelId }: { channelId: string }) {
                       .padStart(2, "0")}
                     :{(remaining % 60).toString().padStart(2, "0")}
                   </p>
+                  </div>
+                  <div className="cs2-pairing-actions">
                   <a
-                    className="inline-flex rounded-md bg-primary px-4 py-2 text-primary-foreground"
+                    className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-primary-foreground"
                     href={`necko7-cs2i://pair?code=${encodeURIComponent(code.code)}`}
+                    onClick={() => setOpenFeedback(true)}
                   >
+                    <HugeiconsIcon icon={Link01Icon} size={16} />
                     Open CS2 Integration
                   </a>
+                  <Button variant="outline" disabled={status.isFetching} onClick={() => void retry()}><HugeiconsIcon icon={RefreshIcon} size={16} />Check connection</Button>
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    Or enter this code in the desktop app.
+                    You can also enter this code in the desktop app.
                   </p>
+                  {openFeedback && <p role="status" className="text-sm text-muted-foreground">Your browser may ask to open necko7 CS2. If nothing opens, install the app below, then enter this code. This page updates when pairing completes.</p>}
+                  {checkFeedback && <p role="status" className="text-sm">{checkFeedback}</p>}
                 </>
               ) : (
                 !pairing.isError && (
@@ -246,25 +269,21 @@ function Cs2Integration({ channelId }: { channelId: string }) {
                   </p>
                 )
               )}
+              </div>}
             </>
           )
         )}
         {!device && (
+          <div className="cs2-install-flow">
+          <div><h3 className="text-sm font-medium">Need the companion?</h3><p className="text-sm text-muted-foreground mt-1">Install necko7 CS2 for Windows, then return here to connect.</p></div>
           <a
-            className="inline-flex rounded-md border border-border px-4 py-2 text-primary"
+            className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-foreground"
             href={download}
           >
+            <HugeiconsIcon icon={Download01Icon} size={16} />
             Download desktop app
           </a>
-        )}
-        {!error && !device && (
-          <Button
-            variant="outline"
-            disabled={status.isFetching || pairing.isFetching}
-            onClick={() => void retry()}
-          >
-            Retry
-          </Button>
+          </div>
         )}
       </section>
       {modal.dialog}

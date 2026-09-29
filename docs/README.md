@@ -1,0 +1,23 @@
+# Scripting documentation maintenance
+
+Public static VitePress site: `docs/site`. Framework configuration/theme: `docs/.vitepress`. Production frontend build includes static output in `dist/docs/scripting`; the existing Docker static copy includes it. No publishing/deployment is performed by these commands.
+
+```sh
+npm ci
+npm run api:sync
+npm run docs:check
+npm run docs:build
+npm run docs:dev
+```
+
+`api:sync` copies the canonical API catalog and tested recipes from the sibling backend `docs/scripting/{api,recipes}.json`, then generates reference/cookbook Markdown. Set SCRIPTING_SOURCE_ROOT for a different backend checkout. Generated Markdown is versioned and must not be edited manually. The frontend can build independently from its versioned JSON snapshots. When the backend checkout exists, generate/check reject any catalog drift instead of silently accepting it.
+
+Backend runtime tests inspect native function signatures/arity, exercise every catalog invocation, verify context properties against serialized types, pin the documented Rhai version and execute every recipe's scenarios (including error/empty/gap paths). Monaco completion/hover and public reference use the exact same catalog snapshot. This is a documentation contract, not a new runtime API or language server. Behavioral prose still needs review when service semantics change; tests cannot prove every prose claim.
+
+`docs:build` rejects stale generated content before VitePress dead-link checks and static internal path/fragment validation. `npm run build` builds the dashboard and docs together. Serve `/docs/scripting/` as static files with `.html` resolution, not the dashboard SPA fallback. Docs are public and contain no credentials. The search index is local; no external search account required.
+
+VitePress 1.6.4 uses a scoped npm override to patched Vite 6.4.3+ because its original Vite 5 dev-server dependency has known security issues. Keep this override until a stable framework release incorporates a patched dependency. Preview/dev servers bind loopback only; production serves static files, never a docs development server. Build and browser tests cover the override.
+
+Development: dashboard on 4173, docs on 4174 via `docs:dev` or `docs:preview`. Production link defaults to `/docs/scripting/`. Optional VITE_SCRIPTING_DOCS_URL (build/dev) or SCRIPTING_DOCS_URL (Docker runtime) can select a separately hosted site; use an http(s) URL with a trailing slash. Nginx includes the static directory in the normal frontend artifact; do not point a separate URL at an unbuilt site.
+
+Keep API version/Rhai version metadata aligned with the source contract. A backend package patch does not automatically mean the scripting API changed. For a signature change: update the canonical catalog, runtime tests, recipes, sync both repos, and build/check docs. Prefer adding regression scenarios over a broad code generator.

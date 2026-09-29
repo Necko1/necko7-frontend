@@ -15,6 +15,7 @@ import ProjectEditor from "@/components/scripts/ProjectEditor";
 import ScriptRecords from "@/components/scripts/ScriptRecords";
 import Cs2Page from "./Cs2Page";
 import { toast } from "sonner";
+import { scriptingDocsUrl } from "@/lib/scriptingDocs";
 import "@/components/scripts/scripts.css";
 
 const tabs = [
@@ -30,7 +31,7 @@ export default function ScriptsPage() {
   const channel = broadcasters.find(
     (b) => b.channel_id === selectedBroadcasterId,
   );
-  if (channel?.role.toUpperCase() !== "OWNER")
+  if (!channel || !["OWNER", "EDITOR"].includes(channel.role.toUpperCase()))
     return <Navigate to="/channels" replace />;
   return <Scripts key={channel.channel_id} channel={channel.channel_id} />;
 }
@@ -143,6 +144,7 @@ function Scripts({ channel }: { channel: string }) {
     <div className="page-shell scripts-page">
       <header>
         <h1>Scripts</h1>
+        <a href={scriptingDocsUrl()} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">Scripting documentation ↗</a>
       </header>
       <nav aria-label="Scripts" className="scripts-nav">
         {tabs.map(([key, label]) => (

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Editor, { type Monaco } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { Tree, type NodeRendererProps, type TreeApi } from "react-arborist";
+import { ContextMenu } from "@base-ui/react/context-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
@@ -61,6 +62,7 @@ import {
 } from "./fileTree";
 import ExecutionReport from "./ExecutionReport";
 import { toast } from "sonner";
+import { scriptingDocsUrl } from "@/lib/scriptingDocs";
 
 function TreeNode({ node, style, dragHandle }: NodeRendererProps<FileNode>) {
   return (
@@ -68,6 +70,7 @@ function TreeNode({ node, style, dragHandle }: NodeRendererProps<FileNode>) {
       style={style}
       ref={dragHandle}
       className={`script-tree-node ${node.isSelected ? "selected" : ""}`}
+      data-path={node.id}
       onClick={() => {
         node.select();
         if (node.isInternal) node.toggle();
@@ -135,6 +138,8 @@ export default function ProjectEditor({
   const [version, setVersion] = useState(project.draft_version);
   const [file, setFile] = useState("main.rhai");
   const [selectedPath, setSelectedPath] = useState("main.rhai");
+  const [contextPath, setContextPath] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [open, setOpen] = useState(["main.rhai"]);
   const [result, setResult] = useState<unknown>(null);
   const [testOpen, setTestOpen] = useState(false);
@@ -166,6 +171,7 @@ export default function ProjectEditor({
   const unpublished = project.live_files
     ? canonical(files) !== canonical(project.live_files)
     : !project.active_revision;
+  if (!active && menuOpen) setMenuOpen(false);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
     const resize = () => setTreeHeight(media.matches ? 140 : 370);
@@ -255,13 +261,13 @@ export default function ProjectEditor({
     setSelectedPath(transform(selectedPath));
     toast.success("Path updated. Check affected imports before publishing.");
   }
-  function newFile(folder: boolean) {
+  function newFile(folder: boolean, parentOverride?: string) {
     const node = treeRef.current?.get(selectedPath);
-    const parent = node?.isInternal
+    const parent = parentOverride ?? (node?.isInternal
       ? selectedPath
       : selectedPath.includes("/")
         ? selectedPath.slice(0, selectedPath.lastIndexOf("/"))
-        : "";
+        : "");
     modal.show({
       title: folder ? "Create folder" : "Create file",
       description: folder
@@ -300,17 +306,17 @@ export default function ProjectEditor({
       },
     });
   }
-  function removePath() {
-    if (selectedPath === "main.rhai") return;
+  function removePath(path = selectedPath) {
+    if (path === "main.rhai") return;
     modal.show({
       title: "Delete file or folder?",
-      description: `Remove ${selectedPath} from the draft? This takes effect when you save and publish.`,
+      description: `Remove ${path} from the draft? This takes effect when you save and publish.`,
       submit: "Delete",
       destructive: true,
       onSubmit: () => {
         const next = Object.fromEntries(
           Object.entries(workingFiles()).filter(
-            ([p]) => p !== selectedPath && !p.startsWith(selectedPath + "/"),
+            ([p]) => p !== path && !p.startsWith(path + "/"),
           ),
         );
         setFiles(next);
@@ -319,6 +325,15 @@ export default function ProjectEditor({
         if (next[file] === undefined) setFile("main.rhai");
         setSelectedPath("main.rhai");
       },
+    });
+  }
+  function editPath(path: string, rename = false) {
+    modal.show({
+      title: rename ? "Rename file or folder" : "Move file or folder",
+      description: "Imports must be updated separately. Validate before publishing.",
+      submit: rename ? "Rename" : "Move",
+      fields: [{ name: "path", label: rename ? "Name" : "Destination path", value: rename ? path.split("/").at(-1) : path }],
+      onSubmit: values => applyMove([{ from: path, to: rename && path.includes("/") ? path.slice(0, path.lastIndexOf("/") + 1) + values.path : values.path }]),
     });
   }
   async function action(body: Record<string, unknown>) {
@@ -441,6 +456,8 @@ export default function ProjectEditor({
             <HugeiconsIcon icon={MoreHorizontalIcon} size={19} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem render={<a href={scriptingDocsUrl("reference/")} target="_blank" rel="noopener noreferrer" />}>API reference</DropdownMenuItem>
+            <DropdownMenuItem render={<a href="https://rhai.rs/book/" target="_blank" rel="noopener noreferrer" />}>Rhai language guide</DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>
                 modal.show({
@@ -621,7 +638,7 @@ export default function ProjectEditor({
                 <DropdownMenuItem
                   disabled={selectedPath === "main.rhai"}
                   variant="destructive"
-                  onClick={removePath}
+                  onClick={() => removePath()}
                 >
                   <HugeiconsIcon icon={Delete02Icon} size={15} />
                   Delete
@@ -629,7 +646,16 @@ export default function ProjectEditor({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <div className="script-tree">
+          <ContextMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
+          <ContextMenu.Trigger className="script-tree" tabIndex={0} aria-label="File tree context menu"
+            onContextMenu={event => {
+              const path = (event.target as Element).closest<HTMLElement>("[data-path]")?.dataset.path ?? null;
+              setContextPath(path);
+              if (path) setSelectedPath(path);
+            }}
+            onKeyDown={event => {
+              if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) setContextPath(selectedPath);
+            }}>
             <Tree
               ref={treeRef}
               data={fileTree(files, saved)}
@@ -685,7 +711,24 @@ export default function ProjectEditor({
             >
               {TreeNode}
             </Tree>
-          </div>
+          </ContextMenu.Trigger>
+          <ContextMenu.Portal>
+            <ContextMenu.Positioner sideOffset={4} collisionPadding={8} className="z-50">
+              <ContextMenu.Popup className="script-context-menu" aria-label="File tree actions">
+                {contextPath && files[contextPath] !== undefined && <ContextMenu.Item disabled={busy} onClick={() => select(contextPath)}>Open</ContextMenu.Item>}
+                {(!contextPath || files[contextPath] === undefined) && <>
+                  <ContextMenu.Item disabled={busy} onClick={() => newFile(false, contextPath ?? "")}><HugeiconsIcon icon={FileAddIcon} size={15} />New file</ContextMenu.Item>
+                  <ContextMenu.Item disabled={busy} onClick={() => newFile(true, contextPath ?? "")}><HugeiconsIcon icon={FolderAddIcon} size={15} />New folder</ContextMenu.Item>
+                </>}
+                {contextPath && <>
+                  <ContextMenu.Item disabled={busy || contextPath === "main.rhai"} onClick={() => editPath(contextPath, true)}><HugeiconsIcon icon={Edit02Icon} size={15} />Rename</ContextMenu.Item>
+                  <ContextMenu.Item disabled={busy || contextPath === "main.rhai"} onClick={() => editPath(contextPath)}>Move to...</ContextMenu.Item>
+                  <ContextMenu.Item disabled={busy || contextPath === "main.rhai"} data-destructive onClick={() => removePath(contextPath)}><HugeiconsIcon icon={Delete02Icon} size={15} />Delete</ContextMenu.Item>
+                </>}
+              </ContextMenu.Popup>
+            </ContextMenu.Positioner>
+          </ContextMenu.Portal>
+          </ContextMenu.Root>
         </aside>
         <div className="script-code">
           <div className="script-file-tabs">

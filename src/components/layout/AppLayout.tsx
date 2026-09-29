@@ -160,7 +160,7 @@ export default function AppLayout() {
     ] },
     { label: t("ops.configuration"), items: [
       { label: t("nav.rewards"), to: "/rewards", icon: <IconGift /> },
-      ...(role === "OWNER" ? [{ label: "Scripts", to: "/scripts/editor", icon: <IconGrid />, isActive: (pathname: string) => pathname === "/scripts" || pathname.startsWith("/scripts/") }] : []),
+      ...(operator ? [{ label: "Scripts", to: "/scripts/editor", icon: <IconGrid />, isActive: (pathname: string) => pathname === "/scripts" || pathname.startsWith("/scripts/") }] : []),
       { label: t("ops.settings"), to: `/broadcasters/${selected!.channel_id}/settings`, icon: <IconSettings /> },
     ] },
     { label: t("ops.community"), items: [

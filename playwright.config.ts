@@ -13,9 +13,13 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  webServer: {
+  webServer: [{
     command: "npm run dev -- --host 127.0.0.1 --port 4173 --strictPort",
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,
-  },
+  }, {
+    command: "npm run docs:dev",
+    url: "http://127.0.0.1:4174/docs/scripting/",
+    reuseExistingServer: !process.env.CI,
+  }],
 });

@@ -1,0 +1,11 @@
+:root { --vp-c-brand-1: #537500; --vp-c-brand-2: #668a11; --vp-c-brand-3: #779928; --vp-font-family-base: 'Segoe UI', sans-serif; }
+.dark { --vp-c-brand-1: #d6ee87; --vp-c-brand-2: #c3dc71; --vp-c-brand-3: #b0cd57; --vp-c-bg: #17191a; --vp-c-bg-alt: #111314; --vp-c-bg-soft: #222629; }
+.vp-doc th, .vp-doc td { overflow-wrap: anywhere; }
+.vp-doc th, .vp-doc td:first-child code { white-space: nowrap; }
+@media (max-width: 639px) {
+  .vp-doc th, .vp-doc td { padding: 8px 10px; font-size: 14px; overflow-wrap: break-word; }
+  .vp-doc td:nth-child(2) code { white-space: nowrap; }
+}
+.vp-doc div[class*='language-'] { border-radius: 6px; }
+.VPDoc h1 { font-size: 30px; letter-spacing: 0; }
+.VPDoc h2, .VPDoc h3, .VPNavBarTitle .title { letter-spacing: 0; }
