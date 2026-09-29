@@ -30,6 +30,23 @@ test("script reward announcements and actionable delivery notices have distinct 
   await page.screenshot({ path: "../.qa/script-delivery/docs-notifications-narrow.png", animations: "disabled" });
 });
 
+test("reward notice suppression documents both call forms without hiding trade tracking", async ({ page }) => {
+  await page.goto(`${root}reference/rewards#trigger-suppress-chat`);
+  await expect(page.locator("#trigger-suppress-chat")).toBeInViewport();
+  await expect(page.locator("main")).toContainText('rewards.trigger(alias: string, user_id: string, suppress_chat: array<string>)');
+  await expect(page.locator("main")).toContainText('rewards.trigger(alias: string, user_id: string, suppress_chat: string)');
+  await expect(page.locator("main")).toContainText("Order-reconciliation and all trade/order tracking notices cannot be suppressed");
+  await page.goto(`${root}cookbook/custom-trigger-notice`);
+  await expect(page.locator("main h1")).toContainText("Replace a missing-trade-link notice");
+  await expect(page.locator("main")).toContainText('rewards.trigger("secret_case", user.id, ["trade_link_required"])');
+  await expect(page.locator("main")).toContainText("If custom chat fails, the suppressed standard notice is not restored");
+  await page.screenshot({ path: "../.qa/script-delivery/docs-custom-notice.png", animations: "disabled" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: "../.qa/script-delivery/docs-custom-notice-narrow.png", animations: "disabled" });
+});
+
 test("message filtering guide, complete API and keyword recipe explain the same semantics", async ({ page }) => {
   await page.goto(`${root}message-filtering`);
   await expect(page.locator("main h1")).toContainText("Filter chatters by message content");

@@ -2,6 +2,7 @@
 
 Complete native Rhai projects, compiled and exercised by the backend test suite. Reward names are aliases you must configure, not built-in rewards. Nothing executes until you publish and enable a project.
 
+- [Replace a missing-trade-link notice](./custom-trigger-notice)
 - [Choose a chatter by message content](./message-keyword-draw)
 - [Announce a local kill](./announce-kill)
 - [Ace to delayed secret-case giveaway](./ace-secret-case)

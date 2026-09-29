@@ -27,7 +27,7 @@ Find a reward by alias.
 rewards.get("secret_case");
 ```
 
-Related APIs: [rewards.set_visible](./rewards#set_visible), [rewards.set_paused](./rewards#set_paused), [rewards.enable_for](./rewards#enable_for), [rewards.trigger](./rewards#trigger).
+Related APIs: [rewards.set_visible](./rewards#set_visible), [rewards.set_paused](./rewards#set_paused), [rewards.enable_for](./rewards#enable_for), [rewards.trigger](./rewards#trigger), [rewards.trigger](./rewards#trigger-suppress-chat), [rewards.trigger](./rewards#trigger-suppress-one).
 
 See [data shapes](./data), [limits](../limits), [dry run](../workflows#dry-run) and [cookbook](../cookbook/).
 
@@ -58,7 +58,7 @@ Change presentation visibility.
 rewards.set_visible("secret_case", false);
 ```
 
-Related APIs: [rewards.get](./rewards#get), [rewards.set_paused](./rewards#set_paused), [rewards.enable_for](./rewards#enable_for), [rewards.trigger](./rewards#trigger).
+Related APIs: [rewards.get](./rewards#get), [rewards.set_paused](./rewards#set_paused), [rewards.enable_for](./rewards#enable_for), [rewards.trigger](./rewards#trigger), [rewards.trigger](./rewards#trigger-suppress-chat), [rewards.trigger](./rewards#trigger-suppress-one).
 
 See [data shapes](./data), [limits](../limits), [dry run](../workflows#dry-run) and [cookbook](../cookbook/).
 
@@ -89,7 +89,7 @@ Change operational pause.
 rewards.set_paused("secret_case", false);
 ```
 
-Related APIs: [rewards.get](./rewards#get), [rewards.set_visible](./rewards#set_visible), [rewards.enable_for](./rewards#enable_for), [rewards.trigger](./rewards#trigger).
+Related APIs: [rewards.get](./rewards#get), [rewards.set_visible](./rewards#set_visible), [rewards.enable_for](./rewards#enable_for), [rewards.trigger](./rewards#trigger), [rewards.trigger](./rewards#trigger-suppress-chat), [rewards.trigger](./rewards#trigger-suppress-one).
 
 See [data shapes](./data), [limits](../limits), [dry run](../workflows#dry-run) and [cookbook](../cookbook/).
 
@@ -120,7 +120,7 @@ Show temporarily, then hide.
 rewards.enable_for("round_drop", Duration::from_mins(2));
 ```
 
-Related APIs: [rewards.get](./rewards#get), [rewards.set_visible](./rewards#set_visible), [rewards.set_paused](./rewards#set_paused), [rewards.trigger](./rewards#trigger).
+Related APIs: [rewards.get](./rewards#get), [rewards.set_visible](./rewards#set_visible), [rewards.set_paused](./rewards#set_paused), [rewards.trigger](./rewards#trigger), [rewards.trigger](./rewards#trigger-suppress-chat), [rewards.trigger](./rewards#trigger-suppress-one).
 
 See [data shapes](./data), [limits](../limits), [dry run](../workflows#dry-run) and [cookbook](../cookbook/).
 
@@ -152,5 +152,69 @@ rewards.trigger("secret_case", "123");
 ```
 
 Related APIs: [rewards.get](./rewards#get), [chat.send](./chat#send).
+
+See [data shapes](./data), [limits](../limits), [dry run](../workflows#dry-run) and [cookbook](../cookbook/).
+
+## trigger {#trigger-suppress-chat}
+
+```rhai
+rewards.trigger(alias: string, user_id: string, suppress_chat: array<string>) -> TriggerResult
+```
+
+Trigger a reward while replacing selected automatic delivery notices with script-authored chat.
+
+| Parameter | Type | Meaning |
+| --- | --- | --- |
+| `alias` | `string` | Reward script_alias in this channel. |
+| `user_id` | `string` | Twitch user ID, not @login. |
+| `suppress_chat` | `array<string>` | Up to 20 message keys, e.g. ["trade_link_required", "unavailable"]. Short keys or full category keys are accepted. Only definitive pre-order/actionable buyer-error notices can be selected. |
+
+**Returns:** `TriggerResult`.
+
+**Behavior and effects:** Choose notice keys BEFORE triggering: rewards.trigger returns after synchronous fulfillment notices may already have been sent. These are chat-template keys, not necessarily TriggerResult.code values. Short keys: trade_link_required, insufficient_funds, unavailable, trade_link_check_failed, inventory_hidden, steam_banned, no_mobile_authenticator, offline_trades_disabled, trade_link_invalid, trade_check_bot_banned, inventory_full. Full category keys such as orders.trade_link_required also work. The selection is stored on this fulfillment and survives recovery/later authorized purchase attempts. Order-reconciliation and all trade/order tracking notices cannot be suppressed. Unselected notices still use channel templates. Suppression changes only chat, never reward admission, inventory, purchase, trade, audit, or returned status. Twitch redemptions are unaffected. If replacement chat.send fails, there is no fallback automatic notice for a suppressed key.
+
+**Errors:** Non-string elements, more than 20 keys, or unsupported keys (including trade tracking and ambiguous reconciliation) throw invalid_trigger_options before a fulfillment is admitted. Other trigger results follow the two-argument overload.
+
+**Dry run:** Validates the key list and performs the normal trigger dry run; no fulfillment, suppression record, or chat message is created.
+
+**Budget:** 100 host calls total; 3 calls of this operation per execution. Also at most 10 admitted fulfillment rows per project in the preceding minute; the check is not a blanket Twitch rate limit.
+
+```rhai
+rewards.trigger("secret_case", "123", ["trade_link_required", "unavailable"]);
+```
+
+Related APIs: [rewards.trigger](./rewards#trigger), [chat.send](./chat#send).
+
+See [data shapes](./data), [limits](../limits), [dry run](../workflows#dry-run) and [cookbook](../cookbook/).
+
+## trigger {#trigger-suppress-one}
+
+```rhai
+rewards.trigger(alias: string, user_id: string, suppress_chat: string) -> TriggerResult
+```
+
+Convenience overload for replacing one suppressible fulfillment notice.
+
+| Parameter | Type | Meaning |
+| --- | --- | --- |
+| `alias` | `string` | Reward script_alias in this channel. |
+| `user_id` | `string` | Twitch user ID, not @login. |
+| `suppress_chat` | `string` | One short or full template key from the allowlist of the array overload. |
+
+**Returns:** `TriggerResult`.
+
+**Behavior and effects:** Equivalent to passing a one-element suppress_chat array. Selection is per fulfillment and must be made before rewards.trigger returns. Order reconciliation and trade/order tracking notices remain mandatory. See the array overload for allowed keys and the scope of suppression.
+
+**Errors:** An unsupported key throws invalid_trigger_options before a fulfillment is admitted. Other trigger results follow the two-argument overload.
+
+**Dry run:** Validates the key and performs the normal trigger dry run without side effects.
+
+**Budget:** 100 host calls total; 3 calls of this operation per execution. Also at most 10 admitted fulfillment rows per project in the preceding minute; the check is not a blanket Twitch rate limit.
+
+```rhai
+rewards.trigger("secret_case", "123", "trade_link_required");
+```
+
+Related APIs: [rewards.trigger](./rewards#trigger), [chat.send](./chat#send).
 
 See [data shapes](./data), [limits](../limits), [dry run](../workflows#dry-run) and [cookbook](../cookbook/).

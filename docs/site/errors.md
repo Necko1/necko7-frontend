@@ -88,6 +88,17 @@ Once the item exists in inventory, normal fulfillment notifications are enabled 
 
 These notices also work during authorized manual purchases and background tracking after the script finishes. Existing durable per-attempt notification deduplication remains in effect. All origins use the same channel-configured delivery templates and shared neutral defaults, without SCRIPT-specific text substitution; Twitch points/refund notices retain separate Twitch-only keys. Channel-authored delivery templates are honored.
 
+To replace selected buyer/pre-order notices for one SCRIPT fulfillment, pass their keys before the trigger runs:
+
+```rhai
+let result = rewards.trigger("secret_case", user.id, ["trade_link_required", "unavailable"]);
+if !result.ok && result.code == "trade_link_required" {
+    chat.send(`@${user.login} Add a Steam trade link in your inventory to receive your prize.`);
+}
+```
+
+A single key may instead be passed as a string. The allowed keys are listed in the [rewards.trigger reference](./reference/rewards#trigger-suppress-chat); they identify chat templates, not necessarily `result.code` values. Other keys cause a script error before triggering. The choice belongs to that fulfillment and carries over to later authorized purchase attempts. It only changes chat: inventory state, purchase processing and the returned result are unchanged. Reconciliation and all existing-order/Steam-trade tracking notices, including acceptance links and delivery failures, cannot be disabled. The standard notice may already have been sent when `rewards.trigger` returns, so it cannot be cancelled afterward; choose keys in the call. If your replacement `chat.send` fails, the suppressed standard notice is not restored. See the [complete custom-notice recipe](./cookbook/custom-trigger-notice).
+
 If no trade link was saved when auto-buy ran, the item stays in inventory with `TRADE_LINK_REQUIRED`; no Market order is made. The viewer can save the link and start delivery of **that same item** for AUTO/VIEWER modes. Saving the link does not itself place an order. If reward auto-buy is disabled, OPERATOR mode still requires the channel operator to start purchase. Do not call `rewards.trigger` again to resume an existing item.
 
 Use [safe hidden trigger](./cookbook/trigger-safely) or [the complete delayed giveaway](./cookbook/ace-secret-case). Do not solve delivery errors by spamming chat or automatic retrigger loops.
