@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { mockApi } from "./fixtures";
 import live from "./fixtures/live-vertigo.json" with { type: "json" };
+import { respondHistory } from "./executionHistoryFixture";
 
 async function setup(page: Page, unknown = false) {
   await mockApi(page);
@@ -22,6 +23,13 @@ async function setup(page: Page, unknown = false) {
   }
   const queries: string[] = [];
   await page.route("**/api/v1/broadcasters/123/scripts**", async (route) => {
+    if (new URL(route.request().url()).pathname.endsWith("/executions")) {
+      const search = new URL(route.request().url()).searchParams.get("search") || "";
+      queries.push(search);
+      return respondHistory(route, [...Array.from({ length: 350 }, (_, i) => ({
+        ...data.executions[0], id: `newer-${i}`, event: { kind: "ammo_changed" }, report: { logs: [], actions: [], error: null },
+      })), ...data.executions]);
+    }
     const search = new URL(route.request().url()).searchParams.get("execution_search") || "";
     queries.push(search);
     const executions = search
@@ -110,7 +118,7 @@ test("player_kill search reaches retained history and displays all eight persist
   await page.getByRole("textbox", { name: "Search", exact: true }).fill(" player_kill ");
   await expect.poll(() => queries.includes("player_kill")).toBe(true);
   await expect(page.locator(".script-execution-line")).toHaveCount(8);
-  await expect(page.getByText("Latest 200 matching reports", { exact: true })).toBeVisible();
+  await expect(page.getByText("Showing 8 of 8 retained matches · page 1", { exact: true })).toBeVisible();
   await capture(page, info, "eight-player-kill-executions");
   await page.locator(".script-execution-line").last().click();
   const dialog = page.getByRole("dialog", { name: "Live evidence" });

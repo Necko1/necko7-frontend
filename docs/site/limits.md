@@ -44,7 +44,8 @@ Local Duration/filter construction, random.pick and last_rounds do not use the h
 | last_rounds argument | 0..256 |
 | Match records | One active/channel, up to 30 completed matches |
 | Round storage | Up to 256 completed observed rounds, 512 timeline events/round |
-| Overview recent windows | 200 reports, 500 jobs/revisions, 2,000 keys, 30 snapshots; not an unlimited paginated browser |
+| Editor overview recent windows | 200 reports, 500 jobs/revisions, 2,000 keys, 30 snapshots |
+| Logs / job attempt history pages | 50 reports/page in UI; API accepts 1..100; all predicates before cursor/limit |
 | Execution search text | At most 128 characters, literal substring, not SQL wildcard syntax |
 | Compiler/test workers / execution workers | 2 / 2 |
 

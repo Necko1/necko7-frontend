@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { mockApi } from "./fixtures";
+import { jobResults, respondHistory } from "./executionHistoryFixture";
 
 export function scriptData() {
   const now = new Date(Date.now() - 180000).toISOString();
@@ -175,9 +176,11 @@ export async function scriptsApi(
       data[key as keyof typeof data] = [] as never;
   const actions: Record<string, any>[] = [];
   let createError = !!options.createError;
+  await page.route("**/api/v1/broadcasters/123/scripts/executions?*", route => respondHistory(route, data.executions,
+    Object.fromEntries(data.projects.map(p => [p.id, p.name]))));
   await page.route("**/api/v1/broadcasters/123/scripts{,?*}", async (route) => {
     if (route.request().method() !== "POST")
-      return route.fulfill({ json: data });
+      return route.fulfill({ json: { ...data, jobs: jobResults(data.jobs, data.executions) } });
     const body = route.request().postDataJSON();
     actions.push(body);
     const project = data.projects.find((p) => p.id === body.project_id);

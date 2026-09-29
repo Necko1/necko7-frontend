@@ -27,6 +27,8 @@ import {
 import { useScriptDialog } from "./useScriptDialog";
 import ExecutionReport from "./ExecutionReport";
 import { toast } from "sonner";
+import { useExecutionHistory } from "./useExecutionHistory";
+import { HistoryPager } from "./HistoryPager";
 
 const t = i18n.t.bind(i18n);
 
@@ -88,6 +90,7 @@ function executionSummary(row: Row) {
               : t("scripts.executionReport");
 }
 export default function ScriptRecords({
+  channel,
   section,
   data,
   command,
@@ -95,6 +98,7 @@ export default function ScriptRecords({
   executionSearch,
   onExecutionSearch,
 }: {
+  channel: string;
   section: string;
   data: Overview;
   command: Command;
@@ -111,22 +115,32 @@ export default function ScriptRecords({
   const [level, setLevel] = useState("");
   const [executionStatus, setExecutionStatus] = useState("");
   const [observations, setObservations] = useState(false);
+  const [mode, setMode] = useState("noteworthy");
   const [detail, setDetail] = useState<Row | null>(null);
+  const history = useExecutionHistory(channel, section === "logs"
+    ? { search: activeSearch, project_id: project || undefined, status, source, level, mode }
+    : { job_id: detail?.id, mode: "all" }, section === "logs" || (section === "scheduler" && !!detail));
   const modal = useScriptDialog();
   const projectName = (row: Row) =>
     data.projects.find((p) => p.id === row.project_id)?.name ??
     t("scripts.deletedProject");
   const jobsResult = (row: Row) =>
-    data.executions.find((e) => e.job_id === row.id);
+    row.last_execution ? object(row.last_execution) : null;
+  const jobExecutionLabel = (row: Row) => {
+    const result = jobsResult(row);
+    if (result) return human(result.status);
+    return t(`scripts.${row.status === "scheduled" ? "notRunYet" : row.status === "blocked" ? "notRunBlocked" : row.status === "queued" ? "awaitingExecution" : row.status === "cancelled" ? "cancelledBeforeRun" : "executionUnavailable"}`);
+  };
   const all =
     section === "storage"
       ? data.storage
       : section === "scheduler"
         ? data.jobs
         : section === "logs"
-          ? data.executions
+          ? history.query.data?.executions ?? []
           : data.matches;
   const filtered = all.filter((row) => {
+    if (section === "logs") return true;
     const report = object(row.report);
     return (
       (!project || row.project_id === project) &&
@@ -340,6 +354,7 @@ export default function ScriptRecords({
               "blocked",
               "queued",
               "completed",
+              "failed",
               "cancelled",
             ]}
             onChange={setStatus}
@@ -359,6 +374,10 @@ export default function ScriptRecords({
       )}
       {section === "logs" && (
         <div className="script-log-filters">
+          <Choice label={t("scripts.historyView")} value={mode} options={[
+            { value: "noteworthy", label: t("scripts.withOutput") },
+            { value: "all", label: t("scripts.allExecutions") },
+          ]} onChange={setMode} />
           <Filters
             label={t("scripts.status")}
             value={status}
@@ -395,6 +414,7 @@ export default function ScriptRecords({
           {filtered.map((row) => (
             <article
               key={row.id}
+              data-execution-id={row.id}
               className="terminal-record"
               data-level={row.status === "failed" ? "ERROR" : "INFO"}
             >
@@ -447,7 +467,7 @@ export default function ScriptRecords({
             </thead>
             <tbody>
               {filtered.map((row, i) => (
-                <tr key={row.id ?? `${row.project_id}-${row.key ?? i}`}>
+                <tr key={row.id ?? `${row.project_id}-${row.key ?? i}`} data-record-id={row.id}>
                   {section === "storage" ? (
                     <>
                       <td>
@@ -521,11 +541,12 @@ export default function ScriptRecords({
                           <button
                             onClick={() => setDetail(row)}
                             className="script-record-link"
+                            data-result={String(jobsResult(row)?.status)}
                           >
                             {human(jobsResult(row)?.status)}
                           </button>
                         ) : (
-                          t("scripts.notExecuted")
+                          jobExecutionLabel(row)
                         )}
                       </td>
                       <td>
@@ -601,7 +622,7 @@ export default function ScriptRecords({
           </table>
         </div>
       )}
-      {!filtered.length && (
+      {!filtered.length && !(section === "logs" && (history.query.isPending || history.query.isError)) && (
         <Empty
           title={
             all.length
@@ -626,13 +647,14 @@ export default function ScriptRecords({
       )}
       <p className="script-limit">
         {section === "logs"
-          ? activeSearch ? t("scripts.matchingReportsLimit") : t("scripts.reportsLimit")
+          ? t("scripts.historyRetention")
           : section === "matches"
             ? t("scripts.matchesLimit")
             : section === "storage"
               ? t("scripts.storageLimit")
               : t("scripts.jobsLimit")}
       </p>
+      {section === "logs" && <HistoryPager history={history} />}
       <Sheet
         open={!!selected}
         onOpenChange={(open) => {
@@ -720,6 +742,14 @@ export default function ScriptRecords({
                       </dd>
                     </div>
                     <div>
+                      <dt>{t("scripts.jobInstance")}</dt>
+                      <dd>{text(selected.id)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("scripts.lastExecution")}</dt>
+                      <dd>{jobExecutionLabel(selected)}</dd>
+                    </div>
+                    <div>
                       <dt>{t("scripts.pinnedVersion")}</dt>
                       <dd>{text(selected.revision)}</dd>
                     </div>
@@ -743,16 +773,18 @@ export default function ScriptRecords({
                   )}
                   <Raw value={selected.payload} label={t("scripts.jobPayload")} />
                   <h3>{t("scripts.executionHistory")}</h3>
-                  {data.executions
-                    .filter((e) => e.job_id === selected.id)
+                  <HistoryPager history={history} />
+                  {(history.query.data?.executions ?? [])
                     .map((e) => (
                       <section key={e.id}>
-                        <StatusBadge value={e.status} />
-                        <Time value={e.created_at} />
+                        <div className="flex items-center gap-3">
+                          <StatusBadge value={e.status} />
+                          <Time value={e.created_at} />
+                        </div>
                         <ExecutionReport value={e.report} />
                       </section>
                     ))}
-                  {!jobsResult(selected) && <p>{t("scripts.notExecutedSentence")}</p>}
+                  {!history.query.isPending && !history.query.isError && !history.query.data?.executions.length && <p>{jobExecutionLabel(selected)}</p>}
                   <Raw value={selected} label={t("scripts.rawJob")} />
                 </>
               ) : (

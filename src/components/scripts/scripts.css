@@ -595,3 +595,18 @@
     padding-inline: 10px;
   }
 }
+.script-history-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  margin: 16px 0;
+}
+.script-history-pager > [role="alert"] { flex-basis: 100%; }
+.script-record-link[data-result="failed"],
+.script-record-link[data-result="interrupted"] { color: var(--destructive); }
+.script-record-link[data-result="skipped"],
+.script-record-link[data-result="queued"],
+.script-record-link[data-result="running"] { color: var(--muted-foreground); }

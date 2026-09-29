@@ -43,17 +43,13 @@ function Scripts({ channel }: { channel: string }) {
   const qc = useQueryClient();
   const queryKey = ["scripts", channel];
   const [executionSearch, setExecutionSearch] = useState("");
-  const [historySearch, setHistorySearch] = useState("");
-  useEffect(() => {
-    const timer = setTimeout(() => setHistorySearch(executionSearch.trim()), 200);
-    return () => clearTimeout(timer);
-  }, [executionSearch]);
+  const recordSection = section === "logs" || section === "scheduler";
   const query = useQuery({
-    queryKey: [...queryKey, section === "logs" ? historySearch : ""],
+    queryKey: [...queryKey, recordSection],
     queryFn: () =>
       api
         .get<Overview>(`/api/v1/broadcasters/${channel}/scripts`, {
-          params: section === "logs" && historySearch ? { execution_search: historySearch } : undefined,
+          params: recordSection ? { include_executions: false } : undefined,
         })
         .then((r) => r.data),
     enabled: section !== "cs2",
@@ -80,6 +76,7 @@ function Scripts({ channel }: { channel: string }) {
         body,
       );
       await qc.invalidateQueries({ queryKey });
+      await qc.invalidateQueries({ queryKey: ["script-history", channel] });
       return response.data;
     } finally {
       pending.current = false;
@@ -235,6 +232,7 @@ function Scripts({ channel }: { channel: string }) {
           {section !== "editor" && section !== "cs2" && (
             <ScriptRecords
               key={section}
+              channel={channel}
               section={section}
               data={query.data}
               command={command}
