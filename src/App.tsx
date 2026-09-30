@@ -11,6 +11,7 @@ const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const InitBotPage = lazy(() => import("@/pages/auth/InitBotPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const RewardsPage = lazy(() => import("@/pages/RewardsPage"));
+const ManualOrdersPage = lazy(() => import("@/pages/ManualOrdersPage"));
 const RedemptionsPage = lazy(() => import("@/pages/RedemptionsPage"));
 const ChannelsPage = lazy(() => import("@/pages/ChannelsPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
@@ -66,6 +67,8 @@ export default function App() {
                 <Route path="/channels" element={<ChannelsPage />} />
                 <Route path="/rewards" element={<RewardsPage />} />
                 <Route path="/redemptions" element={<RedemptionsPage />} />
+                <Route path="/manual-orders" element={<ManualOrdersPage />} />
+                <Route path="/manual-orders/:orderId" element={<ManualOrdersPage />} />
                 <Route path="/logs" element={<LogsPage />} />
                 <Route path="/leaderboard" element={<ChatPage />} />
                 <Route path="/chat/leaderboard" element={<Navigate to="/leaderboard" replace />} />

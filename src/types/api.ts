@@ -515,6 +515,7 @@ export interface PaginatedChannelMessagesResponse {
 export type ChannelLogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
 
 export type ChannelLogCategory =
+  | "MANUAL"
   | "REDEMPTION"
   | "REWARD"
   | "MARKET"

@@ -1,3 +1,4 @@
+import { manualEn, manualRu } from "./manualOrders";
 import { operationsEn, operationsRu } from "./operations";
 import { scriptsEn, scriptsRu } from "./scripts";
 import i18n from "i18next";
@@ -11,8 +12,8 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      ru: { translation: { ...ru, ops: operationsRu, scripts: scriptsRu } },
-      en: { translation: { ...en, ops: operationsEn, scripts: scriptsEn } },
+      ru: { translation: { ...ru, ops: operationsRu, scripts: scriptsRu, manual: manualRu } },
+      en: { translation: { ...en, ops: operationsEn, scripts: scriptsEn, manual: manualEn } },
     },
     lng: savedLang,
     fallbackLng: "en",

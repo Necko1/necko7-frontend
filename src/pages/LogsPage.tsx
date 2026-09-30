@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Segments from "@/components/common/Segments";
 import { toast } from "sonner";
 import { QueryError } from "@/components/common/Page";
@@ -29,6 +30,7 @@ const LEVELS: { value: ChannelLogLevel | ""; label: string }[] = [
 
 const CATEGORIES: { value: ChannelLogCategory | ""; label: string }[] = [
   { value: "", label: "ALL" },
+  { value: "MANUAL", label: "MANUAL" },
   { value: "REDEMPTION", label: "REDEMPTION" },
   { value: "REWARD", label: "REWARD" },
   { value: "MARKET", label: "MARKET" },
@@ -193,6 +195,9 @@ function ConsoleLogItem({ log, isExpanded, onToggle }: ConsoleLogItemProps) {
                 {t("logs.openSteamTrade", "Open Steam trade")} ↗
               </a>
             )}
+          {typeof log.details?.manual_order_id === "string" && /^[0-9a-f-]{36}$/i.test(log.details.manual_order_id) && (
+            <Link to={`/manual-orders/${log.details.manual_order_id}`}>{t("manual.open")} ↗</Link>
+          )}
           {hasDetails && <pre>{JSON.stringify(log.details, null, 2)}</pre>}
           <small>
             channel {log.broadcaster_id} / record {log.id}

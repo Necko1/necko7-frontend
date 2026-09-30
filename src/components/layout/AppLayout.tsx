@@ -123,7 +123,7 @@ export default function AppLayout() {
   const role = selected?.role.toUpperCase();
   const operator = role === "OWNER" || role === "EDITOR";
   const publicRoute = location.pathname.startsWith("/c/") || location.pathname.startsWith("/r/");
-  const adminRoute = ["/dashboard", "/rewards", "/redemptions", "/logs", "/leaderboard", "/chat", "/broadcasters"].some(p => location.pathname === p || location.pathname.startsWith(p + "/"));
+  const adminRoute = ["/dashboard", "/rewards", "/redemptions", "/manual-orders", "/logs", "/leaderboard", "/chat", "/broadcasters"].some(p => location.pathname === p || location.pathname.startsWith(p + "/"));
   const { data: holds } = useQuery({ queryKey: ["redemptions", selectedBroadcasterId, "attention-count"], queryFn: () => redemptionsApi.list(selectedBroadcasterId!, { status: "MANUAL_HOLD", limit: 1 }).then(r => r.data), enabled: operator, refetchInterval: 15_000 });
   const logout = useMutation({ mutationFn: authApi.logout, onSuccess: () => { setCurrentUser(null); setBroadcasters([]); setSelectedBroadcasterId(null); qc.clear(); navigate("/login"); }, onError: () => toast.error(t("ops.loadError")) });
   useEffect(() => { setCurrentUser(meData ?? null); }, [meData, setCurrentUser]);
@@ -156,6 +156,7 @@ export default function AppLayout() {
       { label: t("ops.overview"), to: "/dashboard", icon: <IconGrid /> },
       { label: t("ops.holds"), to: "/redemptions?status=MANUAL_HOLD", icon: <span className="text-amber-300 text-base w-[18px] text-center">!</span>, isActive: p => p === "/redemptions" && new URLSearchParams(location.search).get("status") === "MANUAL_HOLD" },
       { label: t("ops.transactions"), to: "/redemptions", icon: <IconList />, isActive: p => p === "/redemptions" && new URLSearchParams(location.search).get("status") !== "MANUAL_HOLD" },
+      { label: t("manual.title"), to: "/manual-orders", icon: <IconGift /> },
       { label: t("nav.logs"), to: "/logs", icon: <IconTerminal /> },
     ] },
     { label: t("ops.configuration"), items: [
