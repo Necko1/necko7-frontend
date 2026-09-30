@@ -11,22 +11,19 @@
 
 /* Manual fulfillment uses the workspace palette and existing page primitives. */
 .manual-dialog { max-height: calc(100dvh - 2rem); overflow-y: auto; }
-.manual-steps { display: flex; gap: .75rem; margin: 0; padding: 0; list-style: none; }
-.manual-steps li { display: flex; align-items: center; gap: .5rem; flex: 1; color: var(--muted-foreground); font-size: .75rem; }
-.manual-steps li > span { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; flex-shrink: 0; border: 1px solid var(--border); border-radius: 50%; }
-.manual-steps li[data-current="true"] { color: var(--foreground); font-weight: 600; }
-.manual-steps li[data-current="true"] > span { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
 .manual-field { display: flex; flex-direction: column; gap: .5rem; min-width: 0; font-size: .875rem; font-weight: 500; }
 .manual-field small { color: var(--muted-foreground); font-size: .75rem; font-weight: 400; line-height: 1.5; }
 .manual-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
 .manual-catalog { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .75rem; }
 .manual-skin { display: flex; flex-direction: column; gap: .4rem; padding: .75rem; min-width: 0; text-align: left; border: 1px solid var(--border); border-radius: .5rem; background: var(--card); cursor: pointer; }
 .manual-skin:hover, .manual-skin:focus-visible { border-color: var(--primary); background: var(--accent); }
+.manual-skin[aria-pressed="true"] { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); background: var(--accent); }
 .manual-skin:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .manual-skin:disabled { opacity: .5; cursor: wait; }
+.manual-skin[aria-pressed="true"]:disabled { opacity: 1; }
 .manual-skin > img, .manual-skin > div:first-child { height: 5rem; object-fit: contain; }
 .manual-skin strong { font-size: .75rem; overflow-wrap: anywhere; }
-.manual-skin > span { color: var(--primary); font-size: .8rem; font-weight: 600; }
+.manual-skin > span { color: var(--foreground); font-size: .8rem; font-weight: 600; }
 .manual-skin small { color: var(--muted-foreground); font-size: .7rem; }
 .manual-selected { display: flex; gap: 1rem; align-items: center; min-width: 0; }
 .manual-selected > img, .manual-selected > div:first-child:has(svg) { width: 6rem; height: 5rem; object-fit: contain; flex-shrink: 0; }
@@ -43,7 +40,18 @@
 .manual-error { padding: .75rem 1rem; background: color-mix(in srgb,var(--destructive) 8%,transparent); color: var(--destructive); border: 1px solid color-mix(in srgb,var(--destructive) 30%,transparent); border-radius: .5rem; font-size: .875rem; }
 .manual-notice { padding: 1rem; background: var(--accent); border: 1px solid var(--border); border-radius: .5rem; font-size: .875rem; }
 .manual-toolbar { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1.5fr) minmax(0,1fr) auto; gap: .75rem; }
-.manual-toolbar select { min-width: 0; border: 1px solid var(--input); border-radius: .5rem; background: var(--card); padding: .5rem; font-size: .875rem; color: var(--foreground); }
+.manual-toolbar [data-slot="select-trigger"] { width: 100%; min-width: 0; }
+.manual-form-section { min-width: 0; border-top: 1px solid var(--border); padding-top: .75rem; }
+.manual-form-section legend { padding-right: .75rem; font-size: .875rem; font-weight: 600; }
+.manual-preview-loading { padding: .75rem; border: 1px solid var(--border); background: var(--muted); font-size: .8rem; }
+.manual-preview-loading strong { display: block; margin-top: .65rem; }
+.manual-preview-loading p { color: var(--muted-foreground); margin-top: .25rem; }
+.manual-review .manual-selected { padding-block: 1rem; border-bottom: 1px solid var(--border); }
+.manual-review-facts { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.manual-review .manual-review-facts > div { display: block; }
+.manual-review-facts dt { margin-bottom: .3rem; }
+.manual-review-facts > div:has(.manual-review-link) { grid-column: 1 / -1; }
+.manual-detail-actions { justify-content: flex-start; }
 .manual-order-list { border: 1px solid var(--border); border-radius: .75rem; background: var(--card); overflow: hidden; }
 .manual-order-row { display: grid; grid-template-columns: 5rem minmax(0,1fr) minmax(0,15rem); gap: 1rem; align-items: center; padding: 1.25rem; border-bottom: 1px solid var(--border); }
 .manual-order-row:last-child { border-bottom: 0; }
@@ -76,7 +84,7 @@
 @media (max-width: 540px) {
   .manual-catalog { grid-template-columns: repeat(2,minmax(0,1fr)); } .manual-fields, .manual-facts, .manual-toolbar { grid-template-columns: minmax(0,1fr); }
   .manual-order-row { grid-template-columns: 3.5rem minmax(0,1fr); padding: 1rem; gap: .75rem; } .manual-row-summary { grid-column: 2; align-items: flex-start; }
-  .manual-panel { padding: 1rem; } .manual-dialog { padding: 1rem; } .manual-steps { gap: .3rem; } .manual-steps li { font-size: .65rem; gap: .3rem; }
+  .manual-panel { padding: 1rem; } .manual-dialog { padding: 1rem; } .manual-review-facts { grid-template-columns: minmax(0,1fr); }
   .manual-selected > img { width: 4rem; } .manual-actions > button { flex: 1 1 auto; }
 }
 
@@ -424,10 +432,11 @@ h1, h2, h3 { text-wrap: balance; }
 .wizard-progress button > span:first-child { font:12px/1 ui-monospace,monospace; }
 .wizard-progress button > span:last-child { font-size:11px; line-height:1.3; }
 .wizard-progress button[aria-current=step] { color:var(--primary); border-bottom-color:var(--primary); }
+.wizard-progress button:focus-visible { outline:2px solid var(--ring); outline-offset:3px; }
 .wizard-progress button:disabled { opacity:.4; }
 .wizard-heading h3 { font:600 28px/1.1 var(--font-heading); }
 .wizard-heading p { color:var(--muted-foreground); font-size:13px; margin-top:6px; }
-@media(max-width:639px) { .wizard-progress button > span:last-child { display:none; } }
+@media(max-width:639px) { .wizard-progress { gap:8px; } .wizard-progress button > span:last-child { font-size:10px; overflow-wrap:anywhere; } }
 
 .reward-filter-group { display:flex; align-items:center; gap:16px; padding-inline:8px; }
 .reward-filter-group button { background:transparent; color:var(--muted-foreground); border:0; border-radius:0; padding:9px 0; white-space:nowrap; }

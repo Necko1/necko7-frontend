@@ -7,6 +7,7 @@ import { majorToMinor, minorToMajor, getCurrencyDivisor } from "@/lib/currency";
 import { orderError, orderMoney, splitTags, useDebounced } from "@/lib/manualOrderUtils";
 import type { AttemptParameters, CreateManualOrder, ManualOrder, ManualPreview } from "@/types/manualOrders";
 import SkinImage from "@/components/common/SkinImage";
+import WizardProgress from "@/components/common/WizardProgress";
 import { EmptyState, QueryError } from "@/components/common/Page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ export default function ManualOrderWizard({ channel, channelLabel, order, onClos
   const [quote, setQuote] = useState<ManualPreview | null>(() => pending ? { item_name: pending.item, currency: pending.currency,
     min_price: pending.minimum, max_price: pending.body.max_price, chance_to_transfer: pending.body.chance_to_transfer,
     trade_link: pending.body.trade_link, steam_partner: null } : null);
+  const [selectedItem, setSelectedItem] = useState(order?.item_name || pending?.item || "");
   const [maxPrice, setMaxPrice] = useState(last ? String(minorToMajor(last.max_price, order!.currency)) : "");
   const [chance, setChance] = useState(last ? String(last.chance_to_transfer) : "");
   const [trade, setTrade] = useState(last?.trade_link || "");
@@ -45,6 +47,7 @@ export default function ManualOrderWizard({ channel, channelLabel, order, onClos
   const catalog = useQuery({ queryKey: ["manual-catalog", channel, settledSearch, offset],
     queryFn: () => manualOrdersApi.catalog(channel, settledSearch, offset), enabled: step === 0, retry: false });
   const select = useMutation({ mutationFn: (name: string) => manualOrdersApi.preview(channel, { item_name: name, ...(order ? { currency: order.currency } : {}) }),
+    onMutate: name => setSelectedItem(name),
     onSuccess: data => { setQuote(data); if (!order) { setMaxPrice(String(minorToMajor(data.min_price, data.currency))); setChance(String(data.chance_to_transfer)); } setStep(1); }, onError: () => {} });
   const selectRef = useRef(select.mutate);
   useEffect(() => { if (order && !pending) selectRef.current(order.item_name); }, [order, pending]);
@@ -70,6 +73,8 @@ export default function ManualOrderWizard({ channel, channelLabel, order, onClos
     ...(!order ? { item_name: quote.item_name, currency: quote.currency, description, tags: splitTags(tags) } : {}),
   } : null);
   const createBody = !order && body ? body as CreateManualOrder : null;
+  const reviewDescription = createBody?.description ?? order?.description ?? "";
+  const reviewTags = createBody?.tags ?? order?.tags ?? [];
   const confirm = () => {
     if (!body || !quote || submitLock.current) return;
     submitLock.current = true;
@@ -82,19 +87,20 @@ export default function ManualOrderWizard({ channel, channelLabel, order, onClos
     <DialogContent className="manual-dialog sm:max-w-3xl" showCloseButton={!busy}>
       <DialogHeader><DialogTitle>{t(order ? "manual.retryTitle" : "manual.createTitle")}</DialogTitle>
         <DialogDescription>{t(order ? "manual.retryHint" : "manual.previewHint")}</DialogDescription></DialogHeader>
-      <ol className="manual-steps" aria-label={t("manual.review")}>
-        {[0,1,2].map(n => <li key={n} aria-current={step === n ? "step" : undefined} data-current={step === n}><span>{n + 1}</span>{t(`manual.steps.${n}`)}</li>)}
-      </ol>
+      <WizardProgress label={t("manual.setup")} steps={[0,1,2].map(n => t(`manual.steps.${n}`))} current={step}
+        isDisabled={n => busy || !!pending || (!!order && n === 0) || (n > step && !(step === 1 && n === 2))}
+        onChange={n => { if (n === 2 && step === 1) (document.getElementById("manual-parameters") as HTMLFormElement)?.requestSubmit(); else setStep(n); }} />
       {fieldError && <div role="alert" className="manual-error">{orderError(fieldError, t)}</div>}
       {pending && <p role="status" className="manual-notice">{t("manual.pendingRequest")}</p>}
       {step === 0 && <div className="space-y-4">
-        <label className="manual-field"><span>{t("manual.searchItems")}</span><Input autoFocus value={search} onChange={e => { setSearch(e.target.value); setOffset(0); }} placeholder="Glock-18 | Vogue" /><small>{t("manual.searchHint")}</small></label>
+        <div className="wizard-heading"><h3>{t("manual.itemHeading")}</h3><p>{t("manual.searchHint")}</p></div>
+        <label className="manual-field"><span>{t("manual.searchItems")}</span><Input autoFocus value={search} onChange={e => { setSearch(e.target.value); setOffset(0); }} placeholder="Glock-18 | Vogue" /></label>
         {catalog.isPending ? <div className="manual-catalog">{Array.from({length:6},(_,i) => <Skeleton key={i} className="h-40 rounded-lg" />)}</div>
           : catalog.isError ? <QueryError message={orderError(catalog.error,t)} onRetry={() => catalog.refetch()} />
           : !catalog.data?.items.length ? <EmptyState title={t("manual.noItems")} description={t("manual.noItemsHint")} />
           : <>
             <div className="manual-catalog" aria-busy={select.isPending}>{catalog.data.items.map(item => <button type="button" key={item.market_hash_name} disabled={busy}
-              className="manual-skin" aria-label={`${item.market_hash_name}, ${orderMoney(item.price,catalog.data.currency,i18n.language)}`} onClick={() => select.mutate(item.market_hash_name)}>
+              className="manual-skin" aria-pressed={selectedItem === item.market_hash_name} aria-label={`${item.market_hash_name}, ${orderMoney(item.price,catalog.data.currency,i18n.language)}`} onClick={() => select.mutate(item.market_hash_name)}>
               <SkinImage marketItemName={item.market_hash_name} /><strong>{item.market_hash_name}</strong>
               <span>{orderMoney(item.price,catalog.data.currency,i18n.language)}</span><small>{t("manual.availability",{count:item.volume})}</small>
             </button>)}</div>
@@ -102,33 +108,35 @@ export default function ManualOrderWizard({ channel, channelLabel, order, onClos
               <span>{t("manual.page",{from:offset+1,to:Math.min(offset+24,catalog.data.total),total:catalog.data.total})}</span>
               <Button type="button" variant="outline" disabled={offset+24 >= catalog.data.total || busy} onClick={() => setOffset(offset+24)}>{t("manual.nextPage")}</Button></div>
           </>}
-        {select.isPending && <p role="status">{t("manual.selecting")}</p>}
       </div>}
-      {step === 1 && <form id="manual-parameters" className="space-y-5" onSubmit={event => { event.preventDefault(); if (!busy) preview.mutate(); }}>
+      {(select.isPending || preview.isPending) && <div role="status" className="manual-preview-loading"><Skeleton className="h-1 w-full" /><strong>{t("manual.selecting")}</strong><p>{t("manual.previewWait")}</p></div>}
+      {step === 1 && <form id="manual-parameters" className="space-y-4" onSubmit={event => { event.preventDefault(); if (!busy) preview.mutate(); }}>
         {quote ? <div className="manual-selected"><SkinImage marketItemName={quote.item_name} /><div><strong>{quote.item_name}</strong><p>{t("manual.minPrice")}: {orderMoney(quote.min_price,quote.currency,i18n.language)}</p></div></div>
           : <p role="status">{t("manual.selecting")}</p>}
-        <label className="manual-field"><span>{t("manual.tradeLink")}</span><Input type="url" required autoFocus={!order} value={trade} onChange={e => { setTrade(e.target.value); preview.reset(); }} placeholder="https://steamcommunity.com/tradeoffer/new/?partner=…&token=…" /><small>{t("manual.tradeHint")}</small></label>
-        <div className="manual-fields">
+        <fieldset className="manual-form-section" disabled={busy}><legend>{t("manual.recipientSection")}</legend>
+        <label className="manual-field"><span>{t("manual.tradeLink")}</span><Input type="url" required autoFocus={!order} value={trade} onChange={e => { setTrade(e.target.value); preview.reset(); }} placeholder="https://steamcommunity.com/tradeoffer/new/?partner=…&token=…" /><small>{t("manual.tradeHint")}</small></label></fieldset>
+        <fieldset className="manual-form-section" disabled={busy}><legend>{t("manual.purchaseSection")}</legend><div className="manual-fields">
           <label className="manual-field"><span>{t("manual.price")}{quote && ` · ${quote.currency}`}</span><Input type="number" required min={quote ? 1/getCurrencyDivisor(quote.currency) : 0.001} step={quote ? 1/getCurrencyDivisor(quote.currency) : 0.001} max={quote ? i32Max/getCurrencyDivisor(quote.currency) : undefined} value={maxPrice} onChange={e => { setMaxPrice(e.target.value); preview.reset(); }} /><small>{t("manual.priceHint")}</small></label>
           <label className="manual-field"><span>{t("manual.chance")}</span><Input type="number" required min={0} max={100} step={1} value={chance} onChange={e => { setChance(e.target.value); preview.reset(); }} /><small>{t("manual.chanceHint")}</small></label>
-        </div>
-        {!order && <><label className="manual-field"><span>{t("manual.descriptionLabel")}</span><Textarea value={description} maxLength={4000} onChange={e => setDescription(e.target.value)} /><small>{t("manual.descriptionHint")}</small></label>
-          <label className="manual-field"><span>{t("manual.tags")}</span><Input value={tags} onChange={e => setTags(e.target.value)} /><small>{t("manual.tagsHint")}</small></label></>}
+        </div></fieldset>
+        {!order && <fieldset className="manual-form-section" disabled={busy}><legend>{t("manual.metadataSection")}</legend><div className="manual-fields"><label className="manual-field"><span>{t("manual.descriptionLabel")}</span><Textarea rows={2} value={description} maxLength={4000} onChange={e => setDescription(e.target.value)} /><small>{t("manual.descriptionHint")}</small></label>
+          <label className="manual-field"><span>{t("manual.tags")}</span><Input value={tags} onChange={e => setTags(e.target.value)} /><small>{t("manual.tagsHint")}</small></label></div></fieldset>}
       </form>}
-      {step === 2 && quote && body && <div className="space-y-4">
-        <div className="manual-selected"><SkinImage marketItemName={quote.item_name} /><strong>{quote.item_name}</strong></div>
-        <dl className="manual-facts">
+      {step === 2 && quote && body && <section className="reward-preview manual-review" aria-label={t("manual.summary")}>
+        <div className="wizard-heading"><h3>{t("manual.reviewHeading")}</h3></div>
+        <div className="manual-selected"><SkinImage marketItemName={quote.item_name} /><div><p className="eyebrow">{t("manual.item")}</p><strong>{quote.item_name}</strong></div></div>
+        <dl className="preview-facts manual-review-facts">
           <div><dt>{t("manual.account")}</dt><dd>{channelLabel}</dd></div>
           <div><dt>{t("manual.recipient")}</dt><dd>{recipient}</dd></div>
-          <div><dt>{t("manual.tradeLink")}</dt><dd className="break-all">{body.trade_link}</dd></div>
+          <div><dt>{t("manual.tradeLink")}</dt><dd className="break-all manual-review-link">{body.trade_link}</dd></div>
           <div><dt>{t("manual.price")}</dt><dd>{orderMoney(body.max_price,quote.currency,i18n.language)}</dd></div>
           <div><dt>{t("manual.chance")}</dt><dd>{body.chance_to_transfer}%</dd></div>
           <div><dt>{t("manual.minPrice")}</dt><dd>{orderMoney(quote.min_price,quote.currency,i18n.language)}</dd></div>
-          {createBody && <><div><dt>{t("manual.descriptionLabel")}</dt><dd>{createBody.description || t("manual.noDescription")}</dd></div>
-            <div><dt>{t("manual.tags")}</dt><dd>{createBody.tags.join(", ") || t("manual.noTags")}</dd></div></>}
+          <div><dt>{t("manual.descriptionLabel")}</dt><dd className="whitespace-pre-wrap">{reviewDescription || t("manual.noDescription")}</dd></div>
+          <div><dt>{t("manual.tags")}</dt><dd>{reviewTags.join(", ") || t("manual.noTags")}</dd></div>
         </dl>
-      </div>}
-      <div className="manual-actions">
+      </section>}
+      <div className="builder-footer manual-actions">
         <Button type="button" variant="ghost" disabled={busy} onClick={onClose}>{t("manual.cancel")}</Button>
         {step > (order ? 1 : 0) && !pending && <Button type="button" variant="outline" disabled={busy} onClick={() => { setStep(step-1); submit.reset(); }}>{t("manual.back")}</Button>}
         {step === 1 && <Button type="submit" form="manual-parameters" disabled={busy || !quote}>{busy ? t("manual.loading") : t("manual.review")}</Button>}

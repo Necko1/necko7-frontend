@@ -16,12 +16,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const statuses = ["WAITING_OPERATOR","ORDER_PENDING","TRADE_WAITING","TRADE_ACCEPTED","RETRY_AVAILABLE","INSUFFICIENT_FUNDS","TRADE_LINK_REQUIRED","RECONCILIATION_REQUIRED","OPERATOR_REVIEW","DELIVERED","CANCELLED"];
 const active = new Set(["WAITING_OPERATOR","ORDER_PENDING","TRADE_WAITING","TRADE_ACCEPTED","RECONCILIATION_REQUIRED"]);
 function Status({ status }: { status: string }) {
   const { t } = useTranslation();
-  return <Badge variant="outline" className="manual-status" data-status={status}>{t(`manual.statuses.${status}`,{defaultValue:status})}</Badge>;
+  return <Badge variant="outline" className="manual-status" data-status={status}>{t(`manual.statuses.${status}`,{defaultValue:t("manual.statuses.OPERATOR_REVIEW")})}</Badge>;
 }
 
 export default function ManualOrdersPage() {
@@ -58,7 +59,11 @@ function OrderList({ channel, onCreate }: { channel: string; onCreate: () => voi
   return <div className="space-y-5">
     <div className="manual-toolbar">
       <Input aria-label={t("manual.searchOrders")} placeholder={t("manual.searchOrders")} value={search} onChange={e=>{setSearch(e.target.value);setOffset(0);}} />
-      <select aria-label={t("manual.status")} value={status} onChange={e=>{setStatus(e.target.value);setOffset(0);}}><option value="">{t("manual.allStatuses")}</option>{statuses.map(s=><option key={s} value={s}>{t(`manual.statuses.${s}`)}</option>)}</select>
+      <Select items={[{value:"",label:t("manual.allStatuses")},...statuses.map(s=>({value:s,label:t(`manual.statuses.${s}`)}))]}
+        value={status} onValueChange={value=>{setStatus(value ?? "");setOffset(0);}}>
+        <SelectTrigger aria-label={t("manual.status")}><SelectValue /></SelectTrigger>
+        <SelectContent alignItemWithTrigger={false} className="w-max min-w-[var(--anchor-width)] max-w-[calc(100vw-2rem)] rounded-lg"><SelectItem value="">{t("manual.allStatuses")}</SelectItem>{statuses.map(s=><SelectItem key={s} value={s} className="rounded-sm [&>span:first-child]:whitespace-normal [&>span:first-child]:break-words">{t(`manual.statuses.${s}`)}</SelectItem>)}</SelectContent>
+      </Select>
       <Input aria-label={t("manual.filterTag")} placeholder={t("manual.allTags")} value={tag} onChange={e=>{setTag(e.target.value);setOffset(0);}} />
       <Button variant="outline" onClick={()=>orders.refetch()} disabled={orders.isFetching}>{t("manual.refresh")}</Button>
     </div>
@@ -104,15 +109,13 @@ function OrderDetail({ channel, id, onRetry }: { channel: string; id: string; on
     <div className="manual-detail-toolbar"><Link to="/manual-orders" className="text-sm text-primary">← {t("manual.backToList")}</Link><Button variant="outline" disabled={order.isFetching} onClick={()=>{void order.refetch();void audit.refetch();}}>{t("manual.refresh")}</Button></div>
     <section className="manual-panel">
       <div className="manual-order-heading"><div className="manual-selected"><SkinImage marketItemName={o.item_name}/><div><p className="eyebrow mb-2">{t("manual.origin")}</p><h2 className="text-xl font-semibold break-words">{o.item_name}</h2></div></div><Status status={o.status}/></div>
-      <div aria-live="polite" className="manual-next"><h3>{t("manual.nextAction")}</h3><p>{t(`manual.explanations.${o.status}`,{defaultValue:o.status})}</p>
-        {last?.outcome_kind&&<p className="font-medium">{t(`manual.outcomes.${last.outcome_kind}`,{defaultValue:last.outcome_kind})}</p>}</div>
-      <div className="manual-actions justify-start">
+      <div aria-live="polite" className="manual-next"><h3>{t("manual.nextAction")}</h3><p>{t(`manual.explanations.${o.status}`,{defaultValue:t("manual.explanations.OPERATOR_REVIEW")})}</p></div>
+      <div className="manual-actions manual-detail-actions">
         {tradeUrl&&o.status==="TRADE_WAITING"&&<><Button render={<a href={tradeUrl} target="_blank" rel="noreferrer"/>}>{t("manual.steamTrade")} ↗</Button><Button variant="outline" onClick={copy}>{t("manual.copyTrade")}</Button></>}
-        <Button variant="outline" onClick={()=>open("metadata")}>{t("manual.edit")}</Button>
         {o.can_retry&&<Button onClick={()=>onRetry(o)}>{t("manual.retry")}</Button>}
-        {o.can_close&&<Button variant="outline" onClick={()=>open("close")}>{t("manual.close")}</Button>}
+        <Button variant="outline" onClick={()=>open("metadata")}>{t("manual.edit")}</Button>
+        {o.can_close&&<Button variant="destructive" onClick={()=>open("close")}>{t("manual.close")}</Button>}
       </div>
-      {!o.can_retry&&o.action_block_reason&&<p className="text-xs text-muted-foreground mt-3">{t(`manual.errors.${o.action_block_reason}`)}</p>}
       <dl className="manual-facts mt-6">
         <div><dt>{t("manual.orderId")}</dt><dd className="font-mono text-xs break-all">{o.id}</dd></div><div><dt>{t("manual.recipient")}</dt><dd>{o.steam_partner}</dd></div>
         <div><dt>{t("manual.createdBy")}</dt><dd>{o.created_by}</dd></div><div><dt>{t("manual.created")}</dt><dd>{orderDate(o.created_at,i18n.language)}</dd></div>
@@ -123,14 +126,16 @@ function OrderDetail({ channel, id, onRetry }: { channel: string; id: string; on
     </section>
     <div className="manual-detail-columns">
       <section className="manual-panel min-w-0"><h2 className="section-title mb-4">{t("manual.attempts")}</h2>
-        {!o.attempts.length?<p className="text-sm text-muted-foreground">{t("manual.noAttempts")}</p>:<div className="space-y-5">{[...o.attempts].reverse().map((attempt,index)=><Attempt key={attempt.custom_id} attempt={attempt} number={o.attempts.length-index} currency={o.currency}/>)}</div>}
+        {!o.attempts.length?<p className="text-sm text-muted-foreground">{t("manual.noAttempts")}</p>:<div className="space-y-5">{[...o.attempts].reverse().map((attempt,index)=><Attempt key={attempt.custom_id} attempt={attempt} number={o.attempts.length-index} currency={o.currency}
+          acceptedAt={audit.data?.find(e=>e.event_type==="buyer_accepted_trade"&&e.attempt_custom_id===attempt.custom_id)?.created_at} />)}</div>}
       </section>
       <section className="manual-panel min-w-0"><h2 className="section-title mb-2">{t("manual.history")}</h2><p className="text-xs text-muted-foreground mb-5">{t("manual.retained")}</p>
-        {audit.isPending?<Skeleton className="h-32"/>:audit.isError?<QueryError onRetry={()=>audit.refetch()}/>:<ol className="manual-timeline">{audit.data?.map(event=><li key={event.id}>
+        {audit.isPending?<Skeleton className="h-32"/>:audit.isError?<QueryError onRetry={()=>audit.refetch()}/>:<><ol className="manual-timeline">{audit.data?.filter(event=>event.event_type!=="inventory_created").map(event=><li key={event.id}>
           <span className="manual-event-dot" aria-hidden="true"/><div><strong>{t(`manual.events.${event.event_type}`,{defaultValue:t("manual.unknownEvent")})}</strong><p>{orderDate(event.created_at,i18n.language)}{event.actor_user_id&&` · ${event.actor_user_id}`}</p>
-            {typeof event.details.reason==="string"&&<p className="text-foreground whitespace-pre-wrap">{event.details.reason}</p>}
+            {event.event_type==="manual_order_closed"&&typeof event.details.reason==="string"&&<p className="text-foreground whitespace-pre-wrap">{event.details.reason}</p>}
             {event.event_type==="manual_metadata_updated"&&<details><summary>{t("manual.descriptionLabel")} / {t("manual.tags")}</summary><pre className="manual-evidence">{JSON.stringify(event.details,null,2)}</pre></details>}
-          </div></li>)}</ol>}
+          </div></li>)}</ol>
+          <details className="builder-advanced"><summary>{t("manual.auditEvidence")}</summary><pre className="manual-evidence">{JSON.stringify(audit.data,null,2)}</pre></details></>}
       </section>
     </div>
     {dialog&&<Dialog open onOpenChange={open=>{if(!open&&!busy)setDialog(null);}}><DialogContent className="manual-dialog" showCloseButton={!busy}>
@@ -140,19 +145,19 @@ function OrderDetail({ channel, id, onRetry }: { channel: string; id: string; on
           :<><label className="manual-field"><span>{t("manual.descriptionLabel")}</span><Textarea autoFocus maxLength={4000} value={description} onChange={e=>setDescription(e.target.value)} /></label>
             <label className="manual-field"><span>{t("manual.tags")}</span><Input value={tags} onChange={e=>setTags(e.target.value)}/><small>{t("manual.tagsHint")}</small></label></>}
         {(metadata.error||close.error)&&<p role="alert" className="manual-error">{orderError(metadata.error||close.error,t)}</p>}
-        <div className="manual-actions"><Button type="button" variant="ghost" disabled={busy} onClick={()=>setDialog(null)}>{t("manual.cancel")}</Button>
-          <Button type="submit" disabled={busy||(dialog==="close"&&!reason.trim())}>{t(busy?"manual.loading":dialog==="close"?"manual.closeSubmit":"manual.save")}</Button></div>
+        <div className="manual-actions"><Button type="button" variant="outline" disabled={busy} onClick={()=>setDialog(null)}>{t("manual.cancel")}</Button>
+          <Button type="submit" variant={dialog==="close"?"destructive":"default"} disabled={busy||(dialog==="close"&&!reason.trim())}>{t(busy?"manual.loading":dialog==="close"?"manual.closeSubmit":"manual.save")}</Button></div>
       </form>
     </DialogContent></Dialog>}
   </div>;
 }
 
-function Attempt({ attempt:a, number, currency }: { attempt:ManualAttempt; number:number; currency:string }) {
+function Attempt({ attempt:a, number, currency, acceptedAt }: { attempt:ManualAttempt; number:number; currency:string; acceptedAt?:string }) {
   const {t,i18n}=useTranslation();
   const trade=a.trade_id&&/^\d+$/.test(a.trade_id)?`https://steamcommunity.com/tradeoffer/${a.trade_id}/`:null;
   return <article className="manual-attempt">
     <div className="flex flex-wrap justify-between gap-2 mb-3"><h3 className="font-semibold">{t("manual.attempt",{number})}</h3><span className="text-xs text-muted-foreground">{orderDate(a.created_at,i18n.language)}</span></div>
-    <p className="text-sm mb-3">{a.outcome_kind?t(`manual.outcomes.${a.outcome_kind}`,{defaultValue:a.outcome_kind}):t(`manual.statuses.${a.status==="ORDER_CREATED"||a.status==="CALLING"?"ORDER_PENDING":a.status}`,{defaultValue:a.status})}</p>
+    <p className="text-sm mb-3">{a.outcome_kind?t(`manual.outcomes.${a.outcome_kind}`,{defaultValue:t("manual.outcomes.market_rejected")}):t(`manual.statuses.${a.status==="ORDER_CREATED"||a.status==="CALLING"?"ORDER_PENDING":a.status}`,{defaultValue:t("manual.statuses.OPERATOR_REVIEW")})}</p>
     <dl className="manual-facts">
       <div><dt>{t("manual.price")}</dt><dd>{orderMoney(a.max_price,currency,i18n.language)}</dd></div><div><dt>{t("manual.chance")}</dt><dd>{a.chance_to_transfer}%</dd></div>
       <div><dt>{t("manual.paid")}</dt><dd>{a.paid_price==null?t("manual.notRecorded"):orderMoney(a.paid_price,currency,i18n.language)}</dd></div>
@@ -160,12 +165,12 @@ function Attempt({ attempt:a, number, currency }: { attempt:ManualAttempt; numbe
       <div><dt>{t("manual.tradeLink")}</dt><dd className="break-all">{a.trade_link}</dd></div>
       {a.send_until&&<div><dt>{t("manual.sentDeadline")}</dt><dd>{orderDate(a.send_until,i18n.language)}</dd></div>}
       {a.receive_until&&<div><dt>{t("manual.acceptDeadline")}</dt><dd>{orderDate(a.receive_until,i18n.language)}</dd></div>}
-      {a.settlement&&<div><dt>{t("manual.acceptedAt")}</dt><dd>{orderDate(a.settlement,i18n.language)}</dd></div>}
+      {acceptedAt&&<div><dt>{t("manual.acceptedAt")}</dt><dd>{orderDate(acceptedAt,i18n.language)}</dd></div>}
+      {a.settlement&&<div><dt>{t("manual.settlementAt")}</dt><dd>{orderDate(a.settlement,i18n.language)}</dd></div>}
       {a.last_checked_at&&<div><dt>{t("manual.checkedAt")}</dt><dd>{orderDate(a.last_checked_at,i18n.language)}</dd></div>}
     </dl>
-    {a.outcome_detail&&<p className="text-xs text-muted-foreground mt-3 break-words">{a.outcome_detail}</p>}
     {trade&&<a href={trade} target="_blank" rel="noreferrer" className="text-sm text-primary inline-block mt-3">{t("manual.steamTrade")} ↗</a>}
     <details className="mt-3 text-xs text-muted-foreground"><summary>{t("manual.rawEvidence")}</summary><dl className="manual-facts mt-3"><div><dt>{t("manual.customId")}</dt><dd>{a.custom_id}</dd></div><div><dt>{t("manual.marketId")}</dt><dd>{a.market_order_id||"—"}</dd></div></dl>
-      <pre className="manual-evidence">{JSON.stringify({stage:a.last_market_stage,causer:a.causer,cancellation_reason:a.cancellation_reason,refund:a.market_refund},null,2)}</pre></details>
+      <pre className="manual-evidence">{JSON.stringify({stage:a.last_market_stage,outcome:a.outcome_kind,reason:a.outcome_detail,causer:a.causer,cancellation_reason:a.cancellation_reason,refund:a.market_refund},null,2)}</pre></details>
   </article>;
 }

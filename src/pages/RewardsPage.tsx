@@ -6,6 +6,7 @@ import { rewardErrors } from "@/components/rewards/validateReward";
 import { useCopy } from "@/lib/useCopy";
 import { PageHeader, QueryError, EmptyState } from "@/components/common/Page";
 import ConfirmAction from "@/components/common/ConfirmAction";
+import WizardProgress from "@/components/common/WizardProgress";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -1874,25 +1875,8 @@ function RewardWizard({
         destructive
       />
       <div className="builder-workspace">
-        <nav
-          className="wizard-progress"
-          aria-label={c("Reward setup", "Настройка награды")}
-        >
-          {stages.map((title, index) => (
-            <button
-              key={title}
-              type="button"
-              aria-current={step === index ? "step" : undefined}
-              onClick={() => {
-                if (index < step || check(index === 1 ? "items" : "all"))
-                  setStep(index);
-              }}
-            >
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <span>{title}</span>
-            </button>
-          ))}
-        </nav>
+        <WizardProgress label={c("Reward setup", "Настройка награды")} steps={stages} current={step}
+          onChange={index => { if (index < step || check(index === 1 ? "items" : "all")) setStep(index); }} />
         <div className="flex justify-between items-center gap-3 text-xs text-muted-foreground py-3">
           <span>
             {restored
