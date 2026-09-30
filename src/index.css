@@ -52,15 +52,9 @@
 .manual-review-facts dt { margin-bottom: .3rem; }
 .manual-review-facts > div:has(.manual-review-link) { grid-column: 1 / -1; }
 .manual-detail-actions { justify-content: flex-start; }
-.manual-order-list { border: 1px solid var(--border); border-radius: .75rem; background: var(--card); overflow: hidden; }
-.manual-order-row { display: grid; grid-template-columns: 5rem minmax(0,1fr) minmax(0,15rem); gap: 1rem; align-items: center; padding: 1.25rem; border-bottom: 1px solid var(--border); }
-.manual-order-row:last-child { border-bottom: 0; }
-.manual-order-row:hover { background: var(--muted); }
-.manual-order-row:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
-.manual-row-image { height: 4rem; }
-.manual-row-name { display: block; font-size: .875rem; overflow-wrap: anywhere; }
-.manual-row-summary { display: flex; flex-direction: column; gap: .5rem; align-items: flex-end; font-size: .875rem; }
-.manual-row-summary small { color: var(--muted-foreground); font-family: monospace; }
+/* Reuse Rewards' 1/2/3-column grid; manual orders never need its 4-column tier. */
+.manual-order-grid { align-items: start; }
+@media (min-width: 1536px) { .reward-grid.manual-order-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 .manual-status { max-width: 100%; white-space: normal; text-align: left; line-height: 1.4; }
 .manual-status[data-status="DELIVERED"] { color: var(--primary); border-color: var(--primary); }
 .manual-status[data-status="RECONCILIATION_REQUIRED"], .manual-status[data-status="INSUFFICIENT_FUNDS"], .manual-status[data-status="OPERATOR_REVIEW"] { color: var(--destructive); }
@@ -83,7 +77,6 @@
 @media (max-width: 900px) { .manual-toolbar { grid-template-columns: repeat(2,minmax(0,1fr)); } .manual-detail-columns { grid-template-columns: minmax(0,1fr); } }
 @media (max-width: 540px) {
   .manual-catalog { grid-template-columns: repeat(2,minmax(0,1fr)); } .manual-fields, .manual-facts, .manual-toolbar { grid-template-columns: minmax(0,1fr); }
-  .manual-order-row { grid-template-columns: 3.5rem minmax(0,1fr); padding: 1rem; gap: .75rem; } .manual-row-summary { grid-column: 2; align-items: flex-start; }
   .manual-panel { padding: 1rem; } .manual-dialog { padding: 1rem; } .manual-review-facts { grid-template-columns: minmax(0,1fr); }
   .manual-selected > img { width: 4rem; } .manual-actions > button { flex: 1 1 auto; }
 }

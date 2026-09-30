@@ -71,16 +71,24 @@ function OrderList({ channel, onCreate }: { channel: string; onCreate: () => voi
       : !orders.data.items.length ? <EmptyState title={t(settled||status||settledTag ? "manual.noOrders":"manual.empty")}
           description={t(settled||status||settledTag ? "manual.noOrdersHint":"manual.emptyHint")} action={!(settled||status||settledTag)&&<Button onClick={onCreate}>{t("manual.create")}</Button>} />
       : <>
-        <div className="manual-order-list">{orders.data.items.map(order=>{
+        <ul className="reward-grid manual-order-grid">{orders.data.items.map(order=>{
           const attempt=order.attempts.at(-1);
-          return <Link key={order.id} to={`/manual-orders/${order.id}`} className="manual-order-row">
-            <div className="manual-row-image"><SkinImage marketItemName={order.item_name} /></div>
-            <div className="min-w-0 space-y-1.5"><strong className="manual-row-name">{order.item_name}</strong><p className="text-xs text-muted-foreground">Steam partner {order.steam_partner} · {orderDate(order.created_at,i18n.language)}</p>
-              <div className="flex flex-wrap gap-1.5">{order.tags.map(tag=><Badge key={tag} variant="secondary">{tag}</Badge>)}</div>
-              {order.description&&<p className="text-xs text-muted-foreground line-clamp-2 break-words">{order.description}</p>}</div>
-            <div className="manual-row-summary"><Status status={order.status} /><span>{orderMoney(attempt?.max_price??order.initial_max_price,order.currency,i18n.language)}</span><small>{order.id.slice(0,8)}</small></div>
-          </Link>;
-        })}</div>
+          return <li key={order.id} className="min-w-0"><Link to={`/manual-orders/${order.id}`}
+            className="inventory-item block space-y-3 transition-colors hover:border-primary/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+            <div className="flex items-start justify-between gap-2"><Status status={order.status} /><small className="shrink-0 font-mono text-xs text-muted-foreground" title={order.id}>{order.id.slice(0,8)}</small></div>
+            <div className="flex items-center gap-3 min-w-0">
+              <div aria-hidden="true" className="h-16 w-20 shrink-0 bg-muted"><SkinImage marketItemName={order.item_name} /></div>
+              <h3 className="min-w-0">{order.item_name}</h3>
+            </div>
+            {order.description&&<p className="text-xs text-muted-foreground line-clamp-2 break-words">{order.description}</p>}
+            {!!order.tags.length&&<div className="flex flex-wrap gap-1.5">{order.tags.map(tag=><Badge key={tag} variant="secondary" className="max-w-full whitespace-normal break-all">{tag}</Badge>)}</div>}
+            <dl className="inventory-facts">
+              <div><dt className="text-xs text-muted-foreground">{t("manual.price")}</dt><dd className="font-semibold">{orderMoney(attempt?.max_price??order.initial_max_price,order.currency,i18n.language)}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">{t("manual.recipient")}</dt><dd className="font-semibold break-all">{order.steam_partner}</dd></div>
+            </dl>
+            <p className="text-xs text-muted-foreground">{t("manual.created")}: <time dateTime={order.created_at}>{orderDate(order.created_at,i18n.language)}</time></p>
+          </Link></li>;
+        })}</ul>
         <div className="manual-pager"><Button variant="outline" disabled={offset===0} onClick={()=>setOffset(Math.max(0,offset-25))}>{t("manual.previous")}</Button>
           <span>{t("manual.page",{from:offset+1,to:Math.min(offset+25,orders.data.total),total:orders.data.total})}</span><Button variant="outline" disabled={offset+25>=orders.data.total} onClick={()=>setOffset(offset+25)}>{t("manual.nextPage")}</Button></div>
       </>}

@@ -17,7 +17,7 @@ function sample(status="INSUFFICIENT_FUNDS"): ManualOrder {
       causer:null,cancellation_reason:null,market_refund:null,initiator_user_id:"123",created_at:now,last_checked_at:now}]};
 }
 async function setup(page:Page, options:{status?:string; empty?:boolean; role?:string; failCreateOnce?:boolean; language?:string; itemName?:string;
-  previewDelay?:number; accepted?:boolean; rawReason?:string; multipleAttempts?:boolean; emptyMetadata?:boolean; tradeLink?:string}={}) {
+  previewDelay?:number; accepted?:boolean; rawReason?:string; multipleAttempts?:boolean; emptyMetadata?:boolean; tradeLink?:string; orderCount?:number}={}) {
   await mockApi(page,{role:options.role||"OWNER"});
   if(options.language)await page.addInitScript(lang=>localStorage.setItem("necko_lang",lang),options.language);
   let order=sample(options.status); let exists=!options.empty; let createFailure=!!options.failCreateOnce;
@@ -70,9 +70,11 @@ async function setup(page:Page, options:{status?:string; empty?:boolean; role?:s
       events.push({...events[0],id:events.length+1,event_key:"closed",event_type:"manual_order_closed",details:{origin:"MANUAL"}});return send(order);
     }
     if(path.endsWith("/manual-orders")){
-      let items=exists?[order]:[];const status=url.searchParams.get("status"),tag=url.searchParams.get("tag"),search=url.searchParams.get("search");
+      let items=exists?Array.from({length:options.orderCount??1},(_,index)=>index?{...order,id:id.slice(0,-4)+String(index).padStart(4,"0")}:order):[];
+      const status=url.searchParams.get("status"),tag=url.searchParams.get("tag"),search=url.searchParams.get("search");
       if(status)items=items.filter(o=>o.status===status);if(tag)items=items.filter(o=>o.tags.includes(tag));if(search)items=items.filter(o=>`${o.item_name} ${o.description} ${o.steam_partner} ${o.id}`.toLowerCase().includes(search.toLowerCase()));
-      return send({items,total:items.length,offset:0,limit:25});
+      const offset=Number(url.searchParams.get("offset")||0),limit=Number(url.searchParams.get("limit")||25);
+      return send({items:items.slice(offset,offset+limit),total:items.length,offset,limit});
     }
     return send(order);
   });
@@ -263,4 +265,51 @@ test(`manual wizard uses reward navigation and compact review at ${width}px in $
     expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
     await dialog.screenshot({path:testInfo.outputPath(`manual-review-${language}-${width}-${theme}.png`),animations:"disabled"});
   }
+});
+
+for(const count of [1,2,3])test(`${count} compact delivery cards retain metadata at desktop and mobile widths`,async({page},testInfo)=>{
+  const language=count===2?"ru":"en";
+  await setup(page,{orderCount:count,language,multipleAttempts:true,emptyMetadata:count===1,
+    itemName:count===2?"StatTrak™ Glock-18 | Vogue (Field-Tested) · Очень длинное название скина для победителя розыгрыша":undefined});
+  await page.goto("/manual-orders");
+  const grid=page.locator(".manual-order-grid"),cards=grid.getByRole("link");
+  await expect(cards).toHaveCount(count);
+  const first=cards.first();
+  await expect(first.getByText(language==="en"?"Purchase ceiling":"Потолок покупки",{exact:true})).toBeVisible();
+  await expect(first.getByText(language==="en"?"3.50 USD":"3,50 USD",{exact:true})).toBeVisible();
+  await expect(first.getByText("123456",{exact:true})).toBeVisible();
+  await expect(first.locator("time")).toHaveAttribute("datetime",now);
+  if(count>1){await expect(first.getByText("Telegram giveaway",{exact:true})).toBeVisible();await expect(first.getByText("telegram",{exact:true})).toBeVisible();}
+  for(const width of [1920,1440,1100,390]){
+    await page.setViewportSize({width,height:1000});
+    const columns=width>=1280?3:width>=640?2:1;
+    const gridBox=(await grid.boundingBox())!,firstBox=(await first.boundingBox())!;
+    expect(firstBox.width).toBeLessThanOrEqual(gridBox.width/columns+1);
+    expect(firstBox.height).toBeLessThan(430);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    if(count===3){
+      const boxes=await Promise.all([0,1,2].map(n=>cards.nth(n).boundingBox()));
+      if(columns===3){expect(boxes[1]!.x).toBeGreaterThan(boxes[0]!.x);expect(boxes[2]!.y).toBe(boxes[0]!.y);}
+      if(columns===2){expect(boxes[1]!.x).toBeGreaterThan(boxes[0]!.x);expect(boxes[2]!.y).toBeGreaterThan(boxes[0]!.y);}
+      if(columns===1){expect(boxes[1]!.x).toBe(boxes[0]!.x);expect(boxes[1]!.y).toBeGreaterThan(boxes[0]!.y);}
+    }
+    if(width===1440||width===390)for(const theme of ["dark","light"]){
+      await page.evaluate(theme=>document.documentElement.classList.toggle("dark",theme==="dark"),theme);
+      await page.screenshot({path:testInfo.outputPath(`manual-cards-${count}-${language}-${width}-${theme}.png`),fullPage:true,animations:"disabled"});
+    }
+  }
+  // The image region and the rest of the card are one native link.
+  await first.locator('[aria-hidden="true"]').click();await expect(page).toHaveURL(`/manual-orders/${id}`);
+  await page.goto("/manual-orders");await grid.getByRole("link").first().focus();await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(`/manual-orders/${id}`);
+});
+
+test("delivery cards retain pagination and reset it when filtering",async({page})=>{
+  await setup(page,{orderCount:26});await page.goto("/manual-orders");
+  const cards=page.locator(".manual-order-grid").getByRole("link");
+  await expect(cards).toHaveCount(25);await page.getByRole("button",{name:"Next",exact:true}).click();
+  await expect(cards).toHaveCount(1);await expect(page.getByText("26–26 of 26",{exact:true})).toBeVisible();
+  await page.getByRole("textbox",{name:"Search ID, skin, Steam partner or description",exact:true}).fill(id);
+  await expect(cards).toHaveCount(1);await expect(page.getByText("1–1 of 1",{exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Previous",exact:true})).toBeDisabled();
 });
