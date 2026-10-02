@@ -12,8 +12,9 @@ Scripts have no filesystem, network/raw HTTP, process/shell, raw database handle
 | String size | 65,536 bytes |
 | Array elements / map properties | 2,048 / 512 |
 | Modules / import nesting | 64 / 16; circular imports rejected |
-| Execution deadline | 3 seconds, including validation in execution |
-| Host operation timeout | At most 2 seconds and remaining execution budget |
+| Execution deadline | Project setting: 1..120 seconds; default 30, including validation and external waits |
+| Host operation timeout | Project setting: 1..60 seconds; default 10, capped by remaining execution time |
+| Compiler validation deadline | 3 seconds per validation engine; project settings do not raise compiler limits |
 | Host calls | 100 total; 50 for each general operation |
 | rewards.trigger | 3 calls/execution, also persisted-fulfillment rate check described below |
 | chat.send / chat.reply | 3 calls each/execution |
@@ -22,6 +23,16 @@ Scripts have no filesystem, network/raw HTTP, process/shell, raw database handle
 | Chat message | 1..500 Unicode characters |
 
 Local Duration/filter construction, random.pick and last_rounds do not use the host-call counter, but remain bounded by Rhai's engine limits. The trigger project rate check is at most ten existing fulfillment rows in the preceding minute; an eleventh admitted attempt is rejected while those rows remain recent. This is independent of per-execution budgets.
+
+## Configure execution time
+
+In **Scripts > Editor**, open the project's three-dot menu and choose **Execution limits**. Owner and Editor can save two whole-number values: maximum time for one `on_event`/`on_timer` invocation and maximum time for an individual external call (Twitch, Market or a database-backed host API). The call limit cannot exceed the execution limit.
+
+For example, 30 seconds per execution and 10 seconds per call allow several network operations in one handler. A call started with only three seconds left gets at most those three seconds, not another ten. Raising time limits does not raise instructions, call counts, containers or any other quota. Underlying clients may still have their own shorter timeout; Market HTTP requests retain their 30-second client timeout.
+
+Saving applies to executions that **start afterward**, including already queued events/jobs and Dry Run. A running execution keeps the values it started with. These are project settings, not source variables or revision content: no Publish is required, and publishing/rollback does not reset them. New and existing projects default to 30/10 seconds after the migration. Older reports do not retroactively acquire new limits. New execution reports and `ctx.meta.execution_limits` record the values actually used.
+
+Execution time includes wall-clock waiting, not just computation. Longer runs delay the project's following events and occupy one bounded worker. Use [`scheduler.after`](./reference/scheduler#after) for a deliberate delay such as a two-minute giveaway instead of raising a handler deadline to wait. A timeout stops waiting, but cannot prove that Twitch/Market did not already receive a request; inspect the result before retrying. Earlier storage writes or other completed effects remain committed.
 
 ## Persistent and input quotas
 

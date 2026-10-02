@@ -28,6 +28,14 @@ An event context contains `event`, `state`, `previous`, `current_match`, `source
 | `channel_id` | Channel Twitch ID. |
 | `timestamp` | Execution-time UTC timestamp string. |
 | `source` | Original source map for CS2; timer source string for timer work. |
+| `execution_limits` | ExecutionLimits; project timeouts captured when this execution starts. |
+
+## ctx.meta.execution_limits
+
+| Property | Meaning |
+| --- | --- |
+| `execution_timeout_secs` | Whole-run wall-clock budget in seconds, including validation and external waits; 1..120, default 30. |
+| `host_timeout_secs` | Per-host-call timeout in seconds; 1..60, default 10, never above the whole-run budget. Each call also uses the remaining whole-run time. |
 
 ## ctx.timer
 

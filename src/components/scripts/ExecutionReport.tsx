@@ -20,6 +20,7 @@ export default function ExecutionReport({
         : text(object(report.error).message);
   const logs = rows(report.logs);
   const actions = rows(report.actions);
+  const limits = object(object(report.meta).execution_limits);
   return (
     <div className="script-report">
       <div className="script-report-heading">
@@ -36,6 +37,11 @@ export default function ExecutionReport({
           <span>{t("scripts.milliseconds", { duration: text(report.duration_ms) })}</span>
         )}
       </div>
+      {typeof limits.execution_timeout_secs === "number" && typeof limits.host_timeout_secs === "number" && (
+        <p className="text-xs text-muted-foreground">{t("scripts.usedExecutionLimits", {
+          execution: limits.execution_timeout_secs, host: limits.host_timeout_secs,
+        })}</p>
+      )}
       {error && (
         <div role="alert" className="script-diagnostic">
           <p>{error}</p>

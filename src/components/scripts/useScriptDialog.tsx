@@ -18,7 +18,12 @@ type Field = {
   label: string;
   value?: string;
   multiline?: boolean;
-  validate?: (value: string) => string | undefined;
+  inputType?: "number";
+  min?: number;
+  max?: number;
+  step?: number;
+  description?: string;
+  validate?: (value: string, values: Record<string, string>) => string | undefined;
 };
 export type DialogRequest = {
   title: string;
@@ -68,11 +73,12 @@ export function useScriptDialog() {
           <DialogDescription>{request?.description}</DialogDescription>
         </DialogHeader>
         <form
+          noValidate
           onSubmit={async (e) => {
             e.preventDefault();
             if (!request || submitting.current) return;
             const invalid = request.fields
-              ?.map((f) => f.validate?.(values[f.name] ?? ""))
+              ?.map((f) => f.validate?.(values[f.name] ?? "", values))
               .find(Boolean);
             if (invalid) {
               setError(invalid);
@@ -111,6 +117,10 @@ export function useScriptDialog() {
                 />
               ) : (
                 <Input
+                  type={field.inputType ?? "text"}
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
                   autoFocus={i === 0}
                   aria-label={field.label}
                   value={values[field.name]}
@@ -120,6 +130,7 @@ export function useScriptDialog() {
                   disabled={pending}
                 />
               )}
+              {field.description && <span className="block text-xs text-muted-foreground">{field.description}</span>}
             </label>
           ))}
           {error && (

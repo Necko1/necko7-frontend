@@ -12,6 +12,8 @@ export type Project = {
   draft_version: number;
   active_revision: number | null;
   live_files?: Record<string, string> | null;
+  execution_timeout_secs?: number;
+  host_timeout_secs?: number;
 };
 export type Row = Record<string, unknown> & {
   id?: string;
@@ -70,3 +72,25 @@ export const confirmationField = (word: string) => ({
   validate: (value: string) =>
     value !== word ? t("scripts.confirmWordError", { word }) : undefined,
 });
+
+export const executionLimitFields = (execution = 30, host = 10) => [
+  {
+    name: "execution_timeout_secs", label: t("scripts.executionTimeout"), value: String(execution),
+    inputType: "number" as const, min: 1, max: 120, step: 1,
+    description: t("scripts.executionTimeoutHelp"),
+    validate: (value: string) => {
+      const seconds = Number(value);
+      return !Number.isInteger(seconds) || seconds < 1 || seconds > 120 ? t("scripts.executionTimeoutInvalid") : undefined;
+    },
+  },
+  {
+    name: "host_timeout_secs", label: t("scripts.hostTimeout"), value: String(host),
+    inputType: "number" as const, min: 1, max: 60, step: 1,
+    description: t("scripts.hostTimeoutHelp"),
+    validate: (value: string, values: Record<string, string>) => {
+      const seconds = Number(value);
+      if (!Number.isInteger(seconds) || seconds < 1 || seconds > 60) return t("scripts.hostTimeoutInvalid");
+      if (seconds > Number(values.execution_timeout_secs)) return t("scripts.hostTimeoutExceedsExecution");
+    },
+  },
+];

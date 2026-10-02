@@ -12,9 +12,12 @@ Each channel supports up to 20 projects. A project owns a mutable draft, immutab
 | Activate an older version / rollback | Changes future event revision, leaves draft and existing timer pins unchanged |
 | Enable | Admits future events for detected handlers; does not replay the past or auto-run overdue blocked jobs |
 | Disable | Stops new event execution, preserves files/storage/history/jobs; overdue timers become blocked |
+| Execution limits (project menu) | Saves per-project whole-run/per-call timeouts for future executions, without publishing or changing the draft |
 | Delete | Requires confirmation, hides live project access and cancels pending jobs; retained history is not a promise of automatic replay |
 
 Stale draft versions produce a conflict rather than overwriting a concurrent Owner/Editor. At most 200 revisions/project. New projects are disabled. Validation compiles orphan files too. Host actions during module initialization are forbidden, even before live execution.
+
+Project time limits default to 30 seconds per execution and 10 seconds per external call. Owner and Editor can change them in the three-dot menu; see [configuration and bounds](./limits#configure-execution-time). Timers keep their creating source revision while using the project's settings when they start. A running execution retains its captured values; new reports show those values even if the project is changed later.
 
 ## Entrypoints and ordering
 

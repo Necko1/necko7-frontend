@@ -44,6 +44,7 @@ import { Choice, Empty, StatusBadge, Time } from "./shared";
 import {
   confirmationField,
   errorText,
+  executionLimitFields,
   human,
   object,
   pretty,
@@ -475,6 +476,19 @@ export default function ProjectEditor({
               }
             >
               {t("scripts.renameProject")}
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={busy} onClick={() => modal.show({
+              title: t("scripts.executionLimits"),
+              description: t("scripts.executionLimitsDescription"),
+              submit: t("scripts.saveExecutionLimits"),
+              fields: executionLimitFields(project.execution_timeout_secs, project.host_timeout_secs),
+              onSubmit: values => action({
+                action: "execution_limits",
+                execution_timeout_secs: Number(values.execution_timeout_secs),
+                host_timeout_secs: Number(values.host_timeout_secs),
+              }),
+            })}>
+              {t("scripts.executionLimits")}
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={busy}

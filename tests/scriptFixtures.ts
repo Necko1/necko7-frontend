@@ -31,6 +31,8 @@ export function scriptData() {
         id: "p",
         name: "Round rewards",
         enabled: true,
+        execution_timeout_secs: 30,
+        host_timeout_secs: 10,
         draft_version: 5,
         active_revision: 2,
         draft,
@@ -40,6 +42,8 @@ export function scriptData() {
         id: "q",
         name: "Chat timers",
         enabled: false,
+        execution_timeout_secs: 30,
+        host_timeout_secs: 10,
         draft_version: 1,
         active_revision: null,
         draft: { "main.rhai": "fn on_timer(ctx) {}" },
@@ -203,6 +207,11 @@ export async function scriptsApi(
       project.draft = body.files;
       project.draft_version++;
       return route.fulfill({ json: { version: project.draft_version } });
+    }
+    if (body.action === "execution_limits" && project) {
+      project.execution_timeout_secs = body.execution_timeout_secs;
+      project.host_timeout_secs = body.host_timeout_secs;
+      return route.fulfill({ json: { ok: true } });
     }
     if (body.action === "publish" && project) {
       project.active_revision = 3;
